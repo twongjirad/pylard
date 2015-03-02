@@ -1,11 +1,11 @@
 from pylard.pylardisplay.mainwindow import mainwindow
 from pyqtgraph.Qt import QtGui
 
-def run():
+def run_daefile(daefile):
     app = QtGui.QApplication([])
-    mw = mainwindow()
+    mw = mainwindow(daefile)
     app.exec_()
 
 
 if __name__ == "__main__":
-    run()
+    pass

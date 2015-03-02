@@ -5,8 +5,9 @@ import numpy as np
 from collections import OrderedDict
 from pylard.pylardisplay.solidstreewidget import SolidsTreeWidget
 
+
 class DetectorDisplay(gl.GLViewWidget) :
-    def __init__(self):
+    def __init__(self, use_cache=True, cache_dir="./cache"):
         super(DetectorDisplay,self).__init__()
         self.treeitems = OrderedDict()
 
@@ -54,9 +55,8 @@ class DetectorDisplay(gl.GLViewWidget) :
         nvertices = 0
         for solid in solids:
             # first we check if we should draw the solid
-            print solid, self.solidswidget.solids_state[str(solid)]
             if self.solidswidget.solids_state[solid]==False:
-                print solid,"is off"
+                #print solid,"is off"
                 continue
             for n,(solid_vertices,solid_indices) in enumerate(zip(solids[solid]["vertices"],solids[solid]["indices"])):
                 #print solid,"prim #%d, nvertices=%d, offset=%d" % ( n, len(solid_vertices),nvertices)
@@ -66,11 +66,9 @@ class DetectorDisplay(gl.GLViewWidget) :
                 nvertices += len(solid_vertices)
                 vertices.append( solids[solid]["vertices"][n] )
                 indices.append( solid_indices_copy )
-        print "NVERTICES=",len(vertices)
         return np.concatenate(vertices), np.concatenate(indices)
 
     def solidsListChanged(self):
-        print "updating solids list"
         self.vertices, self.indices = self.flatten_solids( self.solids )
         self.geo_meshdata.setVertexes(verts=self.vertices)
         self.geo_meshdata.setFaces(faces=self.indices)

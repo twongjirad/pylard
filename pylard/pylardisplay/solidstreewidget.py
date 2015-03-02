@@ -42,10 +42,10 @@ class SolidsTreeWidget(QtGui.QWidget):
     def handleChanged(self, item, column):
         if item.checkState(column) == QtCore.Qt.Checked:
             self.solids_state[ str(item.text(column)) ] = True
-            print "checked", item, item.text(column), self.solids_state[ str(item.text(column)) ]
+            #print "checked", item, item.text(column), self.solids_state[ str(item.text(column)) ]
         if item.checkState(column) == QtCore.Qt.Unchecked:
             self.solids_state[ str(item.text(column)) ] = False
-            print "unchecked", item, item.text(column), self.solids_state[ str(item.text(column)) ]
+            #print "unchecked", item, item.text(column), self.solids_state[ str(item.text(column)) ]
 
 if __name__ == "__main__":
 

@@ -12,7 +12,7 @@ from pylard.pylardisplay.detectordisplay import DetectorDisplay
 #        #self.ui.setupUi(self.cw)
 
 class mainwindow( QtGui.QMainWindow ):
-    def __init__(self):
+    def __init__(self, daefile, use_cache=True, cache_dir="./cache"):
         super( mainwindow, self ).__init__()
         self.cw = QtGui.QWidget()
         self.setCentralWidget(self.cw)
@@ -21,8 +21,8 @@ class mainwindow( QtGui.QMainWindow ):
         self.cw.setLayout( self.layout )
 
         # detector
-        self.detector = DetectorDisplay()
-        self.detector.load_geometry( "microboone_32pmts_nowires_cryostat.dae" ) # To do: Fix this hard-coding
+        self.detector = DetectorDisplay(use_cache=use_cache, cache_dir=cache_dir)
+        self.detector.load_geometry( daefile ) # To do: Fix this hard-coding
         self.layout.addWidget( self.detector.solidswidget )
         #self.layout.addWidget( self.detector )
         self.detector.show()
