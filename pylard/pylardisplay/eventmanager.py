@@ -1,4 +1,4 @@
-import os,sys
+import os,sys, time
 from pyqtgraph import QtCore, QtGui
 from pylard.pylarsoftzmq.eventclient import Request, EventClient
 
@@ -7,6 +7,9 @@ class RequestMonitor(QtCore.QObject):
     # of a ZMQ request and sending the status to the eventtree widget.
     # it will be launched on a thread and stops once a request 
     # has been fulfilled.
+    finished = QtCore.pyqtSignal()
+    monitorupdate = QtCore.pyqtSignal()
+
     def __init__(self, request, zmqclient, treewidget):
         super( RequestMonitor, self ).__init__()
         self.request = request
@@ -17,14 +20,16 @@ class RequestMonitor(QtCore.QObject):
     @QtCore.pyqtSlot()
     def monitorRequestStatus(self):
         requestfinished = False
-        while requestfinished:
-            requestfinished, completioninfo  = self.zmqclient.getRequestStatus( self.request )
-            self.updateTreeWidget( self.request, completioninfo )
-        self.isFinished = True
-        self.finshed.emit()
-    def updateTreeWidget( self, request, completioninfo ):
-        pass
+        while not requestfinished:
+            print "checking request status", self.request.fulfilled, id(self.request)
+            #requestfinished, completioninfo  = self.zmqclient.getRequestStatus( self.request )
+            #self.updateTreeWidget( self.request )
+            requestfinished = self.request.fulfilled
+            self.monitorupdate.emit()
+            time.sleep(1)
 
+        self.isFinished = True
+        self.finished.emit()
 
 class EventManager( QtGui.QWidget ):
     def __init__(self):
@@ -68,20 +73,27 @@ class EventManager( QtGui.QWidget ):
             # register in tree
             self.addRequestToTreeWidget( request )
         # send it over to pylarsoftzmq
-        #reqmon = RequestMonitor( request, self.zmqclient, self.eventTreeWidget )
-        #reqmon_thread = QtCore.QThread()
-        #reqmon.moveToThread( reqmon_thread )
-        #reqmon.finished.connect( thread.quit )
-        #reqmon.finished.connect( self.finishRequest )
+        # launch
+        self.zmqclient.processRequest( request )
+
+        # monitor request
+        reqmon = RequestMonitor( request, self.zmqclient, self.eventTree )
+        reqmon_thread = QtCore.QThread()
+        reqmon.moveToThread( reqmon_thread )
+        reqmon_thread.started.connect( reqmon.monitorRequestStatus )
+        reqmon.finished.connect( reqmon_thread.quit )
+        reqmon.finished.connect( self.finishRequest )
+        reqmon.monitorupdate.connect( lambda: self.updateFromMonitor( request ) )
+        reqmon_thread.start()
 
         # add it to our request list
-        #self.requests.append( (request, reqmon ) )
+        self.requests.append( (request, reqmon, reqmon_thread ) )
         
     def finishRequest(self):
         # get data. remove requests from queue
-        for (request, reqmon) in self.requests:
+        for (request, reqmon, reqthread) in self.requests:
             if reqmon.isFinished:
-                self.requests.remove( (request, reqmon) )
+                self.requests.remove( (request, reqmon, reqthread) )
         print "Event request finished. Remaning: ",len(self.requests)
 
     def addRequestToTreeWidget( self, request ):
@@ -103,10 +115,22 @@ class EventManager( QtGui.QWidget ):
             for dp in request.dataproductlist:
                 if item_key not in self.et_dataproducts:
                     self.et_dataproducts[item_key] = {}
-                self.et_dataproducts[item_key][dp] = QtGui.QTreeWidgetItem( self.et_eventitems[item_key], [dp,"0% complete"],QtCore.Qt.DisplayRole )
+                self.et_dataproducts[item_key][dp] = QtGui.QTreeWidgetItem( self.et_eventitems[item_key], [dp,"0.0% complete"],QtCore.Qt.DisplayRole )
                 self.et_dataproducts[item_key][dp].setExpanded(True)
 
-
+    def updateFromMonitor( self, request ):
+        print "Req. Monitor wants to update.",id(request)
+        print request.data
+        for ievent in xrange( request.first_event, request.first_event+request.nevents ):
+            for product in request.dataproductlist:
+                event_data = request.data[ ( request.first_run, ievent ) ]
+                dataproduct = event_data.dataproducts[product]
+                if dataproduct==None:
+                    continue
+                pct = dataproduct.getPercentComplete()
+                print product," ",pct
+                item_key = ( request.filename, request.first_run, ievent )
+                self.et_dataproducts[ item_key ][ product ].setText( 1, "%.1f%% complete"%(pct))
 
     def setupUI(self):
         layout = QtGui.QVBoxLayout()

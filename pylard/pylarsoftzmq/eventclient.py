@@ -1,4 +1,4 @@
-import os,sys
+import os,sys,time
 import zmq, zmq.ssh
 import bz2
 import lz4
@@ -12,6 +12,7 @@ class DataProducts:
         self.nchunks = nchunks
         self.chunks = {}
         self.array = None
+        self.complete = False
     def getarray(self):
         if self.array==None:
             data_stream = ""
@@ -20,6 +21,8 @@ class DataProducts:
                 data = cStringIO.StringIO( data_stream )
             self.array = np.load( data )
         return self.array
+    def getPercentComplete(self):
+        return float(len(self.chunks))/float(self.nchunks)*100.0
         
 
 class EventData:
@@ -32,6 +35,13 @@ class EventData:
         if dataproductslist!=None:
             for products in dataproductslist:
                 self.dataproducts[products] = None
+    def update(self):
+        self.fulfilled = True
+        for product in self.dataproducts:
+            if product not in self.dataproducts or not self.dataproducts[product].complete:
+                self.fulfilled = False
+                break
+
 
 class Request:
     def __init__( self, filename, first_run, first_event, nevents, dataproductlist ):
@@ -46,6 +56,20 @@ class Request:
             self.data[ ( self.first_run, event ) ] = EventData( self.filename, self.first_run, self.first_event, self.dataproductlist )
     def numberStored(self):
         return len(self.event_data)
+    def update(self):
+        self.fulfilled = True
+        for event in self.data:
+            if not self.data[event].fulfilled:
+                self.fulfilled = False
+                break
+    def setfulfilled(self):
+        mylock = threading.Lock()
+        mylock.acquire()
+        self.fulfilled = True
+        mylock.release()
+    def getfulfilled(self):
+        return self.fulfilled
+        
 
 def request_event( socket, request ):
     # initialize request
@@ -63,7 +87,7 @@ def request_event( socket, request ):
 
     # get event data
     tstart = time.time()
-    while request.numberStored()<nevents:
+    while not request.getfulfilled():
         socket.send_multipart([b"REQUEST_EVENT"])
         msg = socket.recv_multipart()
         if msg[0]=="DONE":
@@ -79,11 +103,13 @@ def request_event( socket, request ):
             event_runid = msg[0].split(":")[2]
             event_eventid = msg[0].split(":")[3]
             compression = msg[0].split(":")[4]
-            event_data = EventData( request.filename, event_runid, event_eventid )
+            event_data = request.data[ (event_runid, event_eventid ) ]
 
             # get event data products
-            nchunks = int(msg[0].split(":")[5])
-            data = dataproduct( "RawDigits", nchunks )
+            dataproduct = "RawDigits"
+            event_data.data_nchunks[ dataproduct ] = int(msg[0].split(":")[5])
+            nchunks = event_data.data_nchunks[ dataproduct ]
+            data = DataProduct( "RawDigits", nchunks )
             while len(data.chunks)<nchunks:
                 for n in xrange(0,nchunks):
                     if n in event_chunks:
@@ -96,16 +122,40 @@ def request_event( socket, request ):
                     chunkid = int(reply[0].split(":")[0][len("CHUNK"):])
                     data.chunks[chunkid] = lz4.loads( reply[1] ) # decompress
                 print "Chunks after loop: ",len(data.chunks)
+            data.complete = True
             event_data.dataproducts["RawDigits"] = data
+            event_data.update()
 
             # tell server event is done
             socket.send_multipart(["COMPLETE:"+event_name])
             ok = socket.recv_multipart()
             print "event transfer time: ",time.time()-tstart," seconds."
             
-            # put event data into request
-            request.data[ (event_runid, event_eventid ) ] = event_data
             tstart = time.time()
+    return
+
+def dummy_request( socket, request ):
+    print "dummy request sleeping for 10 seconds. ",id(request)
+    n = 0
+    lock = threading.Lock()
+    while n<10: 
+        time.sleep(1)
+        for event in xrange(request.first_event, request.first_event+request.nevents):
+            eventdata = request.data[ (request.first_run, event ) ]
+            for dp in request.dataproductlist:
+                lock.acquire()
+                if eventdata.dataproducts[dp]==None:
+                    eventdata.dataproducts[dp] = DataProducts( dp, 10 )
+                eventdata.dataproducts[dp].chunks[n] = 1.0
+                if len( eventdata.dataproducts[dp].chunks ) == eventdata.dataproducts[dp].nchunks:
+                    eventdata.dataproducts[dp].complete = True
+                print "dummy chunk update: ",len( eventdata.dataproducts[dp].chunks ), eventdata.dataproducts[dp].complete
+                lock.release()
+            eventdata.update()
+        request.update()
+        n += 1
+        print "dummy update. request complete=",request.getfulfilled()
+    request.setfulfilled()
     return
 
 class EventClient:
@@ -115,8 +165,7 @@ class EventClient:
         self.socket = self.context.socket(zmq.DEALER)
         self.servers = []
         self.timeout = timeout
-        self.requests = []
-        self.threads = []
+        self.requests = [] # list containing (Request, Thread) pairs
         for server in server_list:
             if offline_test:
                 continue # skip for offline test
@@ -139,9 +188,13 @@ class EventClient:
         request = Request(  filename, first_run, first_event, nevents, ["RawDigits"] )
         thread = threading.Thread( target=request_event, args=(self.socket, request ) )
         thread.start()
-        self.requests.append( requests )
-        self.threads.append( thread )
+        self.requests.append( (requests,thread) )
         
+    def processRequest( self, request ):
+        #thread = threading.Thread( target=request_event, args=(self.socket, request ) )
+        #thread.start()
+        #self.requests.append( (requests,thread) )
+        thread = threading.Thread( target=dummy_request, args=(self.socket, request ) )
+        thread.start()
+        #self.requests.append( (requests,thread) )
         
-
-
