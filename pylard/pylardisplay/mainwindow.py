@@ -1,6 +1,7 @@
 import sys
 from pyqtgraph.Qt import QtCore, QtGui
 from pylard.pylardisplay.detectordisplay import DetectorDisplay
+from pylard.pylardisplay.eventmanager import EventManager
 # The different windows
 
 #class ExampleLoader(QtGui.QMainWindow):
@@ -19,6 +20,10 @@ class mainwindow( QtGui.QMainWindow ):
         self.resize(1000,500)
         self.layout = QtGui.QHBoxLayout()
         self.cw.setLayout( self.layout )
+
+        # event info
+        self.eventman = EventManager()
+        self.layout.addWidget( self.eventman )
 
         # detector
         self.detector = DetectorDisplay(use_cache=use_cache, cache_dir=cache_dir)
