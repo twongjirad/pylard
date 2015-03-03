@@ -22,8 +22,7 @@ class DataProducts:
             self.array = np.load( data )
         return self.array
     def getPercentComplete(self):
-        return float(len(self.chunks))/float(self.nchunks)*100.0
-        
+        return float(len(self.chunks))/float(self.nchunks)*100.0        
 
 class EventData:
     def __init__( self, filename, runid, eventid, dataproductslist=None ):
@@ -139,17 +138,17 @@ def dummy_request( socket, request ):
     n = 0
     lock = threading.Lock()
     while n<10: 
-        time.sleep(1)
+        time.sleep(0.1)
         for event in xrange(request.first_event, request.first_event+request.nevents):
             eventdata = request.data[ (request.first_run, event ) ]
-            for dp in request.dataproductlist:
+            for name,product in eventdata.dataproducts.items():
                 lock.acquire()
-                if eventdata.dataproducts[dp]==None:
-                    eventdata.dataproducts[dp] = DataProducts( dp, 10 )
-                eventdata.dataproducts[dp].chunks[n] = 1.0
-                if len( eventdata.dataproducts[dp].chunks ) == eventdata.dataproducts[dp].nchunks:
-                    eventdata.dataproducts[dp].complete = True
-                print "dummy chunk update: ",len( eventdata.dataproducts[dp].chunks ), eventdata.dataproducts[dp].complete
+                if product==None:
+                    eventdata.dataproducts[name] = DataProducts( name, 10 )
+                eventdata.dataproducts[name].chunks[n] = 1.0
+                if len( eventdata.dataproducts[name].chunks ) == eventdata.dataproducts[name].nchunks:
+                    eventdata.dataproducts[name].complete = True
+                print "dummy chunk update: ",len( eventdata.dataproducts[name].chunks ), eventdata.dataproducts[name].complete
                 lock.release()
             eventdata.update()
         request.update()

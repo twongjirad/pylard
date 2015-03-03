@@ -1,6 +1,7 @@
 import os,sys, time
 from pyqtgraph import QtCore, QtGui
 from pylard.pylarsoftzmq.eventclient import Request, EventClient
+from pylard.pylarsoftzmq.datalibrary import DataLibrary
 
 class RequestMonitor(QtCore.QObject):
     # This class is responsible for monitoring the progress
@@ -37,6 +38,7 @@ class EventManager( QtGui.QWidget ):
         self.setupUI()
         self.zmqclient = EventClient(sshusername="tmw",offline_test=True) # ZMQ client for requestig LArSoft data
         self.requests = [] # list containing ( Request, RequestMonitor )
+        self.library = DataLibrary()
         # setup eventtree
         column = 0
         self.eventTree.setColumnCount(2)
@@ -66,14 +68,15 @@ class EventManager( QtGui.QWidget ):
                            int(self.input_nevents.text()),
                            productlist )
         # check if we already have it
-        ranbefore = False
-        if ranbefore:
-            pass
-        else:
-            # register in tree
-            self.addRequestToTreeWidget( request )
+        if not self.input_reload.isChecked():
+            nnewproducts = self.library.removeDuplicatesFromRequest( request )
+            if nnewproducts==0:
+                return
+    
+        # register in tree
+        self.addRequestToTreeWidget( request )
+
         # send it over to pylarsoftzmq
-        # launch
         self.zmqclient.processRequest( request )
 
         # monitor request
@@ -93,8 +96,9 @@ class EventManager( QtGui.QWidget ):
         # get data. remove requests from queue
         for (request, reqmon, reqthread) in self.requests:
             if reqmon.isFinished:
+                self.library.addRequestData( request )
                 self.requests.remove( (request, reqmon, reqthread) )
-        print "Event request finished. Remaning: ",len(self.requests)
+                print "Event request finished. Remaning: ",len(self.requests)
 
     def addRequestToTreeWidget( self, request ):
         # break down by file and event
@@ -112,25 +116,28 @@ class EventManager( QtGui.QWidget ):
             if item_key not in self.et_eventitems:
                 self.et_eventitems[item_key] = QtGui.QTreeWidgetItem( self.et_fileitems[filename], ["Run %d, Event %d"%(run_id, event_id)] )
                 self.et_eventitems[item_key].setExpanded(True)
-            for dp in request.dataproductlist:
+            eventdata = request.data[(run_id, event_id)]
+            for name,product in eventdata.dataproducts.items():
                 if item_key not in self.et_dataproducts:
                     self.et_dataproducts[item_key] = {}
-                self.et_dataproducts[item_key][dp] = QtGui.QTreeWidgetItem( self.et_eventitems[item_key], [dp,"0.0% complete"],QtCore.Qt.DisplayRole )
-                self.et_dataproducts[item_key][dp].setExpanded(True)
+                if name not in self.et_dataproducts[item_key]:
+                    self.et_dataproducts[item_key][name] = QtGui.QTreeWidgetItem( self.et_eventitems[item_key], [name,"0.0% complete"],QtCore.Qt.DisplayRole )
+                    self.et_dataproducts[item_key][name].setExpanded(True)
+                else:
+                    # rerunning. just reset counter.
+                    self.et_dataproducts[item_key][name].setText(1, "0.0% complete" )
 
     def updateFromMonitor( self, request ):
         print "Req. Monitor wants to update.",id(request)
-        print request.data
         for ievent in xrange( request.first_event, request.first_event+request.nevents ):
-            for product in request.dataproductlist:
-                event_data = request.data[ ( request.first_run, ievent ) ]
-                dataproduct = event_data.dataproducts[product]
-                if dataproduct==None:
-                    continue
-                pct = dataproduct.getPercentComplete()
-                print product," ",pct
-                item_key = ( request.filename, request.first_run, ievent )
-                self.et_dataproducts[ item_key ][ product ].setText( 1, "%.1f%% complete"%(pct))
+            for event, eventdata in request.data.items():
+                for name,product in eventdata.dataproducts.items():
+                    if product==None:
+                        continue
+                    pct = product.getPercentComplete()
+                    item_key = ( request.filename, request.first_run, ievent )
+                    print name,pct
+                    self.et_dataproducts[ item_key ][ name ].setText( 1, "%.1f%% complete"%(pct))
 
     def setupUI(self):
         layout = QtGui.QVBoxLayout()
@@ -156,12 +163,14 @@ class EventManager( QtGui.QWidget ):
         self.input_first_run = QtGui.QLineEdit("1")
         self.input_first_event = QtGui.QLineEdit("1")
         self.input_nevents = QtGui.QLineEdit("1")
+        self.input_reload = QtGui.QCheckBox("Reload events")
         range_layout.addWidget( range_numlabel )
         range_layout.addWidget( self.input_nevents )
         range_layout.addWidget( range_runlabel )
         range_layout.addWidget( self.input_first_run )
         range_layout.addWidget( range_evtlabel )
         range_layout.addWidget( self.input_first_event )
+        range_layout.addWidget( self.input_reload )
         self.rangeWidget.setLayout( range_layout )
         layout.addWidget( self.rangeWidget )
 
