@@ -13,12 +13,20 @@ class DataProducts:
         self.chunks = {}
         self.array = None
         self.complete = False
+        self.compression = None
     def getarray(self):
         if self.array==None:
+            # reassmble data
             data_stream = ""
             for n in xrange(0,nchunks):
-                data_stream += event_chunks[n]
-                data = cStringIO.StringIO( data_stream )
+                if self.compression==None:
+                    data_stream += event_chunks[n]
+                elif self.compression=="lz":
+                    data_stream += lz4.loads( event_chunks[n] )
+                else:
+                    raise RuntimeError('unrecognized compression option "%s"'%(self.compression))
+            # convert into numpy array
+            data = cStringIO.StringIO( data_stream )
             self.array = np.load( data )
         return self.array
     def getPercentComplete(self):
@@ -76,7 +84,17 @@ def request_event( socket, request ):
     request_firstrun = b"%d"%(request.first_run)
     request_firstevent = b"%d"%(request.first_event)
     request_nevents = b"%d"%(request.nevents)
-    socket.send_multipart([request_file, request_firstrun, request_firstevent, request_nevents])
+    product_set = []
+    for event,eventdata in request.data.items():
+        for name,product in eventdata.dataproducts:
+            if name not in product_set:
+                product_set.append( name )
+    request_products=""
+    for product in product_set:
+        request_products += product
+        #if product!=product_set[-1]:
+        #    += ":"
+    socket.send_multipart([request_file, request_firstrun, request_firstevent, request_nevents,request_products])
     reply = socket.recv_multipart()
     if reply[0]=="LARSOFT_LAUNCHED":
         print "Request received. Retreiving data..."
@@ -84,30 +102,40 @@ def request_event( socket, request ):
         print "Nothing received"
         return None
 
-    # get event data
+    # time transfer
     tstart = time.time()
-    while not request.getfulfilled():
-        socket.send_multipart([b"REQUEST_EVENT"])
-        msg = socket.recv_multipart()
-        if msg[0]=="DONE":
-            print "We're done."
-            break
-        elif msg[0]=="EMPTY_QUEUE":
-            time.sleep(1)
-            continue
-        elif "EVENTINFO:" in msg[0]:
-            print "Server wants to send an event.: ",msg[0]
-            # get event in chunks
-            event_name = msg[0].split(":")[1]
-            event_runid = msg[0].split(":")[2]
-            event_eventid = msg[0].split(":")[3]
-            compression = msg[0].split(":")[4]
-            event_data = request.data[ (event_runid, event_eventid ) ]
 
-            # get event data products
-            dataproduct = "RawDigits"
-            event_data.data_nchunks[ dataproduct ] = int(msg[0].split(":")[5])
-            nchunks = event_data.data_nchunks[ dataproduct ]
+    # loop over events, dataproducts in request
+    for eventid, eventdata in request.data.items():
+        for name,product in eventdata.dataproducts.items():
+            complete = False
+            if product!=None and product.complete==True:
+                complete = True
+            while not complete:
+                # ask for event data product
+                socket.send_multipart([b"REQUEST_EVENT",b"%s"%(name)])
+                msg = socket.recv_multipart()
+                if msg[0]=="DONE":
+                    print "Finished sending ",eventid,name
+                    break
+                elif msg[0]=="EMPTY_QUEUE":
+                    time.sleep(1)
+                    continue
+                elif "EVENTINFO:" in msg[0]:
+                    print "Server wants to send an event.: ",msg[0]
+                    # get event in chunks
+                    event_name = msg[0].split(":")[1]
+                    event_runid = msg[0].split(":")[2]
+                    event_eventid = msg[0].split(":")[3]
+                    event_product = msg[0].split(":")[4]
+                    compression = msg[0].split(":")[5]
+                    event_data = request.data[ (event_runid, event_eventid ) ]
+
+                    # get event data products
+                    nchunks = int(msg[0].split(":")[6])
+                    event_data.dataproducts[ event_product ]
+
+                    nchunks = event_data.data_nchunks[ dataproduct ]
             data = DataProduct( "RawDigits", nchunks )
             while len(data.chunks)<nchunks:
                 for n in xrange(0,nchunks):
@@ -165,6 +193,7 @@ class EventClient:
         self.servers = []
         self.timeout = timeout
         self.requests = [] # list containing (Request, Thread) pairs
+        self.offline_test = offline_test
         for server in server_list:
             if offline_test:
                 continue # skip for offline test
@@ -190,10 +219,18 @@ class EventClient:
         self.requests.append( (requests,thread) )
         
     def processRequest( self, request ):
-        #thread = threading.Thread( target=request_event, args=(self.socket, request ) )
-        #thread.start()
         #self.requests.append( (requests,thread) )
-        thread = threading.Thread( target=dummy_request, args=(self.socket, request ) )
+        if offline_request:
+            thread = threading.Thread( target=dummy_request, args=(self.socket, request ) )
+        else:
+            thread = threading.Thread( target=request_event, args=(self.socket, request ) )
         thread.start()
         #self.requests.append( (requests,thread) )
         
+
+if __name__=="__main__":
+    client = EventClient( shhusername="tmw" )
+    request = Request( "/uboone/data/users/tmw/chromasim_data/single_gen_uboone.root", 
+                       1, 1, 1, 
+                       ["OpticalRawDigits"] )
+    client.processRequest( request )
