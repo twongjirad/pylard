@@ -22,10 +22,10 @@ class RequestMonitor(QtCore.QObject):
     def monitorRequestStatus(self):
         requestfinished = False
         while not requestfinished:
-            print "checking request status", self.request.fulfilled, id(self.request)
+            print "checking request status", self.request.finish_thread, id(self.request)
             #requestfinished, completioninfo  = self.zmqclient.getRequestStatus( self.request )
             #self.updateTreeWidget( self.request )
-            requestfinished = self.request.fulfilled
+            requestfinished = self.request.finish_thread
             self.monitorupdate.emit()
             time.sleep(1)
 
@@ -36,7 +36,7 @@ class EventManager( QtGui.QWidget ):
     def __init__(self):
         super( EventManager, self ).__init__()
         self.setupUI()
-        self.zmqclient = EventClient(sshusername="tmw",offline_test=True) # ZMQ client for requestig LArSoft data
+        self.zmqclient = EventClient(sshusername="tmw",offline_test=False) # ZMQ client for requestig LArSoft data
         self.requests = [] # list containing ( Request, RequestMonitor )
         self.library = DataLibrary()
         # setup eventtree

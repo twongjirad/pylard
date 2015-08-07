@@ -18,4 +18,5 @@ import pylard.pylardisplay as pd
 # (6) 5th level: classification, energy
 
 pd.run_daefile( "microboone_32pmts_nowires_cryostat.dae" )
+#pd.run_daefile( "nudot.dae" )
 #eventzmq = larzmq.EventServer()
