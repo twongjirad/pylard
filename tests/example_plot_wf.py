@@ -8,7 +8,9 @@ from pylard.pylardata.wfopdata import WFOpData
 app = QtGui.QApplication([])
 
 #  expects 'raw_wf_tree'
-fname='/Users/twongjirad/working/uboone/data/FlasherData_080115/wf_run005.root'
+#fname='/Users/twongjirad/working/uboone/data/FlasherData_080115/wf_run002.root'
+fname='/Users/twongjirad/working/uboone/data/FlasherData_080715/wf_run004.root'
+#fname='/Users/twongjirad/working/uboone/data/FlasherData_080115/wf_run005.root'
 
 opdata = WFOpData( fname )
 
