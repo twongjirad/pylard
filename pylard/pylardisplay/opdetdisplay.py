@@ -158,7 +158,15 @@ class OpDetDisplay(QtGui.QWidget) :
                 pos = getPosFromID( ipmt )
                 self.pmtspot.append( {"pos":(pos[2],pos[1]), "size":25, 'pen':{'color':(0,0,255),'width':2}, 'brush':col, 'symbol':'s'} )
         self.pmtdiagram.setData( self.pmtspot )
-        
+
+        # axis!
+        ax = self.plot.getAxis('bottom')
+        ax.setHeight(20)
+        xStyle = {'color':'#FFFFFF','font-size':'14pt'}
+        ax.setLabel('64 MHz Sample Tick',**xStyle)
+        ay = self.plot.getAxis('left')
+        yStyle = {'color':'#FFFFFF','font-size':'14pt'}
+        ay.setLabel('PMT Channel Number',**yStyle)
 
 
     def definePMTdiagram(self):
