@@ -62,7 +62,7 @@ class OpDetDisplay(QtGui.QWidget) :
         self.start_frame  =  QtGui.QLineEdit("%d"%(self.first_frame))
         self.start_sample = QtGui.QLineEdit("0")
         self.end_frame  =  QtGui.QLineEdit("%d"%(self.first_frame))
-        self.end_sample = QtGui.QLineEdit("1000")
+        self.end_sample = QtGui.QLineEdit("2000")
         self.set_xaxis = QtGui.QPushButton("Re-plot!")
 
         self.lay_inputs.addWidget( QtGui.QLabel("Min. Frame"), 1, 0 )
@@ -161,7 +161,7 @@ class OpDetDisplay(QtGui.QWidget) :
 
         # axis!
         ax = self.plot.getAxis('bottom')
-        ax.setHeight(20)
+        ax.setHeight(30)
         xStyle = {'color':'#FFFFFF','font-size':'14pt'}
         ax.setLabel('64 MHz Sample Tick',**xStyle)
         ay = self.plot.getAxis('left')
