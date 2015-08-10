@@ -121,6 +121,7 @@ class OpDetDisplay(QtGui.QWidget) :
         offset = 1.0
         if self.collapse.isChecked():
             offset = 0.0
+            scaledown = 1.0
             
         for ipmt in xrange(0,self.opdata.opdetdigi.shape[1]):
             if ipmt in getPMTIDList():
@@ -144,7 +145,7 @@ class OpDetDisplay(QtGui.QWidget) :
             bnds[1] = tmp
 
         self.pmtspot = []
-        for ich in xrange(0,self.opdata.opdetdigi.shape[1]):
+        for ich in xrange(self.opdata.opdetdigi.shape[1],-1,-1):
             if ich>=36:
                 continue
             maxamp = np.max( self.opdata.opdetdigi[bnds[0]:bnds[1],ich] )-2048.0
@@ -161,12 +162,15 @@ class OpDetDisplay(QtGui.QWidget) :
 
         # axis!
         ax = self.plot.getAxis('bottom')
-        ax.setHeight(20)
-        xStyle = {'color':'#FFFFFF','font-size':'14pt'}
+        ax.setHeight(30)
+        xStyle = {'color':'#FFFFFF','font-size':'12pt'}
         ax.setLabel('64 MHz Sample Tick',**xStyle)
         ay = self.plot.getAxis('left')
-        yStyle = {'color':'#FFFFFF','font-size':'14pt'}
-        ay.setLabel('PMT Channel Number',**yStyle)
+        yStyle = {'color':'#FFFFFF','font-size':'12pt'}
+        if self.collapse.isChecked():
+            ay.setLabel('ADC counts - 2048',**yStyle)
+        else:
+            ay.setLabel('PMT Channel Number',**yStyle)
 
 
     def definePMTdiagram(self):
