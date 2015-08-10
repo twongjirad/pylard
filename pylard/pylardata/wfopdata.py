@@ -59,11 +59,10 @@ class WFOpData( OpDataPlottable ):
         # definie new event range
         self.event_range = [ start, end ]
         # we find position in tree
-        start = self.searchEntryHistory( start )
-        stop = self.scanForEvent( end+1 )
-        print "start/stop entry in tree: ",start,stop
-        numpy_rec_array= tree2rec( self.ttree, selection="event>=%d && event<=%d"%(self.event_range[0], self.event_range[1]), start=start, stop=stop )
-        #numpy_rec_array= tree2rec( self.ttree )
+        start_entry = self.searchEntryHistory( start )
+        stop_entry = self.scanForEvent( end+1 )
+        print "start/stop entry in tree: ",start_entry,stop_entry
+        numpy_rec_array= tree2rec( self.ttree, selection="event>=%d && event<=%d"%(self.event_range[0], self.event_range[1]), start=start_entry, stop=stop_entry )
         self.wf_df = pd.DataFrame(numpy_rec_array)
         print "Time to load: ",time.time()-s
 
