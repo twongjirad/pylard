@@ -9,8 +9,8 @@ class WFOpData( OpDataPlottable ):
     def __init__(self,inputfile):
         super(WFOpData, self).__init__()
         self.fname = inputfile
-        print "Loading file into data frame ..."
-        # find first event number
+        print "Loading wf (vector<short>) from 'raw_wf_tree' into pandas data frame ..."
+        # find first event number, define first entry range
         self.ttree = ROOT.TChain('raw_wf_tree')
         self.ttree.Add( self.fname )
         self.tree_entry = 0
@@ -20,9 +20,6 @@ class WFOpData( OpDataPlottable ):
         self.entry_points = {}
         self.entry_points[ self.first_event ] = self.tree_entry
 
-        #self.numpy_rec_array = root2array(self.fname,'raw_wf_tree')
-        #numpy_rec_array = tree2rec( self.ttree, selection="event>=%d && event<=%d"%(self.event_range[0], self.event_range[1]) )
-        #self.wf_df = pd.DataFrame(self.numpy_rec_array)
         self.loadEventRange( self.event_range[0], self.event_range[1] )
         self.nsamples = len(self.wf_df['wf'][0])
         self.opdetdigi = np.ones( (self.nsamples,48) )*2048.0
@@ -42,8 +39,6 @@ class WFOpData( OpDataPlottable ):
         wf1 = q['wf'][q.first_valid_index()]
         self.opdetdigi[:len(wf1),39] = wf1[:self.opdetdigi.shape[0]]
 
-        
-        
     def loadEventRange( self, start, end ):
         # load event range from tree
         s = time.time()
@@ -77,8 +72,6 @@ class WFOpData( OpDataPlottable ):
                 self.entry_points[ self.ttree.event ] = entry
                 break
         return entry
-        
-        
             
     def searchEntryHistory(self, event ):
         # searches entry history, telling the best start entry to scan given past history
