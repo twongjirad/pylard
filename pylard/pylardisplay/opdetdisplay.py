@@ -43,14 +43,18 @@ class OpDetDisplay(QtGui.QWidget) :
         self.event = QtGui.QLineEdit("0")     # event number
         self.slot  = QtGui.QLineEdit("5")     # slot number
         self.collapse = QtGui.QRadioButton()  # collapse onto one another
+        self.collapse.setChecked(False)
         self.prev_event = QtGui.QPushButton("Previous")
         self.next_event = QtGui.QPushButton("Next")
+        self.adc_scaledown = QtGui.QLineEdit("100.0")
         self.lay_inputs.addWidget( QtGui.QLabel("Event"), 0, 0 )
         self.lay_inputs.addWidget( self.event, 0, 1 )
         self.lay_inputs.addWidget( QtGui.QLabel("FEM Slot"), 0, 2 )
         self.lay_inputs.addWidget( self.slot, 0, 3 )
         self.lay_inputs.addWidget( QtGui.QLabel("Overlay Mode"), 0, 4 )
         self.lay_inputs.addWidget( self.collapse, 0, 5 )
+        self.lay_inputs.addWidget( QtGui.QLabel("ADC scale-down"), 0, 6 )
+        self.lay_inputs.addWidget( self.adc_scaledown, 0, 7 )
         self.lay_inputs.addWidget( self.prev_event, 0, 10 )
         self.lay_inputs.addWidget( self.next_event, 0, 11 )
 
@@ -110,17 +114,24 @@ class OpDetDisplay(QtGui.QWidget) :
         xmin = (sframe-self.first_frame)*self.ticsperframe + ssample
         xmax = (eframe-self.first_frame)*self.ticsperframe + esample
 
+        scaledown = float( self.adc_scaledown.text() )
+        
+
         self.plot.clear()
+        offset = 1.0
+        if self.collapse.isChecked():
+            offset = 0.0
+            
         for ipmt in xrange(0,self.opdata.opdetdigi.shape[1]):
             if ipmt in getPMTIDList():
                 # PMT
-                self.plot.plot( self.opdata.opdetdigi[:,ipmt]-2045.0+ipmt*1000, pen=(255,255,255), name="PMT%d"%(ipmt))
+                self.plot.plot( (self.opdata.opdetdigi[:,ipmt]-2048.0)/scaledown+ipmt*offset, pen=(255,255,255), name="PMT%d"%(ipmt))
             elif ipmt in getPaddleIDList():
                 # PADDLE
-                self.plot.plot( self.opdata.opdetdigi[:,ipmt]-2045.0+ipmt*1000, pen=(0,0,255), name="PMT%d"%(ipmt))
+                self.plot.plot( (self.opdata.opdetdigi[:,ipmt]-2048.0)/scaledown+ipmt*offset, pen=(0,0,255), name="Paddle%d"%(ipmt))
             else:
                 # LOGIC
-                self.plot.plot( self.opdata.opdetdigi[:,ipmt]-2045.0+ipmt*1000, pen=(0,255,0), name="PMT%d"%(ipmt))
+                self.plot.plot( (self.opdata.opdetdigi[:,ipmt]-2048.0)/scaledown+ipmt*offset, pen=(0,255,0), name="Logic%d"%(ipmt))
         self.plot.setXRange(xmin,xmax,update=True)
         self.plot.addItem( self.time_range )
 
