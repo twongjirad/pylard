@@ -39,30 +39,38 @@ class OpDetDisplay(QtGui.QWidget) :
         self.last_frame = 0
         self.ticsperframe = opdata.nsamples
         
-        self.event = QtGui.QLineEdit("0")
-        self.slot  = QtGui.QLineEdit("5")
-        self.start_frame  =  QtGui.QLineEdit("%d"%(self.first_frame))
-        self.start_sample = QtGui.QLineEdit("0")
-        self.end_frame  =  QtGui.QLineEdit("%d"%(self.first_frame))
-        self.end_sample = QtGui.QLineEdit("1000")
-        self.set_xaxis = QtGui.QPushButton("Plot!")
-
+        # Plot options
+        self.event = QtGui.QLineEdit("0")     # event number
+        self.slot  = QtGui.QLineEdit("5")     # slot number
+        self.collapse = QtGui.QRadioButton()  # collapse onto one another
+        self.prev_event = QtGui.QPushButton("Previous")
+        self.next_event = QtGui.QPushButton("Next")
         self.lay_inputs.addWidget( QtGui.QLabel("Event"), 0, 0 )
         self.lay_inputs.addWidget( self.event, 0, 1 )
         self.lay_inputs.addWidget( QtGui.QLabel("FEM Slot"), 0, 2 )
         self.lay_inputs.addWidget( self.slot, 0, 3 )
-        
-        self.lay_inputs.addWidget( QtGui.QLabel("X Range: min"), 0, 4 )
-        self.lay_inputs.addWidget( QtGui.QLabel("Frame"), 0, 5 )
-        self.lay_inputs.addWidget( self.start_frame, 0, 6 )
-        self.lay_inputs.addWidget( QtGui.QLabel("Sample"), 0, 7 )
-        self.lay_inputs.addWidget( self.start_sample,0,8)
-        self.lay_inputs.addWidget( QtGui.QLabel("max"), 0, 9 )
-        self.lay_inputs.addWidget( QtGui.QLabel("Frame"), 0, 10 )
-        self.lay_inputs.addWidget( self.end_frame, 0, 11 )
-        self.lay_inputs.addWidget( QtGui.QLabel("Sample"), 0, 12 )
-        self.lay_inputs.addWidget( self.end_sample, 0, 13 )
-        self.lay_inputs.addWidget( self.set_xaxis, 0, 14 )
+        self.lay_inputs.addWidget( QtGui.QLabel("Overlay Mode"), 0, 4 )
+        self.lay_inputs.addWidget( self.collapse, 0, 5 )
+        self.lay_inputs.addWidget( self.prev_event, 0, 10 )
+        self.lay_inputs.addWidget( self.next_event, 0, 11 )
+
+        # axis options
+        self.start_frame  =  QtGui.QLineEdit("%d"%(self.first_frame))
+        self.start_sample = QtGui.QLineEdit("0")
+        self.end_frame  =  QtGui.QLineEdit("%d"%(self.first_frame))
+        self.end_sample = QtGui.QLineEdit("1000")
+        self.set_xaxis = QtGui.QPushButton("Re-plot!")
+
+        self.lay_inputs.addWidget( QtGui.QLabel("Min. Frame"), 1, 0 )
+        self.lay_inputs.addWidget( self.start_frame, 1, 1 )
+        self.lay_inputs.addWidget( QtGui.QLabel("Min. Sample"), 1, 2 )
+        self.lay_inputs.addWidget( self.start_sample,1,3)
+        self.lay_inputs.addWidget( QtGui.QLabel("Max. Frame"), 1, 4 )
+        self.lay_inputs.addWidget( self.end_frame, 1, 5 )
+        self.lay_inputs.addWidget( QtGui.QLabel("Max. Sample"), 1, 6 )
+        self.lay_inputs.addWidget( self.end_sample, 1, 10 )
+        self.lay_inputs.addWidget( self.set_xaxis, 1, 11 )
+
 
         # range selections
         self.time_range = pg.LinearRegionItem(values=[50,150], orientation=pg.LinearRegionItem.Vertical)
@@ -73,6 +81,8 @@ class OpDetDisplay(QtGui.QWidget) :
 
         # connect
         self.set_xaxis.clicked.connect( self.plotData )
+        self.next_event.clicked.connect( self.nextEvent )
+        self.prev_event.clicked.connect( self.prevEvent )
         
     def plotData( self ):
 
@@ -154,3 +164,25 @@ class OpDetDisplay(QtGui.QWidget) :
 
 
         
+    def nextEvent(self):
+        evt = int(self.event.text())
+        slot = int(self.slot.text())
+        try:
+            self.opdata.getEvent( evt+1, slot=slot )
+            self.event.setText("%d"%(evt+1))
+        except:
+            self.opdata.getEvent( evt, slot=slot )
+        self.plotData()
+
+    def prevEvent(self):
+        evt = int(self.event.text())
+        slot = int(self.slot.text())
+        try:
+            self.opdata.getEvent( evt-1, slot=slot )
+            self.event.setText("%d"%(evt-1))
+        except:
+            self.opdata.getEvent( evt, slot=slot )
+        self.plotData()
+            
+            
+            

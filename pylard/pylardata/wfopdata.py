@@ -24,6 +24,9 @@ class WFOpData( OpDataPlottable ):
             wf = np.array(ch_df['wf'].values[0])
             print ch,wf,self.opdetdigi.shape[0],len(wf)
             self.opdetdigi[:len(wf),ch] = wf[:self.opdetdigi.shape[0]]
+        q = self.wf_df.query('event==%d and slot==6 and ch==39'%(eventid)) # hack for flasher
+        wf1 = q['wf'][q.first_valid_index()]
+        self.opdetdigi[:len(wf1),39] = wf1[:self.opdetdigi.shape[0]]
 
         
         
