@@ -75,13 +75,15 @@ class OpDetDisplay(QtGui.QWidget) :
         self.lay_inputs.addWidget( self.end_sample, 1, 10 )
         self.lay_inputs.addWidget( self.set_xaxis, 1, 11 )
 
-
         # range selections
         self.time_range = pg.LinearRegionItem(values=[50,150], orientation=pg.LinearRegionItem.Vertical)
         self.plot.addItem( self.time_range )
 
         # diagram objects
         self.definePMTdiagram()
+
+        # other options
+        self.channellist = None # when not None, only draw channels in this list
 
         # connect
         self.set_xaxis.clicked.connect( self.plotData )
@@ -124,6 +126,10 @@ class OpDetDisplay(QtGui.QWidget) :
             scaledown = 1.0
             
         for ipmt in xrange(0,self.opdata.opdetdigi.shape[1]):
+
+            if self.channellist is not None and ipmt not in self.channellist:
+                continue
+
             if ipmt in getPMTIDList():
                 # PMT
                 self.plot.plot( (self.opdata.opdetdigi[:,ipmt]-2048.0)/scaledown+ipmt*offset, pen=(255,255,255), name="PMT%d"%(ipmt))
@@ -154,7 +160,10 @@ class OpDetDisplay(QtGui.QWidget) :
             col = self.pmtscale.colorMap().map( (maxamp)/2048.0 )
             if ipmt in getPMTIDList():
                 pos = getPosFromID(ipmt )
-                self.pmtspot.append( {"pos":(pos[2],pos[1]), "size":30, 'pen':{'color':'w','width':2}, 'brush':col, 'symbol':'o'} )
+                bordercol = (255,255,255,255)
+                if self.channellist is not None and ipmt not in self.channellist:
+                    bordercol = (192,192,192,70)
+                self.pmtspot.append( {"pos":(pos[2],pos[1]), "size":30, 'pen':{'color':bordercol,'width':2}, 'brush':col, 'symbol':'o'} )
             elif ipmt in getPaddleIDList():
                 pos = getPosFromID( ipmt )
                 self.pmtspot.append( {"pos":(pos[2],pos[1]), "size":25, 'pen':{'color':(0,0,255),'width':2}, 'brush':col, 'symbol':'s'} )
@@ -208,5 +217,30 @@ class OpDetDisplay(QtGui.QWidget) :
             self.opdata.getEvent( evt, slot=slot )
         self.plotData()
             
+    def getWaveformPlot(self):
+        return self.plot
+    
+    def getPMTdiagram(self):
+        return self.diagram
             
+    def gotoEvent( self, event ):
+        evt = int(self.event.text())
+        slot = int(self.slot.text())
+        try:
+            self.opdata.getEvent( event, slot=slot )
+            self.event.setText( "%d"%(event) )
+        except:
+            self.opdata.getEvent( evt, slot=slot )
+        self.plotData()
             
+    def setOverlayMode( self, mode=True ):
+        if mode==True:
+            self.collapse.setChecked(True)
+        else:
+            self.collapse.setChecked(False)
+
+    def selectChannels( self, chlist ):
+        self.channellist = chlist
+        
+    def plotChannels( self ):
+        self.channellist = None
