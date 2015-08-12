@@ -57,6 +57,7 @@ class OpDetDisplay(QtGui.QWidget) :
         self.lay_inputs.addWidget( self.adc_scaledown, 0, 7 )
         self.lay_inputs.addWidget( self.prev_event, 0, 10 )
         self.lay_inputs.addWidget( self.next_event, 0, 11 )
+        self.user_plot_item = [] # storage for user plot items
 
         # axis options
         self.start_frame  =  QtGui.QLineEdit("%d"%(self.first_frame))
@@ -141,6 +142,8 @@ class OpDetDisplay(QtGui.QWidget) :
                 self.plot.plot( (self.opdata.opdetdigi[:,ipmt]-2048.0)/scaledown+ipmt*offset, pen=(0,255,0), name="Logic%d"%(ipmt))
         self.plot.setXRange(xmin,xmax,update=True)
         self.plot.addItem( self.time_range )
+        for useritem in self.user_plot_item:
+            self.plot.addItem( useritem )
 
         # ----------------------------------------------------
         # diagram object
@@ -162,11 +165,14 @@ class OpDetDisplay(QtGui.QWidget) :
                 pos = getPosFromID(ipmt )
                 bordercol = (255,255,255,255)
                 if self.channellist is not None and ipmt not in self.channellist:
-                    bordercol = (192,192,192,70)
+                    bordercol = (192,192,192,50)
                 self.pmtspot.append( {"pos":(pos[2],pos[1]), "size":30, 'pen':{'color':bordercol,'width':2}, 'brush':col, 'symbol':'o'} )
             elif ipmt in getPaddleIDList():
                 pos = getPosFromID( ipmt )
-                self.pmtspot.append( {"pos":(pos[2],pos[1]), "size":25, 'pen':{'color':(0,0,255),'width':2}, 'brush':col, 'symbol':'s'} )
+                bordercol = (0,0,255,255)
+                if self.channellist is not None and ipmt not in self.channellist:
+                    bordercol = (0,0,255,50)
+                self.pmtspot.append( {"pos":(pos[2],pos[1]), "size":25, 'pen':{'color':bordercol,'width':2}, 'brush':col, 'symbol':'s'} )
         self.pmtdiagram.setData( self.pmtspot )
 
         # axis!
@@ -244,3 +250,9 @@ class OpDetDisplay(QtGui.QWidget) :
         
     def plotChannels( self ):
         self.channellist = None
+
+    def addUserWaveformItem( self, item ):
+        self.user_plot_item.append( item )
+
+    def clearUserWaveformItem( self, item ):
+        self.user_plot_item = []

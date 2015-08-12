@@ -19,12 +19,16 @@ class WFOpData( OpDataPlottable ):
         self.event_range = [self.first_event, self.first_event+100]
         self.entry_points = {}
         self.entry_points[ self.first_event ] = self.tree_entry
+        self.maxevent = None
 
         self.loadEventRange( self.event_range[0], self.event_range[1] )
         self.nsamples = len(self.wf_df['wf'][0])
         self.opdetdigi = np.ones( (self.nsamples,48) )*2048.0
 
     def getEvent( self, eventid, slot=5 ):
+        if self.maxevent is not None and eventid>=self.maxevent:
+            return False
+
         if eventid < self.event_range[0] or eventid > self.event_range[1]:
             self.loadEventRange( eventid-100, eventid+100 )
             
@@ -33,11 +37,12 @@ class WFOpData( OpDataPlottable ):
             if ch>=self.opdetdigi.shape[1]:
                 continue
             wf = np.array(ch_df['wf'].values[0])
-            print ch,wf,self.opdetdigi.shape[0],len(wf)
+            #print ch,wf,self.opdetdigi.shape[0],len(wf)
             self.opdetdigi[:len(wf),ch] = wf[:self.opdetdigi.shape[0]]
         q = self.wf_df.query('event==%d and slot==6 and ch==39'%(eventid)) # hack for flasher
         wf1 = q['wf'][q.first_valid_index()]
         self.opdetdigi[:len(wf1),39] = wf1[:self.opdetdigi.shape[0]]
+        return True
 
     def loadEventRange( self, start, end ):
         # load event range from tree
@@ -71,6 +76,8 @@ class WFOpData( OpDataPlottable ):
             else:
                 self.entry_points[ self.ttree.event ] = entry
                 break
+            if bytes==0:
+                self.maxevent = entry-1
         return entry
             
     def searchEntryHistory(self, event ):
@@ -95,6 +102,6 @@ class WFOpData( OpDataPlottable ):
                 pos = int(pos/2)
             elif event>oldevents[pos+1]:
                 pos = int((oldpos+pos)/2)
-            #print pos, oldevents[pos], " < ", event, " < ",oldevents[pos]
+            print pos, oldevents[pos], " < ", event, " < ",oldevents[pos]
         
         return self.entry_points[ oldevents[pos] ]
