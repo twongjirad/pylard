@@ -64,7 +64,7 @@ class OpDetDisplay(QtGui.QWidget) :
         self.start_frame  =  QtGui.QLineEdit("%d"%(self.first_frame))
         self.start_sample = QtGui.QLineEdit("0")
         self.end_frame  =  QtGui.QLineEdit("%d"%(self.first_frame))
-        self.end_sample = QtGui.QLineEdit("2000")
+        self.end_sample = QtGui.QLineEdit("%d"%(opdata.getSampleLength()))
         self.set_xaxis = QtGui.QPushButton("Re-plot!")
         self.draw_all = QtGui.QCheckBox()  # collapse onto one another
         self.draw_all.setChecked(False)
@@ -234,9 +234,13 @@ class OpDetDisplay(QtGui.QWidget) :
     def getPMTdiagram(self):
         return self.diagram
             
-    def gotoEvent( self, event ):
+    def gotoEvent( self, event, slot=None ):
         evt = int(self.event.text())
-        slot = int(self.slot.text())
+        if slot is None:
+            slot = int(self.slot.text())
+        else:
+            self.slot.setText("%d"%(slot))
+        
         try:
             self.opdata.getEvent( event, slot=slot )
             self.event.setText( "%d"%(event) )

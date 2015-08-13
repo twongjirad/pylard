@@ -5,13 +5,13 @@ from root_numpy import root2array, root2rec, tree2rec, array2root
 import ROOT
 import time
 
-class WFOpData( OpDataPlottable ):
+class RawDigitsOpData( OpDataPlottable ):
     def __init__(self,inputfile):
-        super(WFOpData, self).__init__()
+        super(RawDigitsOpData, self).__init__()
         self.fname = inputfile
-        print "Loading wf (vector<short>) from 'raw_wf_tree' into pandas data frame ..."
+        print "Loading adcs (vector<short>) from 'rawdigitwriter/RawData/OpDetWaveforms' into pandas data frame ..."
         # find first event number, define first entry range
-        self.ttree = ROOT.TChain('raw_wf_tree')
+        self.ttree = ROOT.TChain('rawdigitwriter/RawData/OpDetWaveforms')
         self.ttree.Add( self.fname )
         self.tree_entry = 0
         self.ttree.GetEntry(self.tree_entry)
@@ -22,7 +22,7 @@ class WFOpData( OpDataPlottable ):
         self.maxevent = None
 
         self.loadEventRange( self.event_range[0], self.event_range[1] )
-        self.nsamples = len(self.wf_df['wf'][0])
+        self.nsamples = len(self.wf_df['adcs'][0])
         self.opdetdigi = np.ones( (self.nsamples,48) )*2048.0
 
     def getSampleLength(self):
@@ -35,16 +35,17 @@ class WFOpData( OpDataPlottable ):
         if eventid < self.event_range[0] or eventid > self.event_range[1]:
             self.loadEventRange( eventid-100, eventid+100 )
             
-        q = self.wf_df.query('event==%d and slot==%d'%(eventid,slot))
-        for ch,ch_df in q.groupby('ch'):
+        q = self.wf_df.query('event==%d and opslot==%d'%(eventid,slot))
+        for ch,ch_df in q.groupby('opfemch'):
             if ch>=self.opdetdigi.shape[1]:
                 continue
-            wf = np.array(ch_df['wf'].values[0])
-            #print ch,wf,self.opdetdigi.shape[0],len(wf)
+            wf = np.array(ch_df['adcs'].values[0])
+            print ch,wf,self.opdetdigi.shape[0],len(wf)
             self.opdetdigi[:len(wf),ch] = wf[:self.opdetdigi.shape[0]]
-        q = self.wf_df.query('event==%d and slot==6 and ch==39'%(eventid)) # hack for flasher
-        wf1 = q['wf'][q.first_valid_index()]
-        self.opdetdigi[:len(wf1),39] = wf1[:self.opdetdigi.shape[0]]
+        # hack for flasher
+        #q = self.wf_df.query('event==%d and opslot==5 and opfemch==39'%(eventid)) 
+        #wf1 = q['adcs'][q.first_valid_index()]
+        #self.opdetdigi[:len(wf1),39] = wf1[:self.opdetdigi.shape[0]]
         return True
 
     def loadEventRange( self, start, end ):
