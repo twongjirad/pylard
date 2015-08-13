@@ -42,7 +42,7 @@ class OpDetDisplay(QtGui.QWidget) :
         # Plot options
         self.event = QtGui.QLineEdit("0")     # event number
         self.slot  = QtGui.QLineEdit("5")     # slot number
-        self.collapse = QtGui.QRadioButton()  # collapse onto one another
+        self.collapse = QtGui.QCheckBox()  # collapse onto one another
         self.collapse.setChecked(False)
         self.prev_event = QtGui.QPushButton("Previous")
         self.next_event = QtGui.QPushButton("Next")
@@ -57,6 +57,7 @@ class OpDetDisplay(QtGui.QWidget) :
         self.lay_inputs.addWidget( self.adc_scaledown, 0, 7 )
         self.lay_inputs.addWidget( self.prev_event, 0, 10 )
         self.lay_inputs.addWidget( self.next_event, 0, 11 )
+        self.last_clicked_channel = None
         self.user_plot_item = [] # storage for user plot items
 
         # axis options
@@ -65,6 +66,8 @@ class OpDetDisplay(QtGui.QWidget) :
         self.end_frame  =  QtGui.QLineEdit("%d"%(self.first_frame))
         self.end_sample = QtGui.QLineEdit("2000")
         self.set_xaxis = QtGui.QPushButton("Re-plot!")
+        self.draw_all = QtGui.QCheckBox()  # collapse onto one another
+        self.draw_all.setChecked(False)
 
         self.lay_inputs.addWidget( QtGui.QLabel("Min. Frame"), 1, 0 )
         self.lay_inputs.addWidget( self.start_frame, 1, 1 )
@@ -73,7 +76,9 @@ class OpDetDisplay(QtGui.QWidget) :
         self.lay_inputs.addWidget( QtGui.QLabel("Max. Frame"), 1, 4 )
         self.lay_inputs.addWidget( self.end_frame, 1, 5 )
         self.lay_inputs.addWidget( QtGui.QLabel("Max. Sample"), 1, 6 )
-        self.lay_inputs.addWidget( self.end_sample, 1, 10 )
+        self.lay_inputs.addWidget( self.end_sample, 1, 7 )
+        self.lay_inputs.addWidget( QtGui.QLabel("Draw all"), 1, 8 )
+        self.lay_inputs.addWidget( self.draw_all, 1, 9 )
         self.lay_inputs.addWidget( self.set_xaxis, 1, 11 )
 
         # range selections
@@ -84,7 +89,7 @@ class OpDetDisplay(QtGui.QWidget) :
         self.definePMTdiagram()
 
         # other options
-        self.channellist = None # when not None, only draw channels in this list
+        self.channellist = [] # when not None, only draw channels in this list
 
         # connect
         self.set_xaxis.clicked.connect( self.plotData )
@@ -128,18 +133,15 @@ class OpDetDisplay(QtGui.QWidget) :
             
         for ipmt in xrange(0,self.opdata.opdetdigi.shape[1]):
 
-            if self.channellist is not None and ipmt not in self.channellist:
+            if len(self.channellist)>0 and ipmt not in self.channellist and not self.draw_all.isChecked():
                 continue
+            
+            pencolor = self.getChanColor( ipmt )
+            if self.last_clicked_channel is not None and ipmt==self.last_clicked_channel:
+                pencolor = (0, 255, 255 )
 
-            if ipmt in getPMTIDList():
-                # PMT
-                self.plot.plot( (self.opdata.opdetdigi[:,ipmt]-2048.0)/scaledown+ipmt*offset, pen=(255,255,255), name="PMT%d"%(ipmt))
-            elif ipmt in getPaddleIDList():
-                # PADDLE
-                self.plot.plot( (self.opdata.opdetdigi[:,ipmt]-2048.0)/scaledown+ipmt*offset, pen=(0,0,255), name="Paddle%d"%(ipmt))
-            else:
-                # LOGIC
-                self.plot.plot( (self.opdata.opdetdigi[:,ipmt]-2048.0)/scaledown+ipmt*offset, pen=(0,255,0), name="Logic%d"%(ipmt))
+            self.plot.plot( (self.opdata.opdetdigi[:,ipmt]-2048.0)/scaledown+ipmt*offset, pen=pencolor, name="PMT%d"%(ipmt))
+
         self.plot.setXRange(xmin,xmax,update=True)
         self.plot.addItem( self.time_range )
         for useritem in self.user_plot_item:
@@ -154,6 +156,7 @@ class OpDetDisplay(QtGui.QWidget) :
             bnds[1] = tmp
 
         self.pmtspot = []
+
         for ich in xrange(self.opdata.opdetdigi.shape[1],-1,-1):
             if ich>=36:
                 continue
@@ -161,19 +164,21 @@ class OpDetDisplay(QtGui.QWidget) :
             ipmt = getPMTID( ich )-1
             #print "maxamp: id=",ipmt,' max=',maxamp
             col = self.pmtscale.colorMap().map( (maxamp)/2048.0 )
+            alpha = 255
+            if len(self.channellist)>0 and ipmt not in self.channellist:
+                alpha = 50
+            bordercol = self.getChanColor( ipmt, alpha=alpha )
+            if self.last_clicked_channel is not None and ipmt==self.last_clicked_channel:
+                bordercol = ( 0, 255, 255, alpha )
             if ipmt in getPMTIDList():
                 pos = getPosFromID(ipmt )
-                bordercol = (255,255,255,255)
-                if self.channellist is not None and ipmt not in self.channellist:
-                    bordercol = (192,192,192,50)
-                self.pmtspot.append( {"pos":(pos[2],pos[1]), "size":30, 'pen':{'color':bordercol,'width':2}, 'brush':col, 'symbol':'o'} )
+                self.pmtspot.append( {"pos":(pos[2],pos[1]), "size":30, 'pen':{'color':bordercol,'width':2}, 'brush':col, 'symbol':'o', 'data':{"id":ipmt,"highlight":False}} )
+
             elif ipmt in getPaddleIDList():
                 pos = getPosFromID( ipmt )
-                bordercol = (0,0,255,255)
-                if self.channellist is not None and ipmt not in self.channellist:
-                    bordercol = (0,0,255,50)
-                self.pmtspot.append( {"pos":(pos[2],pos[1]), "size":25, 'pen':{'color':bordercol,'width':2}, 'brush':col, 'symbol':'s'} )
-        self.pmtdiagram.setData( self.pmtspot )
+                self.pmtspot.append( {"pos":(pos[2],pos[1]), "size":25, 'pen':{'color':bordercol,'width':2}, 'brush':col, 'symbol':'s', 'data':{"id":ipmt,"highlight":False}} )
+
+        self.pmtdiagram.setData( self.pmtspot  )
 
         # axis!
         ax = self.plot.getAxis('bottom')
@@ -200,7 +205,7 @@ class OpDetDisplay(QtGui.QWidget) :
         self.pmtdiagram = pg.ScatterPlotItem(pxMode=False)
         self.pmtdiagram.addPoints( self.pmtspot )
         self.diagram.addItem( self.pmtdiagram ) 
-
+        self.pmtdiagram.sigClicked.connect( self.pmtDiagramClicked )
 
         
     def nextEvent(self):
@@ -246,13 +251,43 @@ class OpDetDisplay(QtGui.QWidget) :
             self.collapse.setChecked(False)
 
     def selectChannels( self, chlist ):
+        if type(chlist) is not list:
+            print "select channels with python list"
+            return
         self.channellist = chlist
         
-    def plotChannels( self ):
-        self.channellist = None
+    def plotAllChannels( self ):
+        self.channellist = []
 
     def addUserWaveformItem( self, item ):
         self.user_plot_item.append( item )
 
     def clearUserWaveformItem( self, item ):
         self.user_plot_item = []
+
+    def getChanColor( self, id, alpha=255 ):
+        if id<32:
+            return (255,255,255,alpha)
+        elif id>=32 and id<36:
+            return (0,0,255,alpha)
+        else:
+            return (0,255,0,alpha)
+        
+    def pmtDiagramClicked( self, plot, points ):
+        for p in points:
+            settings =  p.data()
+            if settings['id'] not in self.channellist:
+                p.setPen( (0, 255, 255, 255) )
+                self.channellist.append( settings['id'] )
+                self.last_clicked_channel = settings['id']
+            else:
+                if settings['id'] in self.channellist:
+                    self.channellist.remove( settings['id'] )
+                if len( self.channellist )==0:
+                    p.setPen( self.getChanColor( settings['id'], alpha=255 ) )
+                else:
+                    p.setPen( self.getChanColor( settings['id'], alpha=50 ) )
+                self.last_clicked_channel=None
+        self.plotData()
+
+
