@@ -40,7 +40,7 @@ class RawDigitsOpData( OpDataPlottable ):
             if ch>=self.opdetdigi.shape[1]:
                 continue
             wf = np.array(ch_df['adcs'].values[0])
-            print ch,wf,self.opdetdigi.shape[0],len(wf)
+            #print ch,wf,self.opdetdigi.shape[0],len(wf)
             self.opdetdigi[:len(wf),ch] = wf[:self.opdetdigi.shape[0]]
         # hack for flasher
         #q = self.wf_df.query('event==%d and opslot==5 and opfemch==39'%(eventid)) 

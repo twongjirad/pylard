@@ -2,5 +2,9 @@ import numpy as np
 
 class OpDataPlottable(object):
     def __init__(self):
-        self.opdetdigi = np.ones( (2000,48) )*2048.0
+        pass
+
+    def getData(self):
+        raise RuntimeError('need to overwrite this function')
+        return None
         

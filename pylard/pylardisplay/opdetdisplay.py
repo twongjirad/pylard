@@ -58,7 +58,7 @@ class OpDetDisplay(QtGui.QWidget) :
         self.lay_inputs.addWidget( self.prev_event, 0, 10 )
         self.lay_inputs.addWidget( self.next_event, 0, 11 )
         self.last_clicked_channel = None
-        self.user_plot_item = [] # storage for user plot items
+        self.user_plot_item = {} # storage for user plot items
 
         # axis options
         self.start_frame  =  QtGui.QLineEdit("%d"%(self.first_frame))
@@ -90,6 +90,8 @@ class OpDetDisplay(QtGui.QWidget) :
 
         # other options
         self.channellist = [] # when not None, only draw channels in this list
+        self.pedfunction = self.getpedestal
+
 
         # connect
         self.set_xaxis.clicked.connect( self.plotData )
@@ -131,7 +133,7 @@ class OpDetDisplay(QtGui.QWidget) :
             offset = 0.0
             scaledown = 1.0
             
-        for ipmt in xrange(0,self.opdata.opdetdigi.shape[1]):
+        for ipmt in xrange(0,self.opdata.getData( slot=int(self.slot.text() ) ).shape[1]):
 
             if len(self.channellist)>0 and ipmt not in self.channellist and not self.draw_all.isChecked():
                 continue
@@ -140,12 +142,17 @@ class OpDetDisplay(QtGui.QWidget) :
             if self.last_clicked_channel is not None and ipmt==self.last_clicked_channel:
                 pencolor = (0, 255, 255 )
 
-            self.plot.plot( (self.opdata.opdetdigi[:,ipmt]-2048.0)/scaledown+ipmt*offset, pen=pencolor, name="PMT%d"%(ipmt))
+            wfm = self.opdata.getData( slot=int(self.slot.text() ) )[:,ipmt]
+            self.plot.plot( (wfm-self.pedfunction(wfm))/scaledown+ipmt*offset, pen=pencolor, name="PMT%d"%(ipmt))
+            if ipmt in self.user_plot_item.keys():
+                for useritem in self.user_plot_item[ipmt]:
+                    self.plot.addItem( useritem )
 
         self.plot.setXRange(xmin,xmax,update=True)
         self.plot.addItem( self.time_range )
-        for useritem in self.user_plot_item:
-            self.plot.addItem( useritem )
+        if None in self.user_plot_item.keys():
+            for useritem in self.user_plot_item[None]:
+                self.plot.addItem( useritem )
 
         # ----------------------------------------------------
         # diagram object
@@ -157,13 +164,14 @@ class OpDetDisplay(QtGui.QWidget) :
 
         self.pmtspot = []
 
-        for ich in xrange(self.opdata.opdetdigi.shape[1],-1,-1):
+        for ich in xrange(self.opdata.getData( slot=int(self.slot.text() ) ).shape[1],-1,-1):
             if ich>=36:
                 continue
-            maxamp = np.max( self.opdata.opdetdigi[bnds[0]:bnds[1],ich] )-2048.0
+            wfm =  self.opdata.getData( slot=int(self.slot.text() ) )[bnds[0]:bnds[1],ich]
+            maxamp = np.max( wfm )-self.pedfunction(wfm)
             ipmt = getPMTID( ich )-1
             #print "maxamp: id=",ipmt,' max=',maxamp
-            col = self.pmtscale.colorMap().map( (maxamp)/2048.0 )
+            col = self.pmtscale.colorMap().map( (maxamp)/self.pedfunction(wfm) )
             alpha = 255
             if len(self.channellist)>0 and ipmt not in self.channellist:
                 alpha = 50
@@ -189,7 +197,7 @@ class OpDetDisplay(QtGui.QWidget) :
         ay = self.plot.getAxis('left')
         yStyle = {'color':'#FFFFFF','font-size':'14pt'}
         if self.collapse.isChecked():
-            ay.setLabel('ADC counts - 2048',**yStyle)
+            ay.setLabel('ADC counts - Pedestal',**yStyle)
         else:
             ay.setLabel('PMT Channel Number',**yStyle)
 
@@ -263,11 +271,13 @@ class OpDetDisplay(QtGui.QWidget) :
     def plotAllChannels( self ):
         self.channellist = []
 
-    def addUserWaveformItem( self, item ):
-        self.user_plot_item.append( item )
+    def addUserWaveformItem( self, item, ch=None ):
+        if ch not in self.user_plot_item.keys():
+            self.user_plot_item[ch] = []
+        self.user_plot_item[ ch ].append( item )
 
     def clearUserWaveformItem( self, item ):
-        self.user_plot_item = []
+        self.user_plot_item = {}
 
     def getChanColor( self, id, alpha=255 ):
         if id<32:
@@ -295,3 +305,5 @@ class OpDetDisplay(QtGui.QWidget) :
         self.plotData()
 
 
+    def getpedestal(self,wfm):
+        return wfm[0]
