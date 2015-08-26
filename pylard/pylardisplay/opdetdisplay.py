@@ -47,16 +47,20 @@ class OpDetDisplay(QtGui.QWidget) :
         self.prev_event = QtGui.QPushButton("Previous")
         self.next_event = QtGui.QPushButton("Next")
         self.adc_scaledown = QtGui.QLineEdit("100.0")
+        self.draw_all = QtGui.QCheckBox()  # collapse onto one another
+        self.draw_all.setChecked(False)
         self.lay_inputs.addWidget( QtGui.QLabel("Event"), 0, 0 )
         self.lay_inputs.addWidget( self.event, 0, 1 )
         self.lay_inputs.addWidget( QtGui.QLabel("FEM Slot"), 0, 2 )
         self.lay_inputs.addWidget( self.slot, 0, 3 )
-        self.lay_inputs.addWidget( QtGui.QLabel("Overlay Mode"), 0, 4 )
-        self.lay_inputs.addWidget( self.collapse, 0, 5 )
-        self.lay_inputs.addWidget( QtGui.QLabel("ADC scale-down"), 0, 6 )
-        self.lay_inputs.addWidget( self.adc_scaledown, 0, 7 )
-        self.lay_inputs.addWidget( self.prev_event, 0, 10 )
-        self.lay_inputs.addWidget( self.next_event, 0, 11 )
+        self.lay_inputs.addWidget( QtGui.QLabel("ADC scale-down"), 0, 4 )
+        self.lay_inputs.addWidget( self.adc_scaledown, 0, 5 )
+        self.lay_inputs.addWidget( QtGui.QLabel("Overlay Mode"), 0, 6 )
+        self.lay_inputs.addWidget( self.collapse, 0, 7 )
+        self.lay_inputs.addWidget( QtGui.QLabel("Draw all"), 0, 8 )
+        self.lay_inputs.addWidget( self.draw_all, 0, 9 )
+        self.lay_inputs.addWidget( self.prev_event, 0, 11 )
+        self.lay_inputs.addWidget( self.next_event, 0, 12 )
         self.last_clicked_channel = None
         self.user_plot_item = {} # storage for user plot items
 
@@ -66,8 +70,10 @@ class OpDetDisplay(QtGui.QWidget) :
         self.end_frame  =  QtGui.QLineEdit("%d"%(self.first_frame))
         self.end_sample = QtGui.QLineEdit("%d"%(opdata.getSampleLength()))
         self.set_xaxis = QtGui.QPushButton("Re-plot!")
-        self.draw_all = QtGui.QCheckBox()  # collapse onto one another
-        self.draw_all.setChecked(False)
+        self.draw_user_items = QtGui.QCheckBox()  # draw user products
+        self.draw_user_items.setChecked(True)
+        self.run_user_analysis = QtGui.QCheckBox()  # draw user products
+        self.run_user_analysis.setChecked(True)
 
         self.lay_inputs.addWidget( QtGui.QLabel("Min. Frame"), 1, 0 )
         self.lay_inputs.addWidget( self.start_frame, 1, 1 )
@@ -77,9 +83,11 @@ class OpDetDisplay(QtGui.QWidget) :
         self.lay_inputs.addWidget( self.end_frame, 1, 5 )
         self.lay_inputs.addWidget( QtGui.QLabel("Max. Sample"), 1, 6 )
         self.lay_inputs.addWidget( self.end_sample, 1, 7 )
-        self.lay_inputs.addWidget( QtGui.QLabel("Draw all"), 1, 8 )
-        self.lay_inputs.addWidget( self.draw_all, 1, 9 )
-        self.lay_inputs.addWidget( self.set_xaxis, 1, 11 )
+        self.lay_inputs.addWidget( QtGui.QLabel("Draw user items"), 1, 8 )
+        self.lay_inputs.addWidget( self.draw_user_items, 1, 9 )
+        self.lay_inputs.addWidget( QtGui.QLabel("Run user funcs."), 1, 10 )
+        self.lay_inputs.addWidget( self.run_user_analysis, 1, 11 )
+        self.lay_inputs.addWidget( self.set_xaxis, 1, 12 )
 
         # range selections
         self.time_range = pg.LinearRegionItem(values=[50,150], orientation=pg.LinearRegionItem.Vertical)
@@ -91,6 +99,10 @@ class OpDetDisplay(QtGui.QWidget) :
         # other options
         self.channellist = [] # when not None, only draw channels in this list
         self.pedfunction = self.getpedestal
+
+        # user analyses
+        self.user_analysis_femchproducts = {}
+        self.user_analyses = []
 
         # connect
         self.set_xaxis.clicked.connect( self.plotData )
@@ -169,7 +181,7 @@ class OpDetDisplay(QtGui.QWidget) :
             wfm =  self.opdata.getData( slot=int(self.slot.text() ) )[bnds[0]:bnds[1],ich]
             maxamp = np.max( wfm )-self.pedfunction(wfm,ich)
             ipmt = getPMTID( ich )-1
-            #print "maxamp: id=",ipmt,' max=',maxamp
+            #print "maxamp: id=",ipmt,' max=',maxamp,' ped=',self.pedfunction(wfm,ich)
             col = self.pmtscale.colorMap().map( (maxamp)/self.pedfunction(wfm,ich) )
             alpha = 255
             if len(self.channellist)>0 and ipmt not in self.channellist:
@@ -184,7 +196,6 @@ class OpDetDisplay(QtGui.QWidget) :
             elif ipmt in getPaddleIDList():
                 pos = getPosFromID( ipmt )
                 self.pmtspot.append( {"pos":(pos[2],pos[1]), "size":25, 'pen':{'color':bordercol,'width':2}, 'brush':col, 'symbol':'s', 'data':{"id":ipmt,"highlight":False}} )
-
         self.pmtdiagram.setData( self.pmtspot  )
 
         # axis!
@@ -304,9 +315,21 @@ class OpDetDisplay(QtGui.QWidget) :
         self.plotData()
 
 
-    def getpedestal(self,wfm,femch):
+    def getpedestal(self,wfm,femch=None):
         slot = int(self.slot.text())
-        return self.opdata.getPedestal( slot=slot )[femch]
+        #print "ped: ",self.opdata.getPedestal( slot=slot )
+        #raw_input()
+        if femch is not None:
+            return self.opdata.getPedestal( slot=slot )[femch]
+        else:
+            return self.opdata.getPedestal( slot=slot )
 
     def setPedestalFunction( self, pedfunc ):
         self.pedfunction = pedfunc
+
+    def addUserAnalysis( self, user_analysis ):
+        self.user_analyses.append( user_analysis )
+
+    def clearUserAnalyses( self ):
+        self.user_analyses = []
+        self.user_analysis_chproducts = {}
