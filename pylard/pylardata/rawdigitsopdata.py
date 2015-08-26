@@ -60,7 +60,7 @@ class RawDigitsOpData( OpDataPlottable ):
             samples = self.getData(slot=slot).shape[0]
             #print ch,wf
             self.getData(slot=slot)[:len(wf),ch] = wf[:samples]
-            self.getPedestal(slot=slot)[ch] = ped.getpedestal( wf[:samples], samples/20, 0.5 )
+            self.getPedestal(slot=slot)[ch] = ped.getpedestal( wf[:samples], samples/20, 1.0 )
 
         # hack for flasher
         #q = self.wf_df.query('event==%d and opslot==5 and opfemch==39'%(eventid)) 

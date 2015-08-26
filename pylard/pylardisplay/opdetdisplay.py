@@ -19,7 +19,8 @@ class OpDetDisplay(QtGui.QWidget) :
         #self.diagram = pg.ViewBox()
         self.diagram = pg.PlotItem(name="plot2")
         self.pmtscale =  pg.GradientEditorItem(orientation='bottom')
-
+        self.lastevent = None
+        self.newevent = True
 
         # main layout
         self.layout = QtGui.QGridLayout()
@@ -101,7 +102,7 @@ class OpDetDisplay(QtGui.QWidget) :
         self.pedfunction = self.getpedestal
 
         # user analyses
-        self.user_analysis_femchproducts = {}
+        self.user_analysis_products = []
         self.user_analyses = []
 
         # connect
@@ -113,7 +114,13 @@ class OpDetDisplay(QtGui.QWidget) :
 
         evt = int(self.event.text())
         slot = int(self.slot.text())
-        self.opdata.getEvent( evt, slot=slot )
+        if self.lastevent is None or (evt,slot)!=self.lastevent:
+            self.opdata.getEvent( evt, slot=slot )
+            self.lastevent = (evt,slot)
+            self.newevent = True
+        else:
+            print "old event: ",self.lastevent
+            self.newevent = False
         
         sframe = int(self.start_frame.text())
         eframe = int(self.end_frame.text())
@@ -161,9 +168,6 @@ class OpDetDisplay(QtGui.QWidget) :
 
         self.plot.setXRange(xmin,xmax,update=True)
         self.plot.addItem( self.time_range )
-        if None in self.user_plot_item.keys():
-            for useritem in self.user_plot_item[None]:
-                self.plot.addItem( useritem )
 
         # ----------------------------------------------------
         # diagram object
@@ -211,6 +215,40 @@ class OpDetDisplay(QtGui.QWidget) :
         else:
             ay.setLabel('PMT Channel Number',**yStyle)
 
+        # ----------------------------------------------------
+        # added user items
+
+        if self.draw_user_items.isChecked() and None in self.user_plot_item.keys():
+            for useritem in self.user_plot_item[None]:
+                self.plot.addItem( useritem )
+
+        # ----------------------------------------------------
+        # user analysis items
+        if self.run_user_analysis.isChecked():
+            # if new event: generate products
+            if self.newevent:
+                self.user_analysis_products = []
+                for userfunc in self.user_analyses:
+                    user_products = userfunc( self.opdata )
+                    for product in user_products:
+                        productok = True
+                        for k in ["femch","plotitem","screen"]:
+                            if k not in product:
+                                print "User analyss products needs to be a list of dicts with the following keys: 'femch', 'plotitem', 'screen'."
+                                productok = False
+                        if not productok:
+                            continue
+                        self.user_analysis_products.append( product )
+            # plot products
+            for product in self.user_analysis_products:
+                ch = product["femch"]
+                item = product["plotitem"]
+                if product["screen"]=="diagram":
+                    self.diagram.addItem( item )
+                elif product["screen"]=="waveform":
+                    self.plot.addItem( item )
+                else:
+                    print "unknonw user product screen option, '",product["screen"],"'. Valid choices are 'diagram' and 'waveform'"
 
     def definePMTdiagram(self):
         self.pmtspot = []

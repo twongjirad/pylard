@@ -3,6 +3,7 @@ import numpy as np
 
 def getpedestal( wfm, samplelength, var_threshold, verbose=False ):
     site = 0
+    pastpeds = []
     while True:
         start = np.maximum(0,site*samplelength)
         end = np.minimum(len(wfm),(site+1)*samplelength)
@@ -15,7 +16,11 @@ def getpedestal( wfm, samplelength, var_threshold, verbose=False ):
             if verbose:
                 print "pedestal used ",site,"sites. ave=",ave," var=",var
             return ave
+        else:
+            pastpeds.append( var )
         if end==len(wfm):
             break
         site += 1
-    return None
+    if verbose:
+        print "no quiet regions found!",pastpeds
+    return 2048.0
