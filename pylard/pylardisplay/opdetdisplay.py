@@ -92,7 +92,6 @@ class OpDetDisplay(QtGui.QWidget) :
         self.channellist = [] # when not None, only draw channels in this list
         self.pedfunction = self.getpedestal
 
-
         # connect
         self.set_xaxis.clicked.connect( self.plotData )
         self.next_event.clicked.connect( self.nextEvent )
@@ -143,7 +142,7 @@ class OpDetDisplay(QtGui.QWidget) :
                 pencolor = (0, 255, 255 )
 
             wfm = self.opdata.getData( slot=int(self.slot.text() ) )[:,ipmt]
-            self.plot.plot( (wfm-self.pedfunction(wfm))/scaledown+ipmt*offset, pen=pencolor, name="PMT%d"%(ipmt))
+            self.plot.plot( (wfm-self.pedfunction(wfm,ipmt))/scaledown+ipmt*offset, pen=pencolor, name="PMT%d"%(ipmt))
             if ipmt in self.user_plot_item.keys():
                 for useritem in self.user_plot_item[ipmt]:
                     self.plot.addItem( useritem )
@@ -168,10 +167,10 @@ class OpDetDisplay(QtGui.QWidget) :
             if ich>=36:
                 continue
             wfm =  self.opdata.getData( slot=int(self.slot.text() ) )[bnds[0]:bnds[1],ich]
-            maxamp = np.max( wfm )-self.pedfunction(wfm)
+            maxamp = np.max( wfm )-self.pedfunction(wfm,ich)
             ipmt = getPMTID( ich )-1
             #print "maxamp: id=",ipmt,' max=',maxamp
-            col = self.pmtscale.colorMap().map( (maxamp)/self.pedfunction(wfm) )
+            col = self.pmtscale.colorMap().map( (maxamp)/self.pedfunction(wfm,ich) )
             alpha = 255
             if len(self.channellist)>0 and ipmt not in self.channellist:
                 alpha = 50
@@ -290,7 +289,7 @@ class OpDetDisplay(QtGui.QWidget) :
     def pmtDiagramClicked( self, plot, points ):
         for p in points:
             settings =  p.data()
-            if settings['id'] not in self.channellist:
+            if settings is not None and settings['id'] not in self.channellist:
                 p.setPen( (0, 255, 255, 255) )
                 self.channellist.append( settings['id'] )
                 self.last_clicked_channel = settings['id']
@@ -305,5 +304,9 @@ class OpDetDisplay(QtGui.QWidget) :
         self.plotData()
 
 
-    def getpedestal(self,wfm):
-        return wfm[0]
+    def getpedestal(self,wfm,femch):
+        slot = int(self.slot.text())
+        return self.opdata.getPedestal( slot=slot )[femch]
+
+    def setPedestalFunction( self, pedfunc ):
+        self.pedfunction = pedfunc

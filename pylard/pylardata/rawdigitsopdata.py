@@ -1,9 +1,11 @@
 from pylard.pylardata.opdataplottable import OpDataPlottable
+import pylard.pylardata.pedestal as ped
 import numpy as np
 import pandas as pd
 from root_numpy import root2array, root2rec, tree2rec, array2root
 import ROOT
 import time
+
 
 class RawDigitsOpData( OpDataPlottable ):
     def __init__(self,inputfile):
@@ -25,12 +27,20 @@ class RawDigitsOpData( OpDataPlottable ):
         self.nsamples = len(self.wf_df['adcs'][0])
         self.opdetdigi_highgain = np.ones( (self.nsamples,48) )*2048.0
         self.opdetdigi_lowgain  = np.ones( (self.nsamples,48) )*2048.0
+        self.pedestals_highgain = np.ones( 48 )*2048.0
+        self.pedestals_lowgain  = np.ones( 48 )*2048.0
 
     def getData( self, slot=5 ):
         if slot==5:
             return self.opdetdigi_highgain
         else:
             return self.opdetdigi_lowgain
+
+    def getPedestal(self,slot=5):
+        if slot==5:
+            return self.pedestals_highgain
+        else:
+            return self.pedestals_lowgain        
 
     def getSampleLength(self):
         return self.nsamples
@@ -47,8 +57,11 @@ class RawDigitsOpData( OpDataPlottable ):
             if ch>=self.getData(slot=slot).shape[1]:
                 continue
             wf = np.array(ch_df['adcs'].values[0])
+            samples = self.getData(slot=slot).shape[0]
             #print ch,wf
-            self.getData(slot=slot)[:len(wf),ch] = wf[:self.getData(slot=slot).shape[0]]
+            self.getData(slot=slot)[:len(wf),ch] = wf[:samples]
+            self.getPedestal(slot=slot)[ch] = ped.getpedestal( wf[:samples], samples/20, 0.5 )
+
         # hack for flasher
         #q = self.wf_df.query('event==%d and opslot==5 and opfemch==39'%(eventid)) 
         #wf1 = q['adcs'][q.first_valid_index()]

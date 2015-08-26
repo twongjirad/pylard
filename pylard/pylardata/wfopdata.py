@@ -1,4 +1,5 @@
 from pylard.pylardata.opdataplottable import OpDataPlottable
+import pylard.pylardata.pedestal as ped
 import numpy as np
 import pandas as pd
 from root_numpy import root2array, root2rec, tree2rec, array2root
@@ -33,6 +34,12 @@ class WFOpData( OpDataPlottable ):
         else:
             return self.opdetdigi_lowgain
 
+    def getPedestal(self,slot=5):
+        if slot==5:
+            return self.pedestals_highgain
+        else:
+            return self.pedestals_lowgain        
+
     def getSampleLength(self):
         return self.nsamples
 
@@ -50,9 +57,11 @@ class WFOpData( OpDataPlottable ):
             wf = np.array(ch_df['wf'].values[0])
             #print ch,wf,self.getData(slot=slot).shape[0],len(wf)
             self.getData(slot=slot)[:len(wf),ch] = wf[:self.getData(slot=slot).shape[0]]
-        q = self.wf_df.query('event==%d and slot==6 and ch==39'%(eventid)) # hack for flasher
-        wf1 = q['wf'][q.first_valid_index()]
-        self.getData(slot=slot)[:len(wf1),39] = wf1[:self.getData(slot=slot).shape[0]]
+            self.getPedestal(slot=slot)[ch] = ped.getpedestal( wf[:samples], samples/20, 0.5 )
+        # hack for flasher
+        #q = self.wf_df.query('event==%d and slot==6 and ch==39'%(eventid)) 
+        #wf1 = q['wf'][q.first_valid_index()]
+        #self.getData(slot=slot)[:len(wf1),39] = wf1[:self.getData(slot=slot).shape[0]]
         return True
 
     def loadEventRange( self, start, end ):
@@ -116,3 +125,5 @@ class WFOpData( OpDataPlottable ):
             print pos, oldevents[pos], " < ", event, " < ",oldevents[pos]
         
         return self.entry_points[ oldevents[pos] ]
+
+    
