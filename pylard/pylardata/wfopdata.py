@@ -25,16 +25,17 @@ class WFOpData( OpDataPlottable ):
         self.loadEventRange( self.event_range[0], self.event_range[1] )
         self.nsamples = len(self.wf_df['wf'][0])
 
+        self.opdetdigits = {}
+        self.pedestals = {}
         self.opdetdigi_highgain = np.ones( (self.nsamples,48) )*2048.0
         self.opdetdigi_lowgain  = np.ones( (self.nsamples,48) )*2048.0        
         self.pedestals_highgain = np.ones( 48 )*2048.0
         self.pedestals_lowgain  = np.ones( 48 )*2048.0
 
     def getData( self, slot=5 ):
-        if slot==5:
-            return self.opdetdigi_highgain
-        else:
-            return self.opdetdigi_lowgain
+        if slot not in self.opdetdigits:
+            self.opdetdigits[slot] = np.ones( (self.nsamples,48) )*2048.0
+        return self.opdetdigits[slot]
 
     def getPedestal(self,slot=5):
         if slot==5:
@@ -52,15 +53,16 @@ class WFOpData( OpDataPlottable ):
         if eventid < self.event_range[0] or eventid > self.event_range[1]:
             self.loadEventRange( eventid-100, eventid+100 )
             
-        q = self.wf_df.query('event==%d and slot==%d'%(eventid,slot))
-        for ch,ch_df in q.groupby('ch'):
-            if ch>=self.getData(slot=slot).shape[1]:
-                continue
-            wf = np.array(ch_df['wf'].values[0])
-            samples = self.getData(slot=slot).shape[0]
-            #print ch,wf,self.getData(slot=slot).shape[0],len(wf)
-            self.getData(slot=slot)[:len(wf),ch] = wf[:self.getData(slot=slot).shape[0]]
-            self.getPedestal(slot=slot)[ch] = ped.getpedestal( wf[:samples], samples/20, 1.0, verbose=False )
+        q = self.wf_df.query('event==%d'%(eventid))
+        for femslot,slot_df in q.groupby('slot'):
+            for ch,ch_df in slot_df.groupby('ch'):
+                if ch>=self.getData(slot=femslot).shape[1]:
+                    continue
+                wf = np.array(ch_df['wf'].values[0])
+                samples = self.getData(slot=femslot).shape[0]
+                #print ch,wf,self.getData(slot=slot).shape[0],len(wf)
+                self.getData(slot=femslot)[:len(wf),ch] = wf[:]
+                self.getPedestal(slot=femslot)[ch] = ped.getpedestal( wf[:samples], samples/20, 1.0, verbose=False )
         # hack for flasher
         #q = self.wf_df.query('event==%d and slot==6 and ch==39'%(eventid)) 
         #wf1 = q['wf'][q.first_valid_index()]
