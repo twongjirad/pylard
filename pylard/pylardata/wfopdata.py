@@ -59,6 +59,7 @@ class WFOpData( OpDataPlottable ):
                 self.getData(slot=femslot)[:len(wf),ch] = wf[:]
                 self.getPedestal(slot=femslot)[ch] = ped.getpedestal( wf[:samples], samples/20, 1.0, verbose=False )
         # hack for flasher
+        self.getData(slot=5)[:,39] = self.getData(slot=6)[:,39]
         #q = self.wf_df.query('event==%d and slot==6 and ch==39'%(eventid)) 
         #wf1 = q['wf'][q.first_valid_index()]
         #self.getData(slot=slot)[:len(wf1),39] = wf1[:self.getData(slot=slot).shape[0]]
