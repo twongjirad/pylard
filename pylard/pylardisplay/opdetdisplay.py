@@ -229,7 +229,7 @@ class OpDetDisplay(QtGui.QWidget) :
             if self.newevent:
                 self.user_analysis_products = []
                 for userfunc in self.user_analyses:
-                    user_products = userfunc( self.opdata )
+                    user_products = userfunc( self.opdata, self )
                     for product in user_products:
                         productok = True
                         for k in ["femch","plotitem","screen"]:
@@ -242,6 +242,8 @@ class OpDetDisplay(QtGui.QWidget) :
             # plot products
             for product in self.user_analysis_products:
                 ch = product["femch"]
+                if len(self.channellist)>0 and ch not in self.channellist and not self.draw_all.isChecked():
+                    continue
                 item = product["plotitem"]
                 if product["screen"]=="diagram":
                     self.diagram.addItem( item )

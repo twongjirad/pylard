@@ -25,22 +25,19 @@ class RawDigitsOpData( OpDataPlottable ):
 
         self.loadEventRange( self.event_range[0], self.event_range[1] )
         self.nsamples = len(self.wf_df['adcs'][0])
-        self.opdetdigi_highgain = np.ones( (self.nsamples,48) )*2048.0
-        self.opdetdigi_lowgain  = np.ones( (self.nsamples,48) )*2048.0
-        self.pedestals_highgain = np.ones( 48 )*2048.0
-        self.pedestals_lowgain  = np.ones( 48 )*2048.0
+
+        self.opdetdigits = {}
+        self.pedestals = {}
 
     def getData( self, slot=5 ):
-        if slot==5:
-            return self.opdetdigi_highgain
-        else:
-            return self.opdetdigi_lowgain
+        if slot not in self.opdetdigits:
+            self.opdetdigits[slot] = np.ones( (self.nsamples,48) )*2048.0
+        return self.opdetdigits[slot]
 
     def getPedestal(self,slot=5):
-        if slot==5:
-            return self.pedestals_highgain
-        else:
-            return self.pedestals_lowgain        
+        if slot not in self.pedestals:
+            self.pedestals[slot] = np.ones( 48 )*2048.0
+        return self.pedestals[slot]
 
     def getSampleLength(self):
         return self.nsamples
@@ -52,15 +49,16 @@ class RawDigitsOpData( OpDataPlottable ):
         if eventid < self.event_range[0] or eventid > self.event_range[1]:
             self.loadEventRange( eventid-100, eventid+100 )
             
-        q = self.wf_df.query('event==%d and opslot==%d'%(eventid,slot))
-        for ch,ch_df in q.groupby('opfemch'):
-            if ch>=self.getData(slot=slot).shape[1]:
-                continue
-            wf = np.array(ch_df['adcs'].values[0])
-            samples = self.getData(slot=slot).shape[0]
-            #print ch,wf
-            self.getData(slot=slot)[:len(wf),ch] = wf[:samples]
-            self.getPedestal(slot=slot)[ch] = ped.getpedestal( wf[:samples], samples/20, 1.0 )
+        q = self.wf_df.query('event==%d'%(eventid))
+        for femslot,slot_df in q.groupby('opslot'):
+            for ch,ch_df in slot_df.groupby('opfemch'):
+                if ch>=self.getData(slot=slot).shape[1]:
+                    continue
+                wf = np.array(ch_df['adcs'].values[0])
+                samples = self.getData(slot=slot).shape[0]
+                #print ch,wf
+                self.getData(slot=femslot)[:len(wf),ch] = wf[:]
+                self.getPedestal(slot=femslot)[ch] = ped.getpedestal( wf[:samples], samples/20, 1.0, verbose=False )
 
         # hack for flasher
         #q = self.wf_df.query('event==%d and opslot==5 and opfemch==39'%(eventid)) 

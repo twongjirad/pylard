@@ -27,10 +27,6 @@ class WFOpData( OpDataPlottable ):
 
         self.opdetdigits = {}
         self.pedestals = {}
-        self.opdetdigi_highgain = np.ones( (self.nsamples,48) )*2048.0
-        self.opdetdigi_lowgain  = np.ones( (self.nsamples,48) )*2048.0        
-        self.pedestals_highgain = np.ones( 48 )*2048.0
-        self.pedestals_lowgain  = np.ones( 48 )*2048.0
 
     def getData( self, slot=5 ):
         if slot not in self.opdetdigits:
@@ -38,10 +34,9 @@ class WFOpData( OpDataPlottable ):
         return self.opdetdigits[slot]
 
     def getPedestal(self,slot=5):
-        if slot==5:
-            return self.pedestals_highgain
-        else:
-            return self.pedestals_lowgain        
+        if slot not in self.pedestals:
+            self.pedestals[slot] = np.ones( 48 )*2048.0
+        return self.pedestals[slot]
 
     def getSampleLength(self):
         return self.nsamples
