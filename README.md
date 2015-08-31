@@ -13,12 +13,15 @@ Being lazy, so have a few that serves merely for convenience:
 * numpy
 * root_numpy
 * pandas
+* lz
+* collada
 
 ## Installation
 
-* First, install ROOTO
-* Second, run
+* install ROOT
+* install dependencies
+* install pylard by running
 ```
-python setu.py install
+python setup.py install
 ```
 * Third, hope I didn't ruin your python distribution. To be safe, I recommend using virtualenv.
