@@ -101,6 +101,33 @@ class RawDigitsOpData( OpDataPlottable ):
             if bytes==0:
                 self.maxevent = entry-1
         return entry
+
+    def searchEntryHistory(self, event ):
+        # searches entry history, telling the best start entry to scan given past history
+        oldevents = self.entry_points.keys()
+        if len(oldevents)>0:
+            oldevents.sort()
+        print "event index history: ",oldevents
+        if len(oldevents)==1:
+            return oldevents[0]
+        elif len(oldevents)==2:
+            if event>oldevents[1]:
+                return self.entry_points[oldevents[1]]
+            else:
+                return oldevents[0]
+            
+        # now do good old binary search
+        hipos = len(oldevents)-1
+        lopos = 0
+        while np.abs(hipos-lopos)>1:
+            newpos = (hipos+lopos)/2
+            if event<oldevents[newpos]:
+                hipos = newpos
+            elif event>oldevents[newpos]:
+                lopos = newpos
+            print "newpos=",newpos, "lo=",lopos,"hi=",hipos,oldevents[lopos], " < ", event, " < ",oldevents[hipos]
+        
+        return self.entry_points[ oldevents[lopos] ]
             
     def searchEntryHistory(self, event ):
         # searches entry history, telling the best start entry to scan given past history

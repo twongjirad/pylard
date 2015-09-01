@@ -106,8 +106,7 @@ class WFOpData( OpDataPlottable ):
         oldevents = self.entry_points.keys()
         if len(oldevents)>0:
             oldevents.sort()
-        print oldevents
-        pos = len(oldevents)/2
+        print "event index history: ",oldevents
         if len(oldevents)==1:
             return oldevents[0]
         elif len(oldevents)==2:
@@ -117,14 +116,16 @@ class WFOpData( OpDataPlottable ):
                 return oldevents[0]
             
         # now do good old binary search
-        oldpos = pos
-        while event < oldevents[pos]  or event > oldevents[pos+1]:
-            if event<oldevents[pos]:
-                pos = int(pos/2)
-            elif event>oldevents[pos+1]:
-                pos = int((oldpos+pos)/2)
-            print pos, oldevents[pos], " < ", event, " < ",oldevents[pos]
+        hipos = len(oldevents)-1
+        lopos = 0
+        while np.abs(hipos-lopos)>1:
+            newpos = (hipos+lopos)/2
+            if event<oldevents[newpos]:
+                hipos = newpos
+            elif event>oldevents[newpos]:
+                lopos = newpos
+            print "newpos=",newpos, "lo=",lopos,"hi=",hipos,oldevents[lopos], " < ", event, " < ",oldevents[hipos]
         
-        return self.entry_points[ oldevents[pos] ]
+        return self.entry_points[ oldevents[lopos] ]
 
     

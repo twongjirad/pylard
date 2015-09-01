@@ -114,9 +114,9 @@ class OpDetDisplay(QtGui.QWidget) :
 
         evt = int(self.event.text())
         slot = int(self.slot.text())
-        if self.lastevent is None or (evt,slot)!=self.lastevent:
+        if self.lastevent is None or evt!=self.lastevent:
             self.opdata.getEvent( evt, slot=slot )
-            self.lastevent = (evt,slot)
+            self.lastevent = evt
             self.newevent = True
         else:
             print "old event: ",self.lastevent
@@ -226,7 +226,7 @@ class OpDetDisplay(QtGui.QWidget) :
         # user analysis items
         if self.run_user_analysis.isChecked():
             # if new event: generate products
-            if self.newevent:
+            if self.newevent or len(self.user_analysis_products)==0:
                 self.user_analysis_products = []
                 for userfunc in self.user_analyses:
                     user_products = userfunc( self.opdata, self )
@@ -240,17 +240,18 @@ class OpDetDisplay(QtGui.QWidget) :
                             continue
                         self.user_analysis_products.append( product )
             # plot products
-            for product in self.user_analysis_products:
-                ch = product["femch"]
-                if len(self.channellist)>0 and ch not in self.channellist and not self.draw_all.isChecked():
-                    continue
-                item = product["plotitem"]
-                if product["screen"]=="diagram":
-                    self.diagram.addItem( item )
-                elif product["screen"]=="waveform":
-                    self.plot.addItem( item )
-                else:
-                    print "unknonw user product screen option, '",product["screen"],"'. Valid choices are 'diagram' and 'waveform'"
+            if self.draw_user_items.isChecked():
+                for product in self.user_analysis_products:
+                    ch = product["femch"]
+                    if len(self.channellist)>0 and ch not in self.channellist and not self.draw_all.isChecked():
+                        continue
+                    item = product["plotitem"]
+                    if product["screen"]=="diagram":
+                        self.diagram.addItem( item )
+                    elif product["screen"]=="waveform":
+                        self.plot.addItem( item )
+                    else:
+                        print "unknonw user product screen option, '",product["screen"],"'. Valid choices are 'diagram' and 'waveform'"
 
     def definePMTdiagram(self):
         self.pmtspot = []
@@ -326,7 +327,7 @@ class OpDetDisplay(QtGui.QWidget) :
             self.user_plot_item[ch] = []
         self.user_plot_item[ ch ].append( item )
 
-    def clearUserWaveformItem( self, item ):
+    def clearUserWaveformItem( self ):
         self.user_plot_item = {}
 
     def getChanColor( self, id, alpha=255 ):
