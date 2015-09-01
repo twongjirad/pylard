@@ -125,7 +125,12 @@ class RawDigitsOpData( OpDataPlottable ):
                 hipos = newpos
             elif event>oldevents[newpos]:
                 lopos = newpos
+            else:
+                # found it!
+                lopos = newpos
+                break
             print "newpos=",newpos, "lo=",lopos,"hi=",hipos,oldevents[lopos], " < ", event, " < ",oldevents[hipos]
         
         return self.entry_points[ oldevents[lopos] ]
-            
+
+    
