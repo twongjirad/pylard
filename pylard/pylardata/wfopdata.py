@@ -56,7 +56,7 @@ class WFOpData( OpDataPlottable ):
                 wf = np.array(ch_df['wf'].values[0])
                 samples = self.getData(slot=femslot).shape[0]
                 #print ch,wf,self.getData(slot=slot).shape[0],len(wf)
-                self.getData(slot=femslot)[:len(wf),ch] = wf[:]
+                self.getData(slot=femslot)[:np.minimum(self.nsamples,len(wf)),ch] = wf[:np.minimum(self.nsamples,len(wf))]
                 self.getPedestal(slot=femslot)[ch] = ped.getpedestal( wf[:samples], samples/20, 1.0, verbose=False )
         # hack for flasher
         self.getData(slot=5)[:,39] = self.getData(slot=6)[:,39]
