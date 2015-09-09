@@ -23,7 +23,12 @@ class WFOpData( OpDataPlottable ):
         self.maxevent = None
 
         self.loadEventRange( self.event_range[0], self.event_range[1] )
-        self.nsamples = len(self.wf_df['wf'][0])
+        q = self.wf_df.query('event==%d'%(self.first_event))
+        self.nsamples = 0
+        for ch,ch_df in q.groupby('ch'):
+            if self.nsamples<len(ch_df['wf'].values[0]):
+                self.nsamples = len(ch_df['wf'].values[0])
+        print "number of samples: ",self.nsamples
 
         self.opdetdigits = {}
         self.pedestals = {}
@@ -53,11 +58,33 @@ class WFOpData( OpDataPlottable ):
             for ch,ch_df in slot_df.groupby('ch'):
                 if ch>=self.getData(slot=femslot).shape[1]:
                     continue
-                wf = np.array(ch_df['wf'].values[0])
-                samples = self.getData(slot=femslot).shape[0]
-                #print ch,wf,self.getData(slot=slot).shape[0],len(wf)
-                self.getData(slot=femslot)[:np.minimum(self.nsamples,len(wf)),ch] = wf[:np.minimum(self.nsamples,len(wf))]
-                self.getPedestal(slot=femslot)[ch] = ped.getpedestal( wf[:samples], samples/20, 1.0, verbose=False )
+                beamsample_wfms = []
+                cosmic_wfms = []
+                if 'disc' in ch_df:
+                    for (disc,awf,tstamp) in zip(ch_df['disc'].values,ch_df['wf'].values,ch_df['timestamp'].values):
+                        wf = np.array( awf )
+                        if disc==4 or ch>=36:
+                            beamsample_wfms.append( wf )
+                        else:
+                            cosmic_wfms.append( (tstamp,wf) )
+                else:
+                    for awf in ch_df['wf'].values:
+                        wf = np.array( awf )
+                        if len(wf)>200:
+                            beamsample_wfms.append( wf )
+                        else:
+                            cosmic_wfms.append( wf )
+
+                for wf in beamsample_wfms:
+                    samples = self.getData(slot=femslot).shape[0]
+                    #print ch,wf,self.getData(slot=femslot).shape[0],len(wf),np.max(wf),np.min(wf),np.std(wf)
+                    self.getData(slot=femslot)[:np.minimum(self.nsamples,len(wf)),ch] = wf[:np.minimum(self.nsamples,len(wf))]
+                    self.getPedestal(slot=femslot)[ch] = ped.getpedestal( wf[:samples], samples/20, 1.0, verbose=False )
+                print "CH ",ch," cosmic window max: ",
+                for (tstamp,wf) in cosmic_wfms:
+                    print (tstamp,np.max(wf)-self.getPedestal(slot=femslot)[ch])," ",
+                print
+                    
         # hack for flasher
         self.getData(slot=5)[:,39] = self.getData(slot=6)[:,39]
         #q = self.wf_df.query('event==%d and slot==6 and ch==39'%(eventid)) 
@@ -97,8 +124,8 @@ class WFOpData( OpDataPlottable ):
             else:
                 self.entry_points[ self.ttree.event ] = entry
                 break
-            if bytes==0:
-                self.maxevent = entry-1
+        if bytes==0:
+            self.maxevent = entry-1
         return entry
             
     def searchEntryHistory(self, event ):
