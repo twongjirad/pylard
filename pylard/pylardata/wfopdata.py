@@ -6,6 +6,8 @@ from root_numpy import root2array, root2rec, tree2rec, array2root
 import ROOT
 import time
 
+import pylard.pylardata.cosmicdisc as cd
+
 class WFOpData( OpDataPlottable ):
     def __init__(self,inputfile):
         super(WFOpData, self).__init__()
@@ -21,6 +23,7 @@ class WFOpData( OpDataPlottable ):
         self.entry_points = {}
         self.entry_points[ self.first_event ] = self.tree_entry
         self.maxevent = None
+        self.samplesPerFrame = 102400
 
         self.loadEventRange( self.event_range[0], self.event_range[1] )
         q = self.wf_df.query('event==%d'%(self.first_event))
@@ -50,46 +53,19 @@ class WFOpData( OpDataPlottable ):
         if self.maxevent is not None and eventid>=self.maxevent:
             return False
 
+        # load TTree data into pandas array -- why? why not?
         if eventid < self.event_range[0] or eventid > self.event_range[1]:
             self.loadEventRange( eventid-100, eventid+100 )
-            
-        q = self.wf_df.query('event==%d'%(eventid))
-        for femslot,slot_df in q.groupby('slot'):
-            for ch,ch_df in slot_df.groupby('ch'):
-                if ch>=self.getData(slot=femslot).shape[1]:
-                    continue
-                beamsample_wfms = []
-                cosmic_wfms = []
-                if 'disc' in ch_df:
-                    for (disc,awf,tstamp) in zip(ch_df['disc'].values,ch_df['wf'].values,ch_df['timestamp'].values):
-                        wf = np.array( awf )
-                        if disc==4 or ch>=36:
-                            beamsample_wfms.append( wf )
-                        else:
-                            cosmic_wfms.append( (tstamp,wf) )
-                else:
-                    for awf in ch_df['wf'].values:
-                        wf = np.array( awf )
-                        if len(wf)>200:
-                            beamsample_wfms.append( wf )
-                        else:
-                            cosmic_wfms.append( wf )
 
-                for wf in beamsample_wfms:
-                    samples = self.getData(slot=femslot).shape[0]
-                    #print ch,wf,self.getData(slot=femslot).shape[0],len(wf),np.max(wf),np.min(wf),np.std(wf)
-                    self.getData(slot=femslot)[:np.minimum(self.nsamples,len(wf)),ch] = wf[:np.minimum(self.nsamples,len(wf))]
-                    self.getPedestal(slot=femslot)[ch] = ped.getpedestal( wf[:samples], samples/20, 1.0, verbose=False )
-                print "CH ",ch," cosmic window max: ",
-                for (tstamp,wf) in cosmic_wfms:
-                    print (tstamp,np.max(wf)-self.getPedestal(slot=femslot)[ch])," ",
-                print
+        # sepaarate beam and cosmic readout windows
+        self.sortReadoutWindows( eventid )
+
+        # store the beam windows into the numpy array expected by the parent class
+        self.fillBeamWindowArray()
                     
-        # hack for flasher
+        # hack for flasher: copy logic pulse from slot 6 into high gain as well
         self.getData(slot=5)[:,39] = self.getData(slot=6)[:,39]
-        #q = self.wf_df.query('event==%d and slot==6 and ch==39'%(eventid)) 
-        #wf1 = q['wf'][q.first_valid_index()]
-        #self.getData(slot=slot)[:len(wf1),39] = wf1[:self.getData(slot=slot).shape[0]]
+
         return True
 
     def loadEventRange( self, start, end ):
@@ -160,3 +136,50 @@ class WFOpData( OpDataPlottable ):
         return self.entry_points[ oldevents[lopos] ]
 
     
+    def sortReadoutWindows( self, eventid ):
+        # clear stores
+        self.cosmics = cd.CosmicDiscVector()
+        self.beamwin_wfms = {}
+        q = self.wf_df.query('event==%d'%(eventid))
+        self.firstframe = q["frame"].min()
+
+        for femslot,slot_df in q.groupby('slot'):
+            for ch,ch_df in slot_df.groupby('ch'):
+
+                if ch>=self.getData(slot=femslot).shape[1]:
+                    continue
+
+                self.beamwin_wfms[(femslot,ch)] = []
+
+                # if the tree has the info we need, use it
+                if 'disc' in ch_df:
+                    for (disc,awf,tstamp,frame,sample,slot) in zip(ch_df['disc'].values,ch_df['wf'].values,ch_df['timestamp'].values,ch_df['frame'].values,ch_df['sample'].values,ch_df['slot'].values):
+                        wf = np.array( awf )
+                        if disc==4 or ch>=36:
+                            self.beamwin_wfms[(femslot,ch)].append( wf )
+                        else:
+                            framesample = self.convertToFrameSample( frame, sample, self.firstframe )
+                            cwd = cd.CosmicDiscWindow( wf, femslot, ch, framesample )
+                            self.cosmics.addWindow( cwd )
+                else:
+                    for (awf,tstamp,frame,sample,slot) in zip( ch_df['wf'].values, ch_df['timestamp'].values,ch_df['frame'].values,ch_df['sample'].values,ch_df['slot'].values):
+                        wf = np.array( awf )
+                        if len(wf)>200:
+                            self.beamwin_wfms[(femslot,ch)].append( wf )
+                        else:                            
+                            framesample = self.convertToFrameSample( frame, sample, self.firstframe )
+                            cwd = cd.CosmicDiscWindow( wf, femslot, ch, framesample )
+                            self.cosmics.addWindow( cwd )                            
+
+    def convertToFrameSample( self, frame, sample, firstframe ):
+        return ((frame-firstframe)-1)*self.samplesPerFrame + sample
+                                                  
+    def fillBeamWindowArray( self ):
+        # Fill the beam sample array
+        for (femslot,ch),wfs in self.beamwin_wfms.items():
+            for wf in wfs:
+                samples = self.getData(slot=femslot).shape[0]
+                #print ch,wf,self.getData(slot=femslot).shape[0],len(wf),np.max(wf),np.min(wf),np.std(wf)
+                self.getData(slot=femslot)[:np.minimum(self.nsamples,len(wf)),ch] = wf[:np.minimum(self.nsamples,len(wf))]
+                self.getPedestal(slot=femslot)[ch] = ped.getpedestal( wf[:samples], samples/20, 1.0, verbose=False )
+        

@@ -7,6 +7,7 @@ from collections import OrderedDict
 
 from pylard.config.pmt_chmap import getPMTID, getChannel, getPMTIDList, getPaddleIDList
 from pylard.config.pmtpos import getPosFromID 
+from pylard.pylardisplay.cosmicdiscdisplay import CosmicDiscDisplay
 
 class OpDetDisplay(QtGui.QWidget) :
     def __init__(self, opdata):
@@ -16,7 +17,6 @@ class OpDetDisplay(QtGui.QWidget) :
         # Plots
         self.graphics = pg.GraphicsLayoutWidget()
         self.plot = pg.PlotItem(name='Plot1')
-        #self.diagram = pg.ViewBox()
         self.diagram = pg.PlotItem(name="plot2")
         self.pmtscale =  pg.GradientEditorItem(orientation='bottom')
         self.lastevent = None
@@ -105,6 +105,9 @@ class OpDetDisplay(QtGui.QWidget) :
         self.user_analysis_products = []
         self.user_analyses = []
 
+        # subwindow
+        self.cosmicdisplay = CosmicDiscDisplay(self)
+
         # connect
         self.set_xaxis.clicked.connect( self.plotData )
         self.next_event.clicked.connect( self.nextEvent )
@@ -145,6 +148,7 @@ class OpDetDisplay(QtGui.QWidget) :
         scaledown = float( self.adc_scaledown.text() )
         
 
+        # BEAM SAMPLE WINDOW
         self.plot.clear()
         offset = 1.0
         if self.collapse.isChecked():
@@ -168,6 +172,29 @@ class OpDetDisplay(QtGui.QWidget) :
 
         self.plot.setXRange(xmin,xmax,update=True)
         self.plot.addItem( self.time_range )
+
+        # COSMIC WINDOW (HACK)
+#         if "cosmicdisc_wfms" in dir(self.opdata):
+#             print "COSMICS: ",len(self.opdata.cosmicdisc_wfms)
+#             for n,cwin in enumerate(self.opdata.cosmicdisc_wfms[:200]):
+#                 if cwin['ch']>32:
+#                     continue
+#                 if cwin["slot"]!=5:
+#                     continue
+#                 sample0 = ((cwin["frame"]-self.opdata.firstframe)-1)*self.opdata.samplesPerFrame
+#                 start = sample0+cwin["sample"]
+#                 end   = start + len(cwin["wfm"])
+#                 if n%100==0:
+#                     print "drawing ",n," of ",len(self.opdata.cosmicdisc_wfms)
+#                 #print start,end,start-end
+#                 x = np.linspace( start, end, num=len(cwin["wfm"]) )
+#                 y = (cwin["wfm"]-self.getpedestal( None, femch=cwin["ch"] ) )/scaledown+cwin['ch']*offset
+#                 cplot = pg.PlotDataItem( x, y )
+#                 self.plot.addItem( cplot )
+        self.cosmicdisplay.show()
+        if "cosmics" in dir(self.opdata):
+            print "COSMICS LOADED!"
+            self.cosmicdisplay.plotCosmicWindows( self.opdata.cosmics )
 
         # ----------------------------------------------------
         # diagram object

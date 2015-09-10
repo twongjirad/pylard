@@ -4,6 +4,8 @@ Goal is to provide a easily customizable MicroBooNE event display for both the T
 
 The idea is to provide basic displays which the user can draw on top of.
 
+## sub-packages
+
 ## Dependencies
 
 Being lazy, so have a few that serves merely for convenience:

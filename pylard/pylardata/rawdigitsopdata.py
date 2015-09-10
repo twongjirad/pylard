@@ -61,9 +61,7 @@ class RawDigitsOpData( OpDataPlottable ):
                 self.getPedestal(slot=femslot)[ch] = ped.getpedestal( wf[:samples], samples/20, 1.0, verbose=False )
 
         # hack for flasher
-        #q = self.wf_df.query('event==%d and opslot==5 and opfemch==39'%(eventid)) 
-        #wf1 = q['adcs'][q.first_valid_index()]
-        #self.opdetdigi[:len(wf1),39] = wf1[:self.opdetdigi.shape[0]]
+        self.getData(slot=5)[:,39] = self.getData(slot=6)[:,39]
         return True
 
     def loadEventRange( self, start, end ):
