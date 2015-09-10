@@ -26,22 +26,30 @@ class CosmicDiscWindow:
 
 class CosmicDiscVector:
     def __init__(self):
-        self.times = []
-        self.windows = {}
+        self.chtimes = {}
+        self.chwindows = {}
 
     def getWindowsBetweenTimes( self, start, end ):
-        self.times.sort()
-        t = np.asarray( self.times ) # we use an array to have access to numpy magic
-        tselect = t[ np.where( (t>=start) & (t<=end) ) ]
         out = []
-        for n in range(0,len(tselect)):
-            out.append( self.windows[ tselect[n] ] )
+        for ch,times in self.chtimes.items():
+            times.sort()
+            t = np.asarray( times ) # we use an array to have access to numpy magic
+            tselect = t[ np.where( (t>=start) & (t<=end) ) ]
+
+            for n in range(0,len(tselect)):
+                out.append( self.chwindows[ch][ tselect[n] ] )
         return out
 
     def addWindow( self, cdw ):
-        self.times.append( cdw.time )
-        self.windows[ cdw.time ] = cdw
+        if cdw.ch not in self.chtimes:
+            self.chtimes[cdw.ch] = []
+            self.chwindows[cdw.ch] = {}
+        self.chtimes[cdw.ch].append( cdw.time )
+        self.chwindows[ cdw.ch ][ cdw.time ] = cdw
             
         
     def getNumWindows( self ):
-        return len(self.times)
+        n = 0
+        for ch,times in self.chtimes.items():
+            n += len(times)
+        return n

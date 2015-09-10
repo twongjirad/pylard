@@ -71,19 +71,19 @@ class OpDetDisplay(QtGui.QWidget) :
         self.end_frame  =  QtGui.QLineEdit("%d"%(self.first_frame))
         self.end_sample = QtGui.QLineEdit("%d"%(opdata.getSampleLength()))
         self.set_xaxis = QtGui.QPushButton("Re-plot!")
+        self.openCosmicWindow = QtGui.QPushButton("Cosmic Disc. Viewer")
         self.draw_user_items = QtGui.QCheckBox()  # draw user products
         self.draw_user_items.setChecked(True)
         self.run_user_analysis = QtGui.QCheckBox()  # draw user products
         self.run_user_analysis.setChecked(True)
 
-        self.lay_inputs.addWidget( QtGui.QLabel("Min. Frame"), 1, 0 )
-        self.lay_inputs.addWidget( self.start_frame, 1, 1 )
-        self.lay_inputs.addWidget( QtGui.QLabel("Min. Sample"), 1, 2 )
-        self.lay_inputs.addWidget( self.start_sample,1,3)
-        self.lay_inputs.addWidget( QtGui.QLabel("Max. Frame"), 1, 4 )
-        self.lay_inputs.addWidget( self.end_frame, 1, 5 )
-        self.lay_inputs.addWidget( QtGui.QLabel("Max. Sample"), 1, 6 )
-        self.lay_inputs.addWidget( self.end_sample, 1, 7 )
+        self.lay_inputs.addWidget( self.openCosmicWindow, 1, 0, 1, 2 )
+        #self.lay_inputs.addWidget( QtGui.QLabel("Min. Sample"), 1, 2 )
+        #self.lay_inputs.addWidget( self.start_sample,1,3)
+        #self.lay_inputs.addWidget( QtGui.QLabel("Max. Frame"), 1, 4 )
+        #self.lay_inputs.addWidget( self.end_frame, 1, 5 )
+        #self.lay_inputs.addWidget( QtGui.QLabel("Max. Sample"), 1, 6 )
+        #self.lay_inputs.addWidget( self.end_sample, 1, 7 )
         self.lay_inputs.addWidget( QtGui.QLabel("Draw user items"), 1, 8 )
         self.lay_inputs.addWidget( self.draw_user_items, 1, 9 )
         self.lay_inputs.addWidget( QtGui.QLabel("Run user funcs."), 1, 10 )
@@ -112,6 +112,7 @@ class OpDetDisplay(QtGui.QWidget) :
         self.set_xaxis.clicked.connect( self.plotData )
         self.next_event.clicked.connect( self.nextEvent )
         self.prev_event.clicked.connect( self.prevEvent )
+        self.openCosmicWindow.clicked.connect( self.showCosmicDisplay )
         
     def plotData( self ):
 
@@ -191,7 +192,6 @@ class OpDetDisplay(QtGui.QWidget) :
 #                 y = (cwin["wfm"]-self.getpedestal( None, femch=cwin["ch"] ) )/scaledown+cwin['ch']*offset
 #                 cplot = pg.PlotDataItem( x, y )
 #                 self.plot.addItem( cplot )
-        self.cosmicdisplay.show()
         if "cosmics" in dir(self.opdata):
             print "COSMICS LOADED!"
             self.cosmicdisplay.plotCosmicWindows( self.opdata.cosmics )
@@ -401,3 +401,7 @@ class OpDetDisplay(QtGui.QWidget) :
     def clearUserAnalyses( self ):
         self.user_analyses = []
         self.user_analysis_chproducts = {}
+        
+    def showCosmicDisplay( self ):
+        self.cosmicdisplay.show()
+                

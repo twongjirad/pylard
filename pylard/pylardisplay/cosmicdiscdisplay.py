@@ -56,16 +56,17 @@ class CosmicDiscDisplay(QtGui.QWidget) :
         self.diagram.clear()
         self.cosmicwindowvector = cosmicwindowvector
         cwv = cosmicwindowvector
-        print "Number of cosmics: ",len(cwv.windows)
+        print "Number of cosmics: ",cwv.getNumWindows()
         self.spots = []
-        for t,win in cwv.windows.items():
-            if t<-samplesPerFrame or t>3*samplesPerFrame:
-                continue
-            if win.slot==5:
-                brush = (255,0,0,100)
-            else:
-                brush = (0,0,255,100)
-            self.spots.append( {"pos":(t,win.ch),"size":2,"pen":{'color':'w','width':1},'brush':brush, 'symbol':'s'} )
+        for ch,windows in cwv.chwindows.items():
+            for t,win in windows.items():
+                if t<-samplesPerFrame or t>3*samplesPerFrame:
+                    continue
+                if win.slot==5:
+                    brush = (255,0,0,100)
+                else:
+                    brush = (0,0,255,100)
+                self.spots.append( {"pos":(t,win.ch),"size":2,"pen":{'color':'w','width':1},'brush':brush, 'symbol':'s'} )
         self.windowplot = pg.ScatterPlotItem(pxMode=False)
         self.windowplot.addPoints( self.spots )
         self.diagram.addItem( self.windowplot )
@@ -90,7 +91,6 @@ class CosmicDiscDisplay(QtGui.QWidget) :
         end = int(bnds[1])+1
         
         slot = int(self.opdetdisplay.slot.text())
-        data = np.zeros( ( end-start,NCHAN), dtype=np.float )
         
         self.opdetdisplay.plot.clear()
         offset = 1.0
@@ -99,19 +99,28 @@ class CosmicDiscDisplay(QtGui.QWidget) :
             offset = 0.0
             scaledown = 1.0
 
+
+        data = np.ones( ( end-start,NCHAN), dtype=np.float )*2048.0
+        
         cosmics = self.cosmicwindowvector.getWindowsBetweenTimes( start, end )
         for win in cosmics:
             if win.slot!=slot:
                 continue
             ipmt = win.ch
+            wfm = win.wfm
+            fillstart = win.time-start
+            fillend   = win.time-start+len(wfm)
+            data[fillstart:fillend,ipmt] = wfm[:]
+
+        x = np.linspace( start, end, num=int(end-start) )
+        for ch in range(0,NCHAN):
+            ipmt = ch
             if len(self.opdetdisplay.channellist)>0 and ipmt not in self.opdetdisplay.channellist and not self.opdetdisplay.draw_all.isChecked():
                 continue
             pencolor = self.opdetdisplay.getChanColor( ipmt )
             if self.opdetdisplay.last_clicked_channel is not None and ipmt==self.opdetdisplay.last_clicked_channel:
                 pencolor = (0, 255, 255 )
-            wfm = win.wfm
-            x = np.linspace( win.time, win.time+len(win.wfm), num=len(win.wfm) )
-            y = (wfm-2048.0)/scaledown + ipmt*offset
+            y = (data[:,ipmt]-2048.0)/scaledown + ipmt*offset
             self.opdetdisplay.plot.plot( x=x, y=y, pen=pencolor, name="PMT%d"%(ipmt))
         self.opdetdisplay.plot.autoRange()
             
