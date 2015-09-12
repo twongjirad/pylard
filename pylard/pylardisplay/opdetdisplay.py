@@ -9,6 +9,8 @@ from pylard.config.pmt_chmap import getPMTID, getChannel, getPMTIDList, getPaddl
 from pylard.config.pmtpos import getPosFromID 
 from pylard.pylardisplay.cosmicdiscdisplay import CosmicDiscDisplay
 
+NSPERTICK = 15.625
+
 class OpDetDisplay(QtGui.QWidget) :
     def __init__(self, opdata):
         super(OpDetDisplay,self).__init__()
@@ -155,7 +157,9 @@ class OpDetDisplay(QtGui.QWidget) :
         if self.collapse.isChecked():
             offset = 0.0
             scaledown = 1.0
-            
+        
+        nbins = self.opdata.getData( slot=int(self.slot.text() ) ).shape[0]
+        x = np.linspace( 0, nbins*NSPERTICK, num=nbins )
         for ipmt in xrange(0,self.opdata.getData( slot=int(self.slot.text() ) ).shape[1]):
 
             if len(self.channellist)>0 and ipmt not in self.channellist and not self.draw_all.isChecked():
@@ -166,50 +170,37 @@ class OpDetDisplay(QtGui.QWidget) :
                 pencolor = (0, 255, 255 )
 
             wfm = self.opdata.getData( slot=int(self.slot.text() ) )[:,ipmt]
-            self.plot.plot( (wfm-self.pedfunction(wfm,ipmt))/scaledown+ipmt*offset, pen=pencolor, name="PMT%d"%(ipmt))
+            y = (wfm-self.pedfunction(wfm,ipmt))/scaledown+ipmt*offset
+
+            self.plot.plot(x=x, y=y, pen=pencolor, name="PMT%d"%(ipmt))
+
             if ipmt in self.user_plot_item.keys():
                 for useritem in self.user_plot_item[ipmt]:
                     self.plot.addItem( useritem )
 
-        self.plot.setXRange(xmin,xmax,update=True)
+        self.plot.setXRange(xmin*NSPERTICK,xmax*NSPERTICK,update=True)
         self.plot.addItem( self.time_range )
 
-        # COSMIC WINDOW (HACK)
-#         if "cosmicdisc_wfms" in dir(self.opdata):
-#             print "COSMICS: ",len(self.opdata.cosmicdisc_wfms)
-#             for n,cwin in enumerate(self.opdata.cosmicdisc_wfms[:200]):
-#                 if cwin['ch']>32:
-#                     continue
-#                 if cwin["slot"]!=5:
-#                     continue
-#                 sample0 = ((cwin["frame"]-self.opdata.firstframe)-1)*self.opdata.samplesPerFrame
-#                 start = sample0+cwin["sample"]
-#                 end   = start + len(cwin["wfm"])
-#                 if n%100==0:
-#                     print "drawing ",n," of ",len(self.opdata.cosmicdisc_wfms)
-#                 #print start,end,start-end
-#                 x = np.linspace( start, end, num=len(cwin["wfm"]) )
-#                 y = (cwin["wfm"]-self.getpedestal( None, femch=cwin["ch"] ) )/scaledown+cwin['ch']*offset
-#                 cplot = pg.PlotDataItem( x, y )
-#                 self.plot.addItem( cplot )
         if "cosmics" in dir(self.opdata):
-            print "COSMICS LOADED!"
-            self.cosmicdisplay.plotCosmicWindows( self.opdata.cosmics )
+            if self.newevent:
+                self.cosmicdisplay.plotCosmicWindows( self.opdata.cosmics )
 
         # ----------------------------------------------------
         # diagram object
         bnds = self.time_range.getRegion()
-        if bnds[0]>bnds[1]:
-            tmp = bnds[0]
-            bnds[0] = bnds[1]
-            bnds[1] = tmp
+        istart = int( bnds[0]/NSPERTICK )
+        iend = int( bnds[1]/NSPERTICK )
+        if istart>iend:
+            tmp = istart
+            istart = iend
+            iend = tmp
 
         self.pmtspot = []
 
         for ich in xrange(self.opdata.getData( slot=int(self.slot.text() ) ).shape[1],-1,-1):
             if ich>=36:
                 continue
-            wfm =  self.opdata.getData( slot=int(self.slot.text() ) )[bnds[0]:bnds[1],ich]
+            wfm =  self.opdata.getData( slot=int(self.slot.text() ) )[istart:iend,ich]
             maxamp = np.max( wfm )-self.pedfunction(wfm,ich)
             ipmt = getPMTID( ich )-1
             #print "maxamp: id=",ipmt,' max=',maxamp,' ped=',self.pedfunction(wfm,ich)
@@ -232,9 +223,9 @@ class OpDetDisplay(QtGui.QWidget) :
         # axis!
         ax = self.plot.getAxis('bottom')
         ax.setHeight(30)
-
         xStyle = {'color':'#FFFFFF','font-size':'14pt'}
-        ax.setLabel('64 MHz Sample Tick',**xStyle)
+        #ax.setLabel('64 MHz Sample Tick',**xStyle)
+        ax.setLabel('ns from readout start',**xStyle)
         ay = self.plot.getAxis('left')
         yStyle = {'color':'#FFFFFF','font-size':'14pt'}
         if self.collapse.isChecked():

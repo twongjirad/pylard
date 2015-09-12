@@ -1,12 +1,11 @@
 from pylard.pylardata.opdataplottable import OpDataPlottable
 import pylard.pylardata.pedestal as ped
+import pylard.pylardata.cosmicdisc as cd
 import numpy as np
 import pandas as pd
 from root_numpy import root2array, root2rec, tree2rec, array2root
 import ROOT
 import time
-
-import pylard.pylardata.cosmicdisc as cd
 
 class WFOpData( OpDataPlottable ):
     def __init__(self,inputfile):
@@ -24,6 +23,7 @@ class WFOpData( OpDataPlottable ):
         self.entry_points[ self.first_event ] = self.tree_entry
         self.maxevent = None
         self.samplesPerFrame = 102400
+        self.nspertick = 15.625
 
         self.loadEventRange( self.event_range[0], self.event_range[1] )
         q = self.wf_df.query('event==%d'%(self.first_event))
@@ -153,26 +153,32 @@ class WFOpData( OpDataPlottable ):
 
                 # if the tree has the info we need, use it
                 if 'disc' in ch_df:
-                    for (disc,awf,tstamp,frame,sample,slot) in zip(ch_df['disc'].values,ch_df['wf'].values,ch_df['timestamp'].values,ch_df['frame'].values,ch_df['sample'].values,ch_df['slot'].values):
+                    for (disc,awf,tstamp,frame,sample,slot,ttrig) in zip(ch_df['disc'].values,ch_df['wf'].values,ch_df['timestamp'].values,
+                                                                         ch_df['frame'].values,ch_df['sample'].values,ch_df['slot'].values,ch_df['trig_timestamp'].values):
                         wf = np.array( awf )
                         if disc==4 or ch>=36:
                             self.beamwin_wfms[(femslot,ch)].append( wf )
                         else:
-                            framesample = self.convertToFrameSample( frame, sample, self.firstframe )
+                            framesample = self.convertToFrameSample( tstamp, ttrig )
                             cwd = cd.CosmicDiscWindow( wf, femslot, ch, framesample )
                             self.cosmics.addWindow( cwd )
                 else:
-                    for (awf,tstamp,frame,sample,slot) in zip( ch_df['wf'].values, ch_df['timestamp'].values,ch_df['frame'].values,ch_df['sample'].values,ch_df['slot'].values):
+                    for (awf,tstamp,frame,sample,slot,ttrig) in zip( ch_df['wf'].values, ch_df['timestamp'].values,ch_df['frame'].values,ch_df['sample'].values,
+                                                                     ch_df['slot'].values,ch_df['trig_timestamp'].values):
                         wf = np.array( awf )
                         if len(wf)>200:
                             self.beamwin_wfms[(femslot,ch)].append( wf )
                         else:                            
-                            framesample = self.convertToFrameSample( frame, sample, self.firstframe )
+                            framesample = self.convertToFrameSample( tstamp, ttrig )
                             cwd = cd.CosmicDiscWindow( wf, femslot, ch, framesample )
                             self.cosmics.addWindow( cwd )                            
 
-    def convertToFrameSample( self, frame, sample, firstframe ):
-        return ((frame-firstframe)-1)*self.samplesPerFrame + sample
+    def convertToFrameSample( self, timestamp, trig_timestamp ):
+        """
+        convert from time stamps to relative TDC tick.
+        """
+        return ((timestamp-trig_timestamp)*1000.0/self.nspertick)
+
                                                   
     def fillBeamWindowArray( self ):
         # Fill the beam sample array

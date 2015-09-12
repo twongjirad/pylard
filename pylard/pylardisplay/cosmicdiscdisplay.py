@@ -7,6 +7,7 @@ from collections import OrderedDict
 
 
 samplesPerFrame = 102400
+NSPERTICK = 15.625
 NPMTS = 32
 NDETS = 36
 NCHAN = 48
@@ -61,6 +62,7 @@ class CosmicDiscDisplay(QtGui.QWidget) :
         for ch,windows in cwv.chwindows.items():
             for t,win in windows.items():
                 if t<-samplesPerFrame or t>3*samplesPerFrame:
+                    print t,"<-",samplesPerFrame,">",3*samplesPerFrame
                     continue
                 if win.slot==5:
                     brush = (255,0,0,100)
@@ -72,6 +74,16 @@ class CosmicDiscDisplay(QtGui.QWidget) :
         self.diagram.addItem( self.windowplot )
         self.diagram.addItem( self.beambox )
         self.diagram.addItem( self.time_range )
+
+        # axis
+        ax = self.diagram.getAxis('bottom')
+        ax.setHeight(30)
+        xStyle = {'color':'#FFFFFF','font-size':'14pt'}
+        ax.setLabel('ns relative to readout trigger',**xStyle)
+        ay = self.diagram.getAxis('left')
+        yStyle = {'color':'#FFFFFF','font-size':'14pt'}
+        ay.setLabel('FEM CH Number (PMTID-1)',**yStyle)
+
         
     def applyCosmicDiscRange( self ):
         if self.opdetdisplay is None:
@@ -99,7 +111,6 @@ class CosmicDiscDisplay(QtGui.QWidget) :
             offset = 0.0
             scaledown = 1.0
 
-
         data = np.ones( ( end-start,NCHAN), dtype=np.float )*2048.0
         
         cosmics = self.cosmicwindowvector.getWindowsBetweenTimes( start, end )
@@ -112,7 +123,7 @@ class CosmicDiscDisplay(QtGui.QWidget) :
             fillend   = win.time-start+len(wfm)
             data[fillstart:fillend,ipmt] = wfm[:]
 
-        x = np.linspace( start, end, num=int(end-start) )
+        x = np.linspace( start*NSPERTICK, end*NSPERTICK, num=int(end-start) )
         for ch in range(0,NCHAN):
             ipmt = ch
             if len(self.opdetdisplay.channellist)>0 and ipmt not in self.opdetdisplay.channellist and not self.opdetdisplay.draw_all.isChecked():
@@ -122,5 +133,7 @@ class CosmicDiscDisplay(QtGui.QWidget) :
                 pencolor = (0, 255, 255 )
             y = (data[:,ipmt]-2048.0)/scaledown + ipmt*offset
             self.opdetdisplay.plot.plot( x=x, y=y, pen=pencolor, name="PMT%d"%(ipmt))
+
+
         self.opdetdisplay.plot.autoRange()
             
