@@ -319,11 +319,12 @@ class OpDetDisplay(QtGui.QWidget) :
             self.slot.setText("%d"%(slot))
         
         try:
-            self.opdata.getEvent( event, slot=slot )
+            more = self.opdata.getEvent( event, slot=slot )
             self.event.setText( "%d"%(event) )
         except:
-            self.opdata.getEvent( evt, slot=slot )
+            more = self.opdata.getEvent( evt, slot=slot )
         self.plotData()
+        return more
             
     def setOverlayMode( self, mode=True ):
         if mode==True:

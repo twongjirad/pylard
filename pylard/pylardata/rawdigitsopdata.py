@@ -115,7 +115,8 @@ class RawDigitsOpData( OpDataPlottable ):
         return self.nsamples
 
     def getEvent( self, eventid, slot=5 ):
-        if self.maxevent is not None and eventid>=self.maxevent:
+        if self.maxevent is not None and eventid>self.maxevent:
+            print "No events for ",eventid,"!"
             return False
 
         # load TTree data into pandas array -- why? why not?
@@ -157,15 +158,18 @@ class RawDigitsOpData( OpDataPlottable ):
     def scanForEvent( self, event, start_entry=0 ):
         entry = start_entry
         bytes = self.ttree.GetEntry(entry)
-        while bytes>0:
+        lastevent = None
+        while bytes>0 and self.ttree.event<=event:
             if event>=self.ttree.event:
-                entry+=1
-                bytes = self.ttree.GetEntry(entry)
+                entry+=1 # keep going
+                lastevent = self.ttree.event
             else:
-                self.entry_points[ self.ttree.event ] = entry
-                break
+                self.entry_points[ self.ttree.event ] = entry-1
+            bytes = self.ttree.GetEntry(entry)
             if bytes==0:
-                self.maxevent = entry-1
+                self.entry_points[ lastevent ] = entry-1
+                self.maxevent = lastevent
+                print "Found max event! ",self.maxevent
         return entry
 
     def searchEntryHistory(self, event ):
@@ -213,8 +217,11 @@ class RawDigitsOpData( OpDataPlottable ):
                     continue
 
                 self.beamwin_wfms[(femslot,ch)] = []
-
-                for (awf,tstamp,frame,sample,slot,trig_timestamp) in zip( ch_df['adcs'].values, ch_df['timestamp'].values,ch_df['frame'].values,ch_df['sample'].values,ch_df['opslot'].values,ch_df['trig_timestamp']):
+                if "trig_timestamp" in ch_df:
+                    vals = zip( ch_df['adcs'].values, ch_df['timestamp'].values,ch_df['frame'].values,ch_df['sample'].values,ch_df['opslot'].values,ch_df['trig_timestamp'])
+                else:
+                    vals = zip( ch_df['adcs'].values, ch_df['timestamp'].values,ch_df['frame'].values,ch_df['sample'].values,ch_df['opslot'].values,ch_df['timestamp'].values)
+                for (awf,tstamp,frame,sample,slot,trig_timestamp) in vals:
                     wf = np.array( awf )
                     if len(wf)>500:
                         self.beamwin_wfms[(femslot,ch)].append( wf )
