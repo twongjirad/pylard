@@ -93,17 +93,21 @@ class WFOpData( OpDataPlottable ):
     def scanForEvent( self, event, start_entry=0 ):
         entry = start_entry
         bytes = self.ttree.GetEntry(entry)
-        while bytes>0:
+        lastevent = None
+        while bytes>0 and self.ttree.event<=event:
             if event>=self.ttree.event:
-                entry+=1
-                bytes = self.ttree.GetEntry(entry)
+                entry+=1 # keep going
+                lastevent = self.ttree.event
             else:
-                self.entry_points[ self.ttree.event ] = entry
-                break
-        if bytes==0:
-            self.maxevent = entry-1
+                self.entry_points[ self.ttree.event ] = entry-1
+            bytes = self.ttree.GetEntry(entry)
+            if bytes==0:
+                self.entry_points[ lastevent ] = entry-1
+                self.maxevent = lastevent
+                print "Found max event! ",self.maxevent
         return entry
-            
+
+
     def searchEntryHistory(self, event ):
         # searches entry history, telling the best start entry to scan given past history
         oldevents = self.entry_points.keys()
