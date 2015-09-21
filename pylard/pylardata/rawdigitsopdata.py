@@ -163,13 +163,11 @@ class RawDigitsOpData( OpDataPlottable ):
             if event>=self.ttree.event:
                 entry+=1 # keep going
                 lastevent = self.ttree.event
-            else:
-                self.entry_points[ self.ttree.event ] = entry-1
             bytes = self.ttree.GetEntry(entry)
             if bytes==0:
-                self.entry_points[ lastevent ] = entry-1
                 self.maxevent = lastevent
                 print "Found max event! ",self.maxevent
+            self.entry_points[ self.ttree.event ] = entry-1
         return entry
 
     def searchEntryHistory(self, event ):
@@ -177,7 +175,7 @@ class RawDigitsOpData( OpDataPlottable ):
         oldevents = self.entry_points.keys()
         if len(oldevents)>0:
             oldevents.sort()
-        print "event index history: ",oldevents
+        #print "event index history: ",self.entry_points
         if len(oldevents)==1:
             return oldevents[0]
         elif len(oldevents)==2:
