@@ -90,20 +90,21 @@ class RawDigitsOpData( OpDataPlottable ):
         self.tree_entry = 0
         self.ttree.GetEntry(self.tree_entry)
         self.first_event = self.ttree.event
-        self.event_range = [self.first_event, self.first_event+100]
+        self.current_event = None
+        self.event_range = [self.first_event, self.first_event+20]
         self.entry_points = {}
         self.entry_points[ self.first_event ] = self.tree_entry
         self.maxevent = None
 
         self.loadEventRange( self.event_range[0], self.event_range[1] )
-        self.nsamples = len(self.wf_df['adcs'][0])
 
         self.opdetdigits = {}
         self.pedestals = {}
 
-    def getData( self, slot=5 ):
-        if slot not in self.opdetdigits:
-            self.opdetdigits[slot] = np.ones( (self.nsamples,48) )*2048.0
+    def getData( self, slot=5, remake=False ):
+        if slot not in self.opdetdigits or remake==True:
+            print "Allocating array for slot ",slot," with length: ",self.getNBeamWinSamples()
+            self.opdetdigits[slot] = np.ones( (self.getNBeamWinSamples(),48) )*2048.0
         return self.opdetdigits[slot]
 
     def getPedestal(self,slot=5):
@@ -119,9 +120,13 @@ class RawDigitsOpData( OpDataPlottable ):
             print "No events for ",eventid,"!"
             return False
 
+        if eventid==self.current_event:
+            return True
+        self.current_event = eventid
+
         # load TTree data into pandas array -- why? why not?
         if eventid < self.event_range[0] or eventid > self.event_range[1]:
-            self.loadEventRange( eventid-100, eventid+100 )
+            self.loadEventRange( eventid-10, eventid+20 )
 
         # sepaarate beam and cosmic readout windows
         self.sortReadoutWindows( eventid )
@@ -131,6 +136,7 @@ class RawDigitsOpData( OpDataPlottable ):
 
         # hack for flasher
         self.getData(slot=5)[:,39] = self.getData(slot=6)[:,39]
+
         return True
 
     def loadEventRange( self, start, end ):
@@ -151,9 +157,24 @@ class RawDigitsOpData( OpDataPlottable ):
         start_entry = self.searchEntryHistory( start )
         stop_entry = self.scanForEvent( end+1 )
         print "start/stop entry in tree: ",start_entry,stop_entry
+        # load data into pandas dataframe
         numpy_rec_array= tree2rec( self.ttree, selection="event>=%d && event<=%d"%(self.event_range[0], self.event_range[1]), start=start_entry, stop=stop_entry )
         self.wf_df = pd.DataFrame(numpy_rec_array)
+        # append the sample sizes of adc strings as a column to dataframe
+        self.determineWaveformLengths()
         print "Time to load: ",time.time()-s
+
+    def determineWaveformLengths( self ):
+        df = self.wf_df['adcs'].apply( len )
+        self.wf_df['nsamples'] = pd.Series( df, index=self.wf_df.index )
+
+    def getNBeamWinSamples( self):
+        if self.current_event is None:
+            print "no current event!"
+            return None
+        df = self.wf_df.query("event==%d"%(int(self.current_event)))
+        return df["nsamples"].max()
+        
 
     def scanForEvent( self, event, start_entry=0 ):
         entry = start_entry
@@ -175,9 +196,9 @@ class RawDigitsOpData( OpDataPlottable ):
         oldevents = self.entry_points.keys()
         if len(oldevents)>0:
             oldevents.sort()
-        #print "event index history: ",self.entry_points
+        print "event index history: ",self.entry_points
         if len(oldevents)==1:
-            return oldevents[0]
+            return self.entry_points[oldevents[0]]
         elif len(oldevents)==2:
             if event>oldevents[1]:
                 return self.entry_points[oldevents[1]]
@@ -207,13 +228,10 @@ class RawDigitsOpData( OpDataPlottable ):
         self.beamwin_wfms = {}
         q = self.wf_df.query('event==%d'%(eventid))
         self.firstframe = q["frame"].min()
-
         for femslot,slot_df in q.groupby('opslot'):
-            for ch,ch_df in slot_df.groupby('readoutch'):
-
+            for ch,ch_df in slot_df.groupby('opfemch'):
                 if ch>=self.getData(slot=femslot).shape[1]:
                     continue
-
                 self.beamwin_wfms[(femslot,ch)] = []
                 if "trig_timestamp" in ch_df:
                     vals = zip( ch_df['adcs'].values, ch_df['timestamp'].values,ch_df['frame'].values,ch_df['sample'].values,ch_df['opslot'].values,ch_df['trig_timestamp'])
@@ -227,14 +245,20 @@ class RawDigitsOpData( OpDataPlottable ):
                         framesample = self.convertToFrameSample( tstamp, trig_timestamp )
                         cwd = cd.CosmicDiscWindow( wf, femslot, ch, framesample )
                         self.cosmics.addWindow( cwd )
+        print "Event %d has %d cosmic windows and %d beam windows (beam window length=%d)" % ( eventid, self.cosmics.getNumWindows(), len(self.beamwin_wfms), self.getNBeamWinSamples() )
             
     def convertToFrameSample( self, timestamp, trig_timestamp  ):
         return int( (timestamp-trig_timestamp)*1000.0/NSPERTICK ) # timestamps in microseconds of course
                                                   
     def fillBeamWindowArray( self ):
         # Fill the beam sample array
+        nbeamsamples = self.getNBeamWinSamples()
         for (femslot,ch),wfs in self.beamwin_wfms.items():
             for wf in wfs:
                 samples = self.getData(slot=femslot).shape[0]
-                self.getData(slot=femslot)[:np.minimum(self.nsamples,len(wf)),ch] = wf[:np.minimum(self.nsamples,len(wf))]
+                if samples!=nbeamsamples:
+                    remake = True
+                else:
+                    remake = False
+                self.getData(slot=femslot,remake=remake)[:np.minimum(nbeamsamples,len(wf)),ch] = wf[:np.minimum(nbeamsamples,len(wf))]
                 self.getPedestal(slot=femslot)[ch] = ped.getpedestal( wf[:samples], samples/20, 1.0, verbose=False )

@@ -38,12 +38,12 @@ class OpDetDisplay(QtGui.QWidget) :
         
         # inputs layout
         # widgets
-        self.first_frame = 0
-        self.last_frame = 0
-        self.ticsperframe = opdata.nsamples
         
-        # Plot options
-        self.event = QtGui.QLineEdit("0")     # event number
+        # Plot optionsd
+        if opdata is not None:
+            self.event = QtGui.QLineEdit("%d"%(opdata.first_event))     # event number
+        else:
+            self.event = QtGui.QLineEdit("0") # event number
         self.slot  = QtGui.QLineEdit("5")     # slot number
         self.collapse = QtGui.QCheckBox()  # collapse onto one another
         self.collapse.setChecked(False)
@@ -68,10 +68,6 @@ class OpDetDisplay(QtGui.QWidget) :
         self.user_plot_item = {} # storage for user plot items
 
         # axis options
-        self.start_frame  =  QtGui.QLineEdit("%d"%(self.first_frame))
-        self.start_sample = QtGui.QLineEdit("0")
-        self.end_frame  =  QtGui.QLineEdit("%d"%(self.first_frame))
-        self.end_sample = QtGui.QLineEdit("%d"%(opdata.getSampleLength()))
         self.set_xaxis = QtGui.QPushButton("Re-plot!")
         self.openCosmicWindow = QtGui.QPushButton("Cosmic Disc. Viewer")
         self.draw_user_items = QtGui.QCheckBox()  # draw user products
@@ -80,12 +76,6 @@ class OpDetDisplay(QtGui.QWidget) :
         self.run_user_analysis.setChecked(True)
 
         self.lay_inputs.addWidget( self.openCosmicWindow, 1, 0, 1, 2 )
-        #self.lay_inputs.addWidget( QtGui.QLabel("Min. Sample"), 1, 2 )
-        #self.lay_inputs.addWidget( self.start_sample,1,3)
-        #self.lay_inputs.addWidget( QtGui.QLabel("Max. Frame"), 1, 4 )
-        #self.lay_inputs.addWidget( self.end_frame, 1, 5 )
-        #self.lay_inputs.addWidget( QtGui.QLabel("Max. Sample"), 1, 6 )
-        #self.lay_inputs.addWidget( self.end_sample, 1, 7 )
         self.lay_inputs.addWidget( QtGui.QLabel("Draw user items"), 1, 8 )
         self.lay_inputs.addWidget( self.draw_user_items, 1, 9 )
         self.lay_inputs.addWidget( QtGui.QLabel("Run user funcs."), 1, 10 )
@@ -128,26 +118,6 @@ class OpDetDisplay(QtGui.QWidget) :
             print "old event: ",self.lastevent
             self.newevent = False
         
-        sframe = int(self.start_frame.text())
-        eframe = int(self.end_frame.text())
-        ssample = int(self.start_sample.text())
-        esample = int(self.end_sample.text())
-        if sframe<self.first_frame:
-            sframe = self.first_frame
-            ssample = 0
-        if eframe>self.last_frame:
-            eframe = self.last_frame
-            esample = self.ticsperframe-1
-
-        for s in [ssample,esample]:
-            if s<0:
-                s = 0
-            if s>=self.ticsperframe:
-                s = self.ticsperframe-1
-
-        xmin = (sframe-self.first_frame)*self.ticsperframe + ssample
-        xmax = (eframe-self.first_frame)*self.ticsperframe + esample
-
         scaledown = float( self.adc_scaledown.text() )
         
 
@@ -178,7 +148,7 @@ class OpDetDisplay(QtGui.QWidget) :
                 for useritem in self.user_plot_item[ipmt]:
                     self.plot.addItem( useritem )
 
-        self.plot.setXRange(xmin*NSPERTICK,xmax*NSPERTICK,update=True)
+        self.plot.setXRange(0,nbins*NSPERTICK,update=True)
         self.plot.addItem( self.time_range )
 
         if "cosmics" in dir(self.opdata):
@@ -288,10 +258,12 @@ class OpDetDisplay(QtGui.QWidget) :
     def nextEvent(self):
         evt = int(self.event.text())
         slot = int(self.slot.text())
-        try:
-            self.opdata.getEvent( evt+1, slot=slot )
+
+        ok = self.opdata.getEvent( evt+1, slot=slot )
+        if ok:
             self.event.setText("%d"%(evt+1))
-        except:
+        else:
+            print "Next event not ok"
             self.opdata.getEvent( evt, slot=slot )
         self.plotData()
 

@@ -55,13 +55,15 @@ class CosmicDiscDisplay(QtGui.QWidget) :
         
     def plotCosmicWindows( self, cosmicwindowvector ):
         self.diagram.clear()
+        self.beambox = pg.PlotDataItem( x=[0,0,samplesPerFrame,samplesPerFrame,0], y=[-5, 32, 32, -5, -5] )
+        #self.time_range = pg.LinearRegionItem(values=[0,1000], orientation=pg.LinearRegionItem.Vertical)
         self.cosmicwindowvector = cosmicwindowvector
         cwv = cosmicwindowvector
         print "Number of cosmics: ",cwv.getNumWindows()
         self.spots = []
         for ch,windows in cwv.chwindows.items():
             for t,win in windows.items():
-                if t<-samplesPerFrame or t>3*samplesPerFrame:
+                if t<-2*samplesPerFrame or t>3*samplesPerFrame:
                     print t,"<-",samplesPerFrame,">",3*samplesPerFrame
                     continue
                 if win.slot==5:
