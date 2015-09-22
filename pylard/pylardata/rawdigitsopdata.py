@@ -91,7 +91,7 @@ class RawDigitsOpData( OpDataPlottable ):
         self.ttree.GetEntry(self.tree_entry)
         self.first_event = self.ttree.event
         self.current_event = None
-        self.event_range = [self.first_event, self.first_event+20]
+        self.event_range = [self.first_event, self.first_event+100]
         self.entry_points = {}
         self.entry_points[ self.first_event ] = self.tree_entry
         self.maxevent = None
@@ -126,7 +126,7 @@ class RawDigitsOpData( OpDataPlottable ):
 
         # load TTree data into pandas array -- why? why not?
         if eventid < self.event_range[0] or eventid > self.event_range[1]:
-            self.loadEventRange( eventid-10, eventid+20 )
+            self.loadEventRange( eventid-10, eventid+100 )
 
         # sepaarate beam and cosmic readout windows
         self.sortReadoutWindows( eventid )
