@@ -196,7 +196,7 @@ class RawDigitsOpData( OpDataPlottable ):
         oldevents = self.entry_points.keys()
         if len(oldevents)>0:
             oldevents.sort()
-        print "event index history: ",self.entry_points
+        #print "event index history: ",self.entry_points
         if len(oldevents)==1:
             return self.entry_points[oldevents[0]]
         elif len(oldevents)==2:
