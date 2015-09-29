@@ -74,7 +74,7 @@ class CosmicDiscDisplay(QtGui.QWidget) :
         self.windowplot = pg.ScatterPlotItem(pxMode=False)
         self.windowplot.addPoints( self.spots )
         self.diagram.addItem( self.windowplot )
-        self.diagram.addItem( self.beambox )
+        #self.diagram.addItem( self.beambox )
         self.diagram.addItem( self.time_range )
 
         # axis
