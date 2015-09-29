@@ -95,6 +95,8 @@ class RawDigitsOpData( OpDataPlottable ):
         self.entry_points = {}
         self.entry_points[ self.first_event ] = self.tree_entry
         self.maxevent = None
+        self.update_the_sample_size = False # optimization. tells getNBeamWinSamples to either calculate or use cached value
+        self.__nbeamsamples = 0 # cached value of beam window size for the event
 
         self.loadEventRange( self.event_range[0], self.event_range[1] )
 
@@ -112,9 +114,6 @@ class RawDigitsOpData( OpDataPlottable ):
             self.pedestals[slot] = np.ones( 48 )*2048.0
         return self.pedestals[slot]
 
-    def getSampleLength(self):
-        return self.nsamples
-
     def getEvent( self, eventid, slot=5 ):
         if self.maxevent is not None and eventid>self.maxevent:
             print "No events for ",eventid,"!"
@@ -122,6 +121,7 @@ class RawDigitsOpData( OpDataPlottable ):
 
         if eventid==self.current_event:
             return True
+        self.update_the_sample_size = True # optimization
         self.current_event = eventid
 
         # load TTree data into pandas array -- why? why not?
@@ -136,7 +136,7 @@ class RawDigitsOpData( OpDataPlottable ):
 
         # hack for flasher
         self.getData(slot=5)[:,39] = self.getData(slot=6)[:,39]
-
+        self.newevent = False
         return True
 
     def loadEventRange( self, start, end ):
@@ -172,8 +172,11 @@ class RawDigitsOpData( OpDataPlottable ):
         if self.current_event is None:
             print "no current event!"
             return None
-        df = self.wf_df.query("event==%d"%(int(self.current_event)))
-        return df["nsamples"].max()
+        if self.update_the_sample_size:
+            df = self.wf_df.query("event==%d"%(int(self.current_event)))
+            self.__nbeamsamples = df["nsamples"].max()
+            self.update_the_sample_size = False
+        return self.__nbeamsamples
         
 
     def scanForEvent( self, event, start_entry=0 ):
