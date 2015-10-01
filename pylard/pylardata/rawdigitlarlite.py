@@ -12,10 +12,10 @@ NCHAN = 48
 NSPERTICK = 15.625 # ns
 NSPERFRAME = 1600000.0 # 1.6 ms in ns
 
-class RawDigitsOpData( OpDataPlottable ):
+class RawLArLiteOpData( OpDataPlottable ):
 
     def __init__(self,inputfile):
-        super(RawDigitsOpData, self).__init__()
+        super(RawLArLiteOpData, self).__init__()
 
         # set input file name
         self.fname = inputfile
