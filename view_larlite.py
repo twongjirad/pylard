@@ -4,7 +4,7 @@ from pyqtgraph.Qt import QtGui, QtCore
 # requires pyqtgraph, pandas, ROOT, rootpy
 from pylard.pylardisplay.opdetdisplay import OpDetDisplay
 from pylard.pylardata.wfopdata import WFOpData
-from pylard.pylardata.rawdigitsopdata import RawDigitsOpData
+#from pylard.pylardata.rawdigitsopdata import RawDigitsOpData
 from pylard.pylardata.rawdigitlarlite import RawDigitsOpData
 
 print 'loading QtGui.QApplication'
@@ -13,7 +13,7 @@ print 'loading QtGui.QApplication'
 
 #  expects 'raw_wf_tree'
 #fname='~/uBooNE/data/PMTCommissioning/wf_000.root'
-fname= '~/uBooNE/data/PMTCommissioning/run007.root'
+fname= sys.argv[1]
 #fname = sys.argv[1]
 print 'call WFOpData()'
 #opdata = WFOpData( fname )

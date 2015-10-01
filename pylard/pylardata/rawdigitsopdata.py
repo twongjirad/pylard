@@ -139,6 +139,36 @@ class RawDigitsOpData( OpDataPlottable ):
         self.newevent = False
         return True
 
+    def getNextEvent(self):
+        # get next event
+        nextevent = self.current_event+1
+        if self.maxevent is not None and nextevent>=self.maxevent:
+            print "No events for ",nextevent,"! maxevent=",self.maxevent
+            return False
+        ok = True
+        inc = 1
+
+        q = self.wf_df.query( "event>=%d"%(nextevent) )
+        if len( q )==0:
+            print "empty query. must find next event number if tree"
+            events = self.entry_points.keys()
+            events.sort()
+            last_tree_entry = self.entry_points[ events[-1] ]
+            numpy_rec_array= tree2rec( self.ttree, selection="event>%d"%(self.current_event), start=last_tree_entry, stop=last_tree_entry+10 )
+            wf_df = pd.DataFrame(numpy_rec_array)
+            nextevent =  wf_df["event"].min()
+            self.entry_points[ nextevent ] = last_tree_entry+1
+            print "loaded edge of new dataframe. nextevent now ",nextevent
+            #raw_input()
+            if len(wf_df)==0:
+                return False # no more
+        else:
+            nextevent = q["event"].min()
+            print "next event is ",nextevent
+        
+        return self.getEvent( nextevent )
+            
+
     def loadEventRange( self, start, end ):
         # load event range from tree
         s = time.time()
@@ -184,9 +214,10 @@ class RawDigitsOpData( OpDataPlottable ):
         bytes = self.ttree.GetEntry(entry)
         lastevent = None
         while bytes>0 and self.ttree.event<=event:
+            lastevent = self.ttree.event
             if event>=self.ttree.event:
                 entry+=1 # keep going
-                lastevent = self.ttree.event
+            #print entry, lastevent
             bytes = self.ttree.GetEntry(entry)
             if bytes==0:
                 self.maxevent = lastevent
@@ -242,13 +273,16 @@ class RawDigitsOpData( OpDataPlottable ):
                     vals = zip( ch_df['adcs'].values, ch_df['timestamp'].values,ch_df['frame'].values,ch_df['sample'].values,ch_df['opslot'].values,ch_df['timestamp'].values)
                 for (awf,tstamp,frame,sample,slot,trig_timestamp) in vals:
                     wf = np.array( awf )
-                    if len(wf)>500:
+                    if len(wf)>=1000:
                         self.beamwin_wfms[(femslot,ch)].append( wf )
                     else:                            
                         framesample = self.convertToFrameSample( tstamp, trig_timestamp )
                         cwd = cd.CosmicDiscWindow( wf, femslot, ch, framesample )
                         self.cosmics.addWindow( cwd )
-        print "Event %d has %d cosmic windows and %d beam windows (beam window length=%d)" % ( eventid, self.cosmics.getNumWindows(), len(self.beamwin_wfms), self.getNBeamWinSamples() )
+        try:
+            print "Event %d has %d cosmic windows and %d beam windows (beam window length=%d)" % ( eventid, self.cosmics.getNumWindows(), len(self.beamwin_wfms), self.getNBeamWinSamples() )
+        except:
+            print "Event ",eventid," has ",self.cosmics.getNumWindows()," cosmic windows and ",len(self.beamwin_wfms)," beam windows (length=",self.getNBeamWinSamples(),")"
             
     def convertToFrameSample( self, timestamp, trig_timestamp  ):
         return int( (timestamp-trig_timestamp)*1000.0/NSPERTICK ) # timestamps in microseconds of course
