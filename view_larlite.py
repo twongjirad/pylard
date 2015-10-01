@@ -40,4 +40,3 @@ if __name__ == '__main__':
         opdisplay.show()
         QtGui.QApplication.instance().exec_()
         #opdisplay.show()
-
