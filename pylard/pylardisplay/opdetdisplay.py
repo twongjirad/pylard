@@ -14,6 +14,7 @@ NSPERTICK = 15.625
 class OpDetDisplay(QtGui.QWidget) :
     def __init__(self, opdata):
         super(OpDetDisplay,self).__init__()
+
         self.opdata = opdata
 
         # Plots
@@ -49,7 +50,7 @@ class OpDetDisplay(QtGui.QWidget) :
         self.collapse.setChecked(False)
         self.prev_event = QtGui.QPushButton("Previous")
         self.next_event = QtGui.QPushButton("Next")
-        self.adc_scaledown = QtGui.QLineEdit("100.0")
+        self.adc_scaledown = QtGui.QLineEdit("10.0")
         self.draw_all = QtGui.QCheckBox()  # collapse onto one another
         self.draw_all.setChecked(False)
         self.lay_inputs.addWidget( QtGui.QLabel("Event"), 0, 0 )
@@ -105,6 +106,8 @@ class OpDetDisplay(QtGui.QWidget) :
         self.next_event.clicked.connect( self.nextEvent )
         self.prev_event.clicked.connect( self.prevEvent )
         self.openCosmicWindow.clicked.connect( self.showCosmicDisplay )
+
+        print 'done initializing...'
         
     def plotData( self ):
 
@@ -115,7 +118,6 @@ class OpDetDisplay(QtGui.QWidget) :
             self.lastevent = evt
             self.newevent = True
         else:
-            print "old event: ",self.lastevent
             self.newevent = False
         
         scaledown = float( self.adc_scaledown.text() )
@@ -130,6 +132,9 @@ class OpDetDisplay(QtGui.QWidget) :
         
         nbins = self.opdata.getData( slot=int(self.slot.text() ) ).shape[0]
         x = np.linspace( 0, nbins*NSPERTICK, num=nbins )
+        
+        print scaledown
+
         for ipmt in xrange(0,self.opdata.getData( slot=int(self.slot.text() ) ).shape[1]):
 
             if len(self.channellist)>0 and ipmt not in self.channellist and not self.draw_all.isChecked():
