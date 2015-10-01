@@ -346,6 +346,20 @@ class OpDetDisplay(QtGui.QWidget) :
                 self.last_clicked_channel=None
         self.plotData()
 
+    def setPMTdiagramValues( self, channeldata, scale=1.0 ):
+        """
+        channeldict: dict
+        """
+        self.pmtspot = []
+        for ch in range(0,36):
+            pos = getPosFromID(ch)
+            bordercol = self.getChanColor( ch, alpha=255 )
+            if ch in channeldata:
+                col = self.pmtscale.colorMap().map( channeldata[ch]/scale )
+            else:
+                col = self.pmtscale.colorMap().map( 0.0 )
+            self.pmtspot.append( {"pos":(pos[2],pos[1]), "size":30, 'pen':{'color':bordercol,'width':2}, 'brush':col, 'symbol':'o', 'data':{"id":ch,"highlight":False}} )
+        self.pmtdiagram.setData( self.pmtspot  )
 
     def getpedestal(self,wfm,femch=None):
         slot = int(self.slot.text())
