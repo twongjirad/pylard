@@ -21,7 +21,7 @@ class RawDigitsOpData( OpDataPlottable ):
         self.files = inputfiles
 
         # get the producer name
-        self.producer = 'pmt_xmit'
+        self.producer = 'pmtreadout'
         
         # set the slot number to use
         self.slot = 5

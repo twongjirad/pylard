@@ -1,7 +1,7 @@
 import os,sys
 from pylard.pylardata.opdataplottable import OpDataPlottable
 from ophit import OpHitData
-from rawdigitlarlite import RawDigitsOpData
+from opdetwf import OpDetWfData
 import ROOT
 
 class OpticalData( OpDataPlottable ):
@@ -24,8 +24,8 @@ class OpticalData( OpDataPlottable ):
         self.SplitInputFiles()
         
         # OpticalData owns instances of all data object classes
-        self.opdata  = RawDigitsOpData(self.opwf_files)
-        self.opdata.setProducer(self.opwf_producer)
+        self.opdetwf = OpDetWfData(self.opwf_files)
+        self.opdetwf.setProducer(self.opwf_producer)
         self.ophits  = OpHitData(self.ophit_files)
         self.ophits.setProducer(self.ophit_producer)
         self.opflash = None

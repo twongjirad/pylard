@@ -12,13 +12,13 @@ NCHAN = 48
 NSPERTICK = 15.625 # ns
 NSPERFRAME = 1600000.0 # 1.6 ms in ns
 
-class RawDigitsOpData( OpDataPlottable ):
+class OpDetWfData( OpDataPlottable ):
 
-    def __init__(self,inputfile):
-        super(RawDigitsOpData, self).__init__()
+    def __init__(self,inputfiles):
+        super(OpDetWfData, self).__init__()
 
         # set input file name
-        self.fname = inputfile
+        self.files = inputfiles
 
         # get the producer name
         self.producer = 'pmtreadout'
@@ -26,7 +26,8 @@ class RawDigitsOpData( OpDataPlottable ):
         # call larlite manager
         self.manager = larlite.storage_manager()
         self.manager.reset()
-        self.manager.add_in_filename(self.fname)
+        for f in self.files:
+            self.manager.add_in_filename(f)
         self.manager.set_io_mode(larlite.storage_manager.kREAD)
         self.manager.open()
 
@@ -55,6 +56,11 @@ class RawDigitsOpData( OpDataPlottable ):
         self.n_pmts = 48
         # fill pedestals w/ baseline
         self.pedestals[self.slot] = np.ones( self.n_pmts ) *2048.
+
+    # -----------------------------
+    # define producer name
+    def setProducer(self, producer):
+        self.producer = producer
 
     def getData( self, slot=5, remake=False ):
         if slot not in self.opdetdigits or remake==True:
