@@ -14,11 +14,11 @@ NSPERFRAME = 1600000.0 # 1.6 ms in ns
 
 class RawDigitsOpData( OpDataPlottable ):
 
-    def __init__(self,inputfile):
+    def __init__(self,inputfiles):
         super(RawDigitsOpData, self).__init__()
 
         # set input file name
-        self.fname = inputfile
+        self.files = inputfiles
 
         # get the producer name
         self.producer = 'pmt_xmit'
@@ -29,7 +29,8 @@ class RawDigitsOpData( OpDataPlottable ):
         # call larlite manager
         self.manager = larlite.storage_manager()
         self.manager.reset()
-        self.manager.add_in_filename(self.fname)
+        for f in self.files:
+            self.manager.add_in_filename(f)
         self.manager.set_io_mode(larlite.storage_manager.kREAD)
         self.manager.open()
 
@@ -56,6 +57,11 @@ class RawDigitsOpData( OpDataPlottable ):
         # fill pedestals w/ baseline
         self.pedestals[self.slot] = np.ones( self.n_pmts ) *2048.
 
+    # --------------------
+    # define producer name
+    def setProducer(self,producer):
+        self.producer = producer
+
     def getData( self, slot=5, remake=False ):
         if slot not in self.opdetdigits or remake==True:
             print "Allocating array for slot ",slot," with length: ",self.getNBeamWinSamples()
@@ -77,6 +83,7 @@ class RawDigitsOpData( OpDataPlottable ):
         self.manager.go_to(eventid)
         
         # load optical waveforms
+        print 'producer name is:%s'%self.producer
         self.opdata = self.manager.get_data(larlite.data.kFIFO,self.producer)
 
         # prepare the cosmics data

@@ -12,7 +12,9 @@ from pylard.pylardisplay.cosmicdiscdisplay import CosmicDiscDisplay
 NSPERTICK = 15.625
 
 class OpDetDisplay(QtGui.QWidget) :
+
     def __init__(self, opdata):
+
         super(OpDetDisplay,self).__init__()
         self.opdata = opdata
 
@@ -27,8 +29,6 @@ class OpDetDisplay(QtGui.QWidget) :
         # main layout
         self.layout = QtGui.QGridLayout()
         self.setLayout(self.layout)
-        #self.layout.addWidget( self.diagram, 0, 0 )
-        #self.layout.addWidget( self.plot, 1, 0 )
         self.layout.addWidget( self.graphics, 0, 0 )
         self.graphics.addItem( self.diagram, 0, 0 )
         self.graphics.addItem( self.pmtscale, 1, 0 )
@@ -47,6 +47,8 @@ class OpDetDisplay(QtGui.QWidget) :
         self.slot  = QtGui.QLineEdit("5")     # slot number
         self.collapse = QtGui.QCheckBox()  # collapse onto one another
         self.collapse.setChecked(False)
+        self.add_hits    = QtGui.QPushButton("View OpHit")
+        self.add_flashes = QtGui.QPushButton("View OpFlash")
         self.prev_event = QtGui.QPushButton("Previous")
         self.next_event = QtGui.QPushButton("Next")
         self.adc_scaledown = QtGui.QLineEdit("100.0")
@@ -64,6 +66,8 @@ class OpDetDisplay(QtGui.QWidget) :
         self.lay_inputs.addWidget( self.draw_all, 0, 9 )
         self.lay_inputs.addWidget( self.prev_event, 0, 11 )
         self.lay_inputs.addWidget( self.next_event, 0, 12 )
+        self.lay_inputs.addWidget( self.add_hits, 0, 13 )
+        self.lay_inputs.addWidget( self.add_flashes, 1, 13 )
         self.last_clicked_channel = None
         self.user_plot_item = {} # storage for user plot items
 
