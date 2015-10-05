@@ -10,6 +10,9 @@ from pylard.config.pmtpos import getPosFromID
 from pylard.pylardisplay.cosmicdiscdisplay import CosmicDiscDisplay
 from pylard.pylardisplay.cosmicwindow import CosmicWindow
 
+# dumb utility functions to import
+from functions import getFlashSize
+
 samplesPerFrame = 102400
 NSPERTICK = 15.625
 USPERTICK = NSPERTICK/1000.
@@ -61,8 +64,6 @@ class OpDetDisplay(QtGui.QWidget) :
         self.slot  = QtGui.QLineEdit("5")     # slot number
         self.collapse = QtGui.QCheckBox()  # collapse onto one another
         self.collapse.setChecked(False)
-        self.add_hits    = QtGui.QPushButton("View OpHit")
-        self.add_flashes = QtGui.QPushButton("View OpFlash")
         self.prev_event = QtGui.QPushButton("Previous")
         self.next_event = QtGui.QPushButton("Next")
         self.adc_scaledown = QtGui.QLineEdit("100.0")
@@ -80,25 +81,21 @@ class OpDetDisplay(QtGui.QWidget) :
         self.lay_inputs.addWidget( self.collapse, 0, 7 )
         self.lay_inputs.addWidget( QtGui.QLabel("Draw all"), 0, 8 )
         self.lay_inputs.addWidget( self.draw_all, 0, 9 )
-        self.lay_inputs.addWidget( self.prev_event, 0, 11 )
-        self.lay_inputs.addWidget( self.next_event, 0, 12 )
-        self.lay_inputs.addWidget( self.add_hits, 0, 13 )
-        self.lay_inputs.addWidget( self.add_flashes, 1, 13 )
+        self.lay_inputs.addWidget( self.prev_event, 0, 10 )
+        self.lay_inputs.addWidget( self.next_event, 0, 11 )
         self.last_clicked_channel = None
         self.user_plot_item = {} # storage for user plot items
 
         # axis options
         self.set_xaxis = QtGui.QPushButton("Re-plot!")
-        self.draw_user_items = QtGui.QCheckBox()  # draw user products
-        self.draw_user_items.setChecked(True)
+        self.draw_flashes = QtGui.QCheckBox()  # draw user products
+        self.draw_flashes.setChecked(True)
         self.run_user_analysis = QtGui.QCheckBox()  # draw user products
         self.run_user_analysis.setChecked(True)
 
-        self.lay_inputs.addWidget( QtGui.QLabel("Draw user items"), 1, 8 )
-        self.lay_inputs.addWidget( self.draw_user_items, 1, 9 )
-        self.lay_inputs.addWidget( QtGui.QLabel("Run user funcs."), 1, 10 )
-        self.lay_inputs.addWidget( self.run_user_analysis, 1, 11 )
-        self.lay_inputs.addWidget( self.set_xaxis, 1, 12 )
+        self.lay_inputs.addWidget( QtGui.QLabel("Draw Flashes"), 1, 8 )
+        self.lay_inputs.addWidget( self.draw_flashes, 1, 9 )
+        self.lay_inputs.addWidget( self.set_xaxis, 0, 12 )
 
         # range selections
         self.time_range = pg.LinearRegionItem(values=[1600,3200], orientation=pg.LinearRegionItem.Vertical)
@@ -117,9 +114,6 @@ class OpDetDisplay(QtGui.QWidget) :
         self.user_analysis_products = []
         self.user_analyses = []
 
-        # subwindow
-        self.cosmicdisplay = CosmicDiscDisplay(self)
-
         # connect
         self.set_xaxis.clicked.connect( self.plotData )
         self.next_event.clicked.connect( self.nextEvent )
@@ -127,7 +121,7 @@ class OpDetDisplay(QtGui.QWidget) :
 
 
     # ----------------------
-    # draw data on GUI
+    # draw data on GUI -----
     def plotData( self ):
 
         evt = int(self.event.text())
@@ -163,34 +157,33 @@ class OpDetDisplay(QtGui.QWidget) :
         hits = self.opdata.ophits.getData()
 
         # what are the bounds that we want to plot in?
-        bounds = self.time_window.time_range.getRegion()
+        bounds = self.time_window.time_range.getRegion() # usec
+        # pmt-color scale bounds
+        pmt_bnds = self.time_range.getRegion() # usec
+
+        # if the time_range for PMT drawing is outside of the bounds of what is shown in the middle window
+        # then re-adjust range so that the window is fully contained
+        if (pmt_bnds[1] < bounds[0]):
+            pmt_bnds = ( bounds[0] , bounds[1] )
+        elif (pmt_bnds[0] > bounds[1]):
+            pmt_bnds = ( bounds[0] , bounds[1] )
+        elif ( (pmt_bnds[0] < bounds[0]) and (pmt_bnds[1] > bounds[1]) ):
+            pmt_bnds = ( bounds[0] , bounds[1] )
+        elif (pmt_bnds[0] < bounds[0]):
+            pmt_bnds = ( bounds[0] , pmt_bnds[1] )
+        elif (pmt_bnds[1] > bounds[1]):
+            pmt_bnds = ( bounds[0], bounds[1] )
+        else:
+            pmt_bnds = (pmt_bnds[0], pmt_bnds[1])
+        self.time_range = pg.LinearRegionItem(values=pmt_bnds, orientation=pg.LinearRegionItem.Vertical)
+
+        # scale to ticks
         bounds = np.array(bounds)/USPERTICK
         bounds[0] = int(bounds[0])
         bounds[1] = int(bounds[1])
 
-        # if the time_range for PMT drawing is outside of the bounds of what is shown in the middle window
-        # then re-adjust range so that the window is fully contained
-        # pmt-color scale bounds
-        pmt_bnds = self.time_range.getRegion()
-        pmt_min = pmt_bnds[0]
-        pmt_max = pmt_bnds[1]
-        if (pmt_min < bounds[0]*USPERTICK):
-            pmt_min = bounds[0]*USPERTICK+50
-        if (pmt_max > bounds[1]*USPERTICK):
-            pmt_max = bounds[1]*USPERTICK-50
-        print 'new bounds : [%i,%i]'%(pmt_min,pmt_max)
-        self.time_range = pg.LinearRegionItem(values=[pmt_min,pmt_max], orientation=pg.LinearRegionItem.Vertical)
-
-        print 'bounds for this draw : ',bounds
-
-
-        
-        print 'pmt color-map bounds are : [%.02f, %.02f]'%(pmt_bnds[0],pmt_bnds[1])
-
         # time-tick values
         TDCs = np.linspace( 0*USPERTICK, 3*samplesPerFrame*USPERTICK, 3*samplesPerFrame )
-
-        print 'bounds are: ',bounds
 
         # for all PMTs
         for ipmt in wfs:
@@ -246,17 +239,18 @@ class OpDetDisplay(QtGui.QWidget) :
         # add the time-range
         self.wfplot.addItem( self.time_range )
 
-        # add all the flashes
-        flashes = self.opdata.opflash.flashes
-        for flash in flashes:
-
-            time = flash[0]
-            flashInfo = flashes[flash]
-            PE = flashInfo[0]
-            Ypos = flashInfo[1]
-            Zpos = -(flashInfo[2]-(1036./2))
-            if (PE > 10):
-                self.wfplot.addLine(time)
+        if (self.draw_flashes.isChecked() == True):
+            # add all the flashes
+            flashes = self.opdata.opflash.flashes
+            for flash in flashes:
+                
+                time = flash[0]
+                flashInfo = flashes[flash]
+                PE = flashInfo[0]
+                Ypos = flashInfo[1]
+                Zpos = -(flashInfo[2]-(1036./2))
+                if (PE > 10):
+                    self.wfplot.addLine(time, movable=False, pen={'color':(255,255,0,255),'width':2})
 
         # do any additional drawing to the cosmics window
         self.time_window.plotCosmicWindows()        
@@ -284,19 +278,24 @@ class OpDetDisplay(QtGui.QWidget) :
         # yellow
         yellow = (255,255,0,255)
 
-        # next append flashes
-        for flash in flashes:
+        # if we are to draw flashes
+        if (self.draw_flashes.isChecked() == True):
 
-            time = flash[0]
-            flashInfo = flashes[flash]
-            PE   = flashInfo[0]
-            if (PE < 10) : continue
-            Ypos = flashInfo[1]
-            Zpos = -(flashInfo[2]-(1036./2))
+            # next append flashes
+            for flash in flashes:
+
+                time = flash[0]
+                flashInfo = flashes[flash]
+                PE   = flashInfo[0]
+                if (PE < 10) : continue
+                Ypos = flashInfo[1]
+                Zpos = -(flashInfo[2]-(1036./2))
+
+                PEsize = int(getFlashSize(PE))
             
-            # if the time is in the correct time-interval
-            if ( ( time > pmt_bnds[0]) and ( time < pmt_bnds[1]) ):
-                self.pmtspot.append( {"pos":(Zpos,Ypos), "size":15, "pen":{'color':yellow,'width':2}, "brush":yellow, "symbol":"d"} )
+                # if the time is in the correct time-interval
+                if ( ( time > pmt_bnds[0]) and ( time < pmt_bnds[1]) ):
+                    self.pmtspot.append( {"pos":(Zpos,Ypos), "size":PEsize, "pen":{'color':yellow,'width':2}, "brush":yellow, "symbol":"d"} )
 
         self.pmtdiagram.setData( self.pmtspot  )
 
@@ -313,44 +312,8 @@ class OpDetDisplay(QtGui.QWidget) :
         else:
             ay.setLabel('PMT Ch',**yStyle)
 
-        # ----------------------------------------------------
-        # added user items
-
-        if self.draw_user_items.isChecked() and None in self.user_plot_item.keys():
-            for useritem in self.user_plot_item[None]:
-                self.wfplot.addItem( useritem )
-
-        # ----------------------------------------------------
-        # user analysis items
-        if self.run_user_analysis.isChecked():
-            # if new event: generate products
-            if self.newevent or len(self.user_analysis_products)==0:
-                self.user_analysis_products = []
-                for userfunc in self.user_analyses:
-                    user_products = userfunc( self.opdata.opdetwf, self )
-                    for product in user_products:
-                        productok = True
-                        for k in ["femch","plotitem","screen"]:
-                            if k not in product:
-                                print "User analyss products needs to be a list of dicts with the following keys: 'femch', 'plotitem', 'screen'."
-                                productok = False
-                        if not productok:
-                            continue
-                        self.user_analysis_products.append( product )
-            # plot products
-            if self.draw_user_items.isChecked():
-                for product in self.user_analysis_products:
-                    ch = product["femch"]
-                    if len(self.channellist)>0 and ch not in self.channellist and not self.draw_all.isChecked():
-                        continue
-                    item = product["plotitem"]
-                    if product["screen"]=="diagram":
-                        self.pmt_map.addItem( item )
-                    elif product["screen"]=="waveform":
-                        self.wfplot.addItem( item )
-                    else:
-                        print "unknonw user product screen option, '",product["screen"],"'. Valid choices are 'diagram' and 'waveform'"
-
+    # ------------------------
+    # PMT position mapping ---
     def definePMTdiagram(self):
         self.pmtspot = []
         for pid in getPMTIDList():
@@ -363,6 +326,7 @@ class OpDetDisplay(QtGui.QWidget) :
         self.pmtdiagram.addPoints( self.pmtspot )
         self.pmt_map.addItem( self.pmtdiagram ) 
         self.pmtdiagram.sigClicked.connect( self.pmtDiagramClicked )
+        self.pmtdiagram.scene().sigMouseMoved.connect(self.onMove)
 
         
     def nextEvent(self):
@@ -460,13 +424,15 @@ class OpDetDisplay(QtGui.QWidget) :
     def getPedestal(self,pmt):
         return self.opdata.opdetwf.pedestals[pmt]
 
-    def addUserAnalysis( self, user_analysis ):
-        self.user_analyses.append( user_analysis )
 
-    def clearUserAnalyses( self ):
-        self.user_analyses = []
-        self.user_analysis_chproducts = {}
-        
-    def showCosmicDisplay( self ):
-        self.cosmicdisplay.show()
-                
+    # -------------------------------------------
+    # function that decides what to do when mouse
+    # hovers over a point in the PMT diagram
+    def onMove(self, pos):
+
+        act_pos = self.pmtdiagram.mapFromScene(pos)
+
+        p1 = self.pmtdiagram.pointsAt(act_pos)
+
+        #if (len(p1) != 0):
+        #print p1[0]
