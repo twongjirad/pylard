@@ -2,6 +2,7 @@ import os,sys
 from pylard.pylardata.opdataplottable import OpDataPlottable
 from ophit import OpHitData
 from opdetwf import OpDetWfData
+from opflash import OpFlashData
 import ROOT
 
 class OpticalData( OpDataPlottable ):
@@ -28,7 +29,14 @@ class OpticalData( OpDataPlottable ):
         self.opdetwf.setProducer(self.opwf_producer)
         self.ophits  = OpHitData(self.ophit_files)
         self.ophits.setProducer(self.ophit_producer)
-        self.opflash = None
+        self.opflash = OpFlashData(self.opflash_files)
+        self.opflash.setProducer(self.opflash_producer)
+
+        # event location
+        self.first_event = 0
+        self.event_range = [ self.first_event, self.first_event+100 ]
+        self.entry_points = {}
+        self.entry_points[ self.first_event ] = 0
 
 
     def SplitInputFiles(self):
@@ -70,3 +78,16 @@ class OpticalData( OpDataPlottable ):
         print
         print 'opflash files:'
         print self.opflash_files
+
+
+    # ------------------------
+    # Move to a specific event
+    def getEvent(self, eventid):
+        
+        self.opdetwf.getEvent(eventid)
+        
+        self.ophits.getEvent(eventid)
+
+        self.opflash.getEvent(eventid)
+
+        return True

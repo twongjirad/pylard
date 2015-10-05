@@ -7,4 +7,5 @@ class OpDataPlottable(object):
     def getData(self):
         raise RuntimeError('need to overwrite this function')
         return None
+
         

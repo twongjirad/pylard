@@ -8,8 +8,11 @@ from collections import OrderedDict
 from pylard.config.pmt_chmap import getPMTID, getChannel, getPMTIDList, getPaddleIDList
 from pylard.config.pmtpos import getPosFromID 
 from pylard.pylardisplay.cosmicdiscdisplay import CosmicDiscDisplay
+from pylard.pylardisplay.cosmicwindow import CosmicWindow
 
+samplesPerFrame = 102400
 NSPERTICK = 15.625
+USPERTICK = NSPERTICK/1000.
 
 class OpDetDisplay(QtGui.QWidget) :
 
@@ -20,8 +23,14 @@ class OpDetDisplay(QtGui.QWidget) :
 
         # Plots
         self.graphics = pg.GraphicsLayoutWidget()
-        self.plot = pg.PlotItem(name='Plot1')
-        self.diagram = pg.PlotItem(name="plot2")
+        # waveform plotting region
+        self.wfplot = pg.PlotItem(name="Wf Plot")
+        # pmt plotting diagram
+        self.pmt_map = pg.PlotItem(name="PMT map")
+        # time-range selction window
+        self.time_window = CosmicWindow()
+        #self.time_window = pg.PlotItem(name='Time Window')
+        
         self.pmtscale =  pg.GradientEditorItem(orientation='bottom')
         self.lastevent = None
         self.newevent = True
@@ -29,12 +38,13 @@ class OpDetDisplay(QtGui.QWidget) :
         # main layout
         self.layout = QtGui.QGridLayout()
         self.setLayout(self.layout)
-        self.layout.addWidget( self.graphics, 0, 0 )
-        self.graphics.addItem( self.diagram, 0, 0 )
-        self.graphics.addItem( self.pmtscale, 1, 0 )
-        self.graphics.addItem( self.plot, 2, 0 )
+        self.layout.addWidget( self.graphics, 0, 0, 1, 10 )
+        self.graphics.addItem( self.pmt_map, 0, 0, rowspan=2 )
+        self.graphics.addItem( self.pmtscale, 2, 0, rowspan=1 )
+        self.graphics.addItem( self.wfplot, 3, 0, rowspan=3 )
+        self.graphics.addItem( self.time_window, 6, 0, rowspan=1 )
         self.lay_inputs = QtGui.QGridLayout()
-        self.layout.addLayout( self.lay_inputs, 1, 0 )
+        self.layout.addLayout( self.lay_inputs, 7, 0 )
         
         # inputs layout
         # widgets
@@ -73,7 +83,7 @@ class OpDetDisplay(QtGui.QWidget) :
 
         # axis options
         self.set_xaxis = QtGui.QPushButton("Re-plot!")
-        self.openCosmicWindow = QtGui.QPushButton("Cosmic Disc. Viewer")
+        self.openCosmicWindow = QtGui.QPushButton("Draw Flashes")
         self.draw_user_items = QtGui.QCheckBox()  # draw user products
         self.draw_user_items.setChecked(True)
         self.run_user_analysis = QtGui.QCheckBox()  # draw user products
@@ -87,15 +97,17 @@ class OpDetDisplay(QtGui.QWidget) :
         self.lay_inputs.addWidget( self.set_xaxis, 1, 12 )
 
         # range selections
-        self.time_range = pg.LinearRegionItem(values=[50,150], orientation=pg.LinearRegionItem.Vertical)
-        self.plot.addItem( self.time_range )
+        self.time_range = pg.LinearRegionItem(values=[1600,3200], orientation=pg.LinearRegionItem.Vertical)
+        self.wfplot.addItem( self.time_range )
+        
+        # array of pmt-maxima in time_range
+        self.pmt_max = np.zeros(32)
 
         # diagram objects
         self.definePMTdiagram()
 
         # other options
         self.channellist = [] # when not None, only draw channels in this list
-        self.pedfunction = self.getpedestal
 
         # user analyses
         self.user_analysis_products = []
@@ -109,76 +121,142 @@ class OpDetDisplay(QtGui.QWidget) :
         self.next_event.clicked.connect( self.nextEvent )
         self.prev_event.clicked.connect( self.prevEvent )
         self.openCosmicWindow.clicked.connect( self.showCosmicDisplay )
-        
+
+
+
+    # ----------------------
+    # draw data on GUI
     def plotData( self ):
 
         evt = int(self.event.text())
         slot = int(self.slot.text())
+        
+        # if this is a new event
         if self.lastevent is None or evt!=self.lastevent:
-            self.opdata.getEvent( evt, slot=slot )
+            print 'getting new event'
+            self.opdata.getEvent( evt )
             self.lastevent = evt
             self.newevent = True
         else:
-            print "old event: ",self.lastevent
             self.newevent = False
         
         scaledown = float( self.adc_scaledown.text() )
-        
 
+        # clear time-window display
+        self.time_window.clear()
+        
+        # clear the pmt-maxima
+        self.pmt_max = np.zeros(32)
+        
         # BEAM SAMPLE WINDOW
-        self.plot.clear()
+        self.wfplot.clear()
         offset = 1.0
         if self.collapse.isChecked():
             offset = 0.0
             scaledown = 1.0
         
-        nbins = self.opdata.getData( slot=int(self.slot.text() ) ).shape[0]
-        x = np.linspace( 0, nbins*NSPERTICK, num=nbins )
-        for ipmt in xrange(0,self.opdata.getData( slot=int(self.slot.text() ) ).shape[1]):
+        # start plotting waveforms
+        wfs = self.opdata.opdetwf.getData()
+        # get OpHits
+        hits = self.opdata.ophits.getData()
 
+        # what are the bounds that we want to plot in?
+        bounds = self.time_window.time_range.getRegion()
+        bounds = np.array(bounds)/USPERTICK
+        bounds[0] = int(bounds[0])
+        bounds[1] = int(bounds[1])
+
+        print 'bounds for this draw : ',bounds
+
+        # pmt-color scale bounds
+        pmt_bnds = self.time_range.getRegion()
+        
+        print 'pmt color-map bounds are : [%.02f, %.02f]'%(pmt_bnds[0],pmt_bnds[1])
+
+        # time-tick values
+        TDCs = np.linspace( 0*USPERTICK, 3*samplesPerFrame*USPERTICK, 3*samplesPerFrame )
+
+        print 'bounds are: ',bounds
+
+        # for all PMTs
+        for ipmt in wfs:
+
+            # if we only want to plot selected PMTs, and this PMT is not in the list -> continue
             if len(self.channellist)>0 and ipmt not in self.channellist and not self.draw_all.isChecked():
                 continue
+
+            # prepare a baseline pmt pulse for the entire time-range
+            pmt_wf = np.ones(len(TDCs))*self.opdata.opdetwf.pedestals[ipmt]
             
+            pmt_pulses = wfs[ipmt]
+            
+            # loop through all pulses found
+            for pulse_start in pmt_pulses:
+                
+                pulse_ADCs = pmt_pulses[pulse_start]
+                pulse_end = pulse_start + len(pulse_ADCs)
+                #print 'pulse region : [%i,%i]'%(pulse_start,pulse_end)
+                #print 'adding wf to time-region [%i,%i]'%(pulse_start,pulse_end)
+                #print 'wf : ',pulse_ADCs
+                pmt_wf[ pulse_start : pulse_end ] = pulse_ADCs
+                
+                # if pulse is in the pmt-color range
+                if ( ( (pulse_start*USPERTICK) > pmt_bnds[0]) and ( (pulse_end*USPERTICK) < pmt_bnds[1]) ):
+                    adcmax = np.max(pulse_ADCs) - self.getPedestal(ipmt)
+                    if ( adcmax > self.pmt_max[ipmt] ):
+                        self.pmt_max[ipmt] = adcmax
+                        
             pencolor = self.getChanColor( ipmt )
             if self.last_clicked_channel is not None and ipmt==self.last_clicked_channel:
                 pencolor = (0, 255, 255 )
 
-            wfm = self.opdata.getData( slot=int(self.slot.text() ) )[:,ipmt]
-            y = (wfm-self.pedfunction(wfm,ipmt))/scaledown+ipmt*offset
-
-            self.plot.plot(x=x, y=y, pen=pencolor, name="PMT%d"%(ipmt))
-
+            # set offset and subtract baseline
+            ADCs = ( pmt_wf - self.getPedestal(ipmt) ) / scaledown + ipmt*offset
+            
+            # get the maximum amplitude
+            maxamp = np.max( np.array(pmt_wf) ) - self.getPedestal(ipmt)
+            
+            # plot the waveform
+            self.wfplot.plot(x=TDCs, y=ADCs, pen=pencolor, name="PMT%d"%(ipmt))
+            
+            # plot the waveform in the cosmics window
+            self.time_window.plot(x=TDCs, y=ADCs, pen=pencolor, name="PMT%d"%(ipmt))
+            
             if ipmt in self.user_plot_item.keys():
                 for useritem in self.user_plot_item[ipmt]:
-                    self.plot.addItem( useritem )
+                    self.wfplot.addItem( useritem )
 
-        self.plot.setXRange(0,nbins*NSPERTICK,update=True)
-        self.plot.addItem( self.time_range )
+        # set the range for the view
+        self.wfplot.setXRange(bounds[0]*USPERTICK, bounds[1]*USPERTICK,update=True)
 
-        if "cosmics" in dir(self.opdata):
-            if self.newevent:
-                self.cosmicdisplay.plotCosmicWindows( self.opdata.cosmics )
+        # add the time-range
+        self.wfplot.addItem( self.time_range )
 
-        # ----------------------------------------------------
-        # diagram object
-        bnds = self.time_range.getRegion()
-        istart = int( bnds[0]/NSPERTICK )
-        iend = int( bnds[1]/NSPERTICK )
-        if istart>iend:
-            tmp = istart
-            istart = iend
-            iend = tmp
+        # add all the flashes
+        flashes = self.opdata.opflash.flashes
+        for flash in flashes:
 
+            time = flash[0]
+            flashInfo = flashes[flash]
+            PE = flashInfo[0]
+            Ypos = flashInfo[1]
+            Zpos = -(flashInfo[2]-(1036./2))
+            if (PE > 10):
+                self.wfplot.addLine(time)
+
+        # do any additional drawing to the cosmics window
+        self.time_window.plotCosmicWindows()        
+
+        
+        # pmt color-scale set here
         self.pmtspot = []
 
-        for ich in xrange(self.opdata.getData( slot=int(self.slot.text() ) ).shape[1],-1,-1):
-            if ich>=36:
-                continue
-            wfm =  self.opdata.getData( slot=int(self.slot.text() ) )[istart:iend,ich]
-            maxamp = np.max( wfm )-self.pedfunction(wfm,ich)
-            ipmt = getPMTID( ich )-1
-            #print "maxamp: id=",ipmt,' max=',maxamp,' ped=',self.pedfunction(wfm,ich)
-            col = self.pmtscale.colorMap().map( (maxamp)/self.pedfunction(wfm,ich) )
+        # first append PMTs with their appropriate color
+        for ich in xrange(32):
+
+            ipmt = ich
+            #print 'max is : %.02f'%self.pmt_max[ich]
+            col = self.pmtscale.colorMap().map( ( self.pmt_max[ich] ) /self.getPedestal(ipmt) )
             alpha = 255
             if len(self.channellist)>0 and ipmt not in self.channellist:
                 alpha = 50
@@ -189,30 +267,44 @@ class OpDetDisplay(QtGui.QWidget) :
                 pos = getPosFromID(ipmt )
                 self.pmtspot.append( {"pos":(pos[2],pos[1]), "size":30, 'pen':{'color':bordercol,'width':2}, 'brush':col, 'symbol':'o', 'data':{"id":ipmt,"highlight":False}} )
 
-            elif ipmt in getPaddleIDList():
-                pos = getPosFromID( ipmt )
-                self.pmtspot.append( {"pos":(pos[2],pos[1]), "size":25, 'pen':{'color':bordercol,'width':2}, 'brush':col, 'symbol':'s', 'data':{"id":ipmt,"highlight":False}} )
+        # yellow
+        yellow = (255,255,0,255)
+
+        # next append flashes
+        for flash in flashes:
+
+            time = flash[0]
+            flashInfo = flashes[flash]
+            PE   = flashInfo[0]
+            if (PE < 10) : continue
+            Ypos = flashInfo[1]
+            Zpos = -(flashInfo[2]-(1036./2))
+            
+            # if the time is in the correct time-interval
+            if ( ( time > pmt_bnds[0]) and ( time < pmt_bnds[1]) ):
+                self.pmtspot.append( {"pos":(Zpos,Ypos), "size":15, "pen":{'color':yellow,'width':2}, "brush":yellow, "symbol":"d"} )
+
         self.pmtdiagram.setData( self.pmtspot  )
 
         # axis!
-        ax = self.plot.getAxis('bottom')
+        ax = self.wfplot.getAxis('bottom')
         ax.setHeight(30)
         xStyle = {'color':'#FFFFFF','font-size':'14pt'}
         #ax.setLabel('64 MHz Sample Tick',**xStyle)
-        ax.setLabel('ns from readout start',**xStyle)
-        ay = self.plot.getAxis('left')
+        ax.setLabel('us from readout start',**xStyle)
+        ay = self.wfplot.getAxis('left')
         yStyle = {'color':'#FFFFFF','font-size':'14pt'}
         if self.collapse.isChecked():
             ay.setLabel('ADC counts - Pedestal',**yStyle)
         else:
-            ay.setLabel('PMT Channel Number',**yStyle)
+            ay.setLabel('PMT Ch',**yStyle)
 
         # ----------------------------------------------------
         # added user items
 
         if self.draw_user_items.isChecked() and None in self.user_plot_item.keys():
             for useritem in self.user_plot_item[None]:
-                self.plot.addItem( useritem )
+                self.wfplot.addItem( useritem )
 
         # ----------------------------------------------------
         # user analysis items
@@ -221,7 +313,7 @@ class OpDetDisplay(QtGui.QWidget) :
             if self.newevent or len(self.user_analysis_products)==0:
                 self.user_analysis_products = []
                 for userfunc in self.user_analyses:
-                    user_products = userfunc( self.opdata, self )
+                    user_products = userfunc( self.opdata.opdetwf, self )
                     for product in user_products:
                         productok = True
                         for k in ["femch","plotitem","screen"]:
@@ -239,9 +331,9 @@ class OpDetDisplay(QtGui.QWidget) :
                         continue
                     item = product["plotitem"]
                     if product["screen"]=="diagram":
-                        self.diagram.addItem( item )
+                        self.pmt_map.addItem( item )
                     elif product["screen"]=="waveform":
-                        self.plot.addItem( item )
+                        self.wfplot.addItem( item )
                     else:
                         print "unknonw user product screen option, '",product["screen"],"'. Valid choices are 'diagram' and 'waveform'"
 
@@ -255,7 +347,7 @@ class OpDetDisplay(QtGui.QWidget) :
             self.pmtspot.append( {"pos":(pos[2],pos[1]), "size":25, 'pen':{'color':(0,0,255,1.0),'width':2}, 'brush':(255,255,255,255), 'symbol':'s'} )
         self.pmtdiagram = pg.ScatterPlotItem(pxMode=False)
         self.pmtdiagram.addPoints( self.pmtspot )
-        self.diagram.addItem( self.pmtdiagram ) 
+        self.pmt_map.addItem( self.pmtdiagram ) 
         self.pmtdiagram.sigClicked.connect( self.pmtDiagramClicked )
 
         
@@ -263,29 +355,29 @@ class OpDetDisplay(QtGui.QWidget) :
         evt = int(self.event.text())
         slot = int(self.slot.text())
 
-        ok = self.opdata.getEvent( evt+1, slot=slot )
+        ok = self.opdata.getEvent( evt+1 )
         if ok:
             self.event.setText("%d"%(evt+1))
         else:
             print "Next event not ok"
-            self.opdata.getEvent( evt, slot=slot )
+            self.opdata.getEvent( evt )
         self.plotData()
 
     def prevEvent(self):
         evt = int(self.event.text())
         slot = int(self.slot.text())
         try:
-            self.opdata.getEvent( evt-1, slot=slot )
+            self.opdata.getEvent( evt-1 )
             self.event.setText("%d"%(evt-1))
         except:
-            self.opdata.getEvent( evt, slot=slot )
+            self.opdata.getEvent( evt )
         self.plotData()
             
     def getWaveformPlot(self):
-        return self.plot
+        return self.wfplot
     
     def getPMTdiagram(self):
-        return self.diagram
+        return self.pmt_map
             
     def gotoEvent( self, event, slot=None ):
         evt = int(self.event.text())
@@ -295,10 +387,10 @@ class OpDetDisplay(QtGui.QWidget) :
             self.slot.setText("%d"%(slot))
         
         try:
-            more = self.opdata.getEvent( event, slot=slot )
+            more = self.opdata.getEvent( event )
             self.event.setText( "%d"%(event) )
         except:
-            more = self.opdata.getEvent( evt, slot=slot )
+            more = self.opdata.getEvent( evt )
         self.plotData()
         return more
             
@@ -351,17 +443,8 @@ class OpDetDisplay(QtGui.QWidget) :
         self.plotData()
 
 
-    def getpedestal(self,wfm,femch=None):
-        slot = int(self.slot.text())
-        #print "ped: ",self.opdata.getPedestal( slot=slot )
-        #raw_input()
-        if femch is not None:
-            return self.opdata.getPedestal( slot=slot )[femch]
-        else:
-            return self.opdata.getPedestal( slot=slot )
-
-    def setPedestalFunction( self, pedfunc ):
-        self.pedfunction = pedfunc
+    def getPedestal(self,pmt):
+        return self.opdata.opdetwf.pedestals[pmt]
 
     def addUserAnalysis( self, user_analysis ):
         self.user_analyses.append( user_analysis )

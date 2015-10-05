@@ -51,6 +51,15 @@ class OpHitData( OpDataPlottable ):
 
         return
 
+    # -------------------------
+    # return data
+    def getData(self, remake=False):
+        # if we are to clear the event
+        if remake == True:
+            return self.initialize_hits()
+        # otherwise save the current hits
+        return self.hits
+
     #---------------------------
     # get data for current event
     def getEvent(self, eventid):
@@ -77,7 +86,7 @@ class OpHitData( OpDataPlottable ):
             hit_end   = hit.PeakTime()+hit.Width()
             hit_amp   = hit.Amplitude()
             hit_info  = [ (hit_start,hit_end) , hit_amp ]
-            print 'found hit for PMT %i : '%hit_chan,hit_info
+            # print 'found hit for PMT %i : '%hit_chan,hit_info
 
             self.hits[hit_chan].append( hit_info)
             
