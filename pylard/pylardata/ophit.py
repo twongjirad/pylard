@@ -15,14 +15,6 @@ class OpHitData( OpDataPlottable ):
         # get the producer name
         self.producer = 'opflash'
         
-        # call larlite manager
-        self.manager = larlite.storage_manager()
-        self.manager.reset()
-        for f in self.files:
-            self.manager.add_in_filename(f)
-        self.manager.set_io_mode(larlite.storage_manager.kREAD)
-        self.manager.open()
-        
         # allow only the 32 "regular" PMTs
         self.pmt_max = 31
         
@@ -62,14 +54,11 @@ class OpHitData( OpDataPlottable ):
 
     #---------------------------
     # get data for current event
-    def getEvent(self, eventid):
+    def getEvent(self, mgr):
 
-        # move to the specified event
-        self.manager.go_to(eventid)
-        
         # load optical hits
-        self.ophitdata = self.manager.get_data(larlite.data.kOpHit,
-                                               self.producer)
+        self.ophitdata = mgr.get_data(larlite.data.kOpHit,
+                                      self.producer)
 
         # load each hit
         for n in xrange(self.ophitdata.size()):

@@ -23,22 +23,11 @@ class OpDetWfData( OpDataPlottable ):
         # get the producer name
         self.producer = 'pmtreadout'
         
-        # call larlite manager
-        self.manager = larlite.storage_manager()
-        self.manager.reset()
-        for f in self.files:
-            self.manager.add_in_filename(f)
-        self.manager.set_io_mode(larlite.storage_manager.kREAD)
-        self.manager.open()
-
         # wf and pedestal holder
         self.opdetdigits = {}
         self.pedestals   = {} 
         # pulses, one per input wf
         self.pulses = {}
-
-        # slot number
-        self.slot = 5
 
         # cosmics window holder
         self.cosmics = cd.CosmicDiscVector()
@@ -87,7 +76,7 @@ class OpDetWfData( OpDataPlottable ):
 
     # ---------------------------
     # get the pedestal vector
-    def getPedestal(self,slot=5):
+    def getPedestal(self):
         return self.pedestals
 
     def getSampleLength(self):
@@ -95,17 +84,13 @@ class OpDetWfData( OpDataPlottable ):
 
     # ----------------------------
     # load the data for this event
-    def getEvent( self, eventid, slot=5 ):
+    def getEvent( self, mgr):
 
         # reset channels
         self.resetChannels()
 
-        # move to next event
-        #self.manager.next_event()
-        self.manager.go_to(eventid)
-        
         # load optical waveforms
-        self.opdata = self.manager.get_data(larlite.data.kOpDetWaveform,self.producer)
+        self.opdata = mgr.get_data(larlite.data.kOpDetWaveform,self.producer)
 
         # prepare the wf data
         self.fillWaveforms()

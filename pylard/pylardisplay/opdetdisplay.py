@@ -51,9 +51,13 @@ class OpDetDisplay(QtGui.QWidget) :
         
         # Plot optionsd
         if opdata is not None:
-            self.event = QtGui.QLineEdit("%d"%(opdata.first_event))     # event number
+            self.run    = QtGui.QLineEdit("%d"%(opdata.run))   # run
+            self.subrun = QtGui.QLineEdit("%d"%(opdata.subrun)) # subrun
+            self.event  = QtGui.QLineEdit("%d"%(opdata.event)) # event
         else:
-            self.event = QtGui.QLineEdit("0") # event number
+            self.run    = QtGui.QLineEdit("0")   # run
+            self.subrun = QtGui.QLineEdit("0") # subrun
+            self.event  = QtGui.QLineEdit("0") # event
         self.slot  = QtGui.QLineEdit("5")     # slot number
         self.collapse = QtGui.QCheckBox()  # collapse onto one another
         self.collapse.setChecked(False)
@@ -64,12 +68,14 @@ class OpDetDisplay(QtGui.QWidget) :
         self.adc_scaledown = QtGui.QLineEdit("100.0")
         self.draw_all = QtGui.QCheckBox()  # collapse onto one another
         self.draw_all.setChecked(False)
-        self.lay_inputs.addWidget( QtGui.QLabel("Event"), 0, 0 )
-        self.lay_inputs.addWidget( self.event, 0, 1 )
-        self.lay_inputs.addWidget( QtGui.QLabel("FEM Slot"), 0, 2 )
-        self.lay_inputs.addWidget( self.slot, 0, 3 )
-        self.lay_inputs.addWidget( QtGui.QLabel("ADC scale-down"), 0, 4 )
-        self.lay_inputs.addWidget( self.adc_scaledown, 0, 5 )
+        self.lay_inputs.addWidget( QtGui.QLabel("Run"), 0, 0 )
+        self.lay_inputs.addWidget( self.run, 0, 1 )
+        self.lay_inputs.addWidget( QtGui.QLabel("Subrun"), 0, 2 )
+        self.lay_inputs.addWidget( self.subrun, 0, 3 )
+        self.lay_inputs.addWidget( QtGui.QLabel("Event"), 0, 4 )
+        self.lay_inputs.addWidget( self.event, 0, 5 )
+        self.lay_inputs.addWidget( QtGui.QLabel("ADC scale-down"), 1, 0 )
+        self.lay_inputs.addWidget( self.adc_scaledown, 1, 1 )
         self.lay_inputs.addWidget( QtGui.QLabel("Overlay Mode"), 0, 6 )
         self.lay_inputs.addWidget( self.collapse, 0, 7 )
         self.lay_inputs.addWidget( QtGui.QLabel("Draw all"), 0, 8 )
@@ -83,13 +89,11 @@ class OpDetDisplay(QtGui.QWidget) :
 
         # axis options
         self.set_xaxis = QtGui.QPushButton("Re-plot!")
-        self.openCosmicWindow = QtGui.QPushButton("Draw Flashes")
         self.draw_user_items = QtGui.QCheckBox()  # draw user products
         self.draw_user_items.setChecked(True)
         self.run_user_analysis = QtGui.QCheckBox()  # draw user products
         self.run_user_analysis.setChecked(True)
 
-        self.lay_inputs.addWidget( self.openCosmicWindow, 1, 0, 1, 2 )
         self.lay_inputs.addWidget( QtGui.QLabel("Draw user items"), 1, 8 )
         self.lay_inputs.addWidget( self.draw_user_items, 1, 9 )
         self.lay_inputs.addWidget( QtGui.QLabel("Run user funcs."), 1, 10 )
@@ -120,8 +124,6 @@ class OpDetDisplay(QtGui.QWidget) :
         self.set_xaxis.clicked.connect( self.plotData )
         self.next_event.clicked.connect( self.nextEvent )
         self.prev_event.clicked.connect( self.prevEvent )
-        self.openCosmicWindow.clicked.connect( self.showCosmicDisplay )
-
 
 
     # ----------------------
@@ -166,10 +168,22 @@ class OpDetDisplay(QtGui.QWidget) :
         bounds[0] = int(bounds[0])
         bounds[1] = int(bounds[1])
 
-        print 'bounds for this draw : ',bounds
-
+        # if the time_range for PMT drawing is outside of the bounds of what is shown in the middle window
+        # then re-adjust range so that the window is fully contained
         # pmt-color scale bounds
         pmt_bnds = self.time_range.getRegion()
+        pmt_min = pmt_bnds[0]
+        pmt_max = pmt_bnds[1]
+        if (pmt_min < bounds[0]*USPERTICK):
+            pmt_min = bounds[0]*USPERTICK+50
+        if (pmt_max > bounds[1]*USPERTICK):
+            pmt_max = bounds[1]*USPERTICK-50
+        print 'new bounds : [%i,%i]'%(pmt_min,pmt_max)
+        self.time_range = pg.LinearRegionItem(values=[pmt_min,pmt_max], orientation=pg.LinearRegionItem.Vertical)
+
+        print 'bounds for this draw : ',bounds
+
+
         
         print 'pmt color-map bounds are : [%.02f, %.02f]'%(pmt_bnds[0],pmt_bnds[1])
 
@@ -352,8 +366,8 @@ class OpDetDisplay(QtGui.QWidget) :
 
         
     def nextEvent(self):
+
         evt = int(self.event.text())
-        slot = int(self.slot.text())
 
         ok = self.opdata.getEvent( evt+1 )
         if ok:
