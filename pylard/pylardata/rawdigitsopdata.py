@@ -141,7 +141,10 @@ class RawDigitsOpData( OpDataPlottable ):
 
     def getNextEvent(self):
         # get next event
-        nextevent = self.current_event+1
+        if self.current_event is not None:
+            nextevent = self.current_event+1
+        else:
+            nextevent = self.first_event
         if self.maxevent is not None and nextevent>=self.maxevent:
             print "No events for ",nextevent,"! maxevent=",self.maxevent
             return False

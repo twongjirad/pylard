@@ -174,7 +174,7 @@ class OpDetDisplay(QtGui.QWidget) :
             maxamp = np.max( wfm )-self.pedfunction(wfm,ich)
             ipmt = getPMTID( ich )-1
             #print "maxamp: id=",ipmt,' max=',maxamp,' ped=',self.pedfunction(wfm,ich)
-            col = self.pmtscale.colorMap().map( (maxamp)/self.pedfunction(wfm,ich) )
+            col = self.pmtscale.colorMap().map( (maxamp)/2048.0 )
             alpha = 255
             if len(self.channellist)>0 and ipmt not in self.channellist:
                 alpha = 50

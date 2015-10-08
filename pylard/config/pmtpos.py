@@ -42,3 +42,7 @@ pmtpos = {# Panel 1
 
 def getPosFromID( id ):
     return pmtpos[id]
+
+if __name__ == "__main__":
+    for ich in range(0,36):
+        print ich,(pmtpos[ich][0],pmtpos[ich][1],pmtpos[ich][2]+518.0)
