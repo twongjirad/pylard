@@ -13,6 +13,9 @@ from pylard.pylardisplay.cosmicwindow import CosmicWindow
 # dumb utility functions to import
 from functions import getFlashSize
 
+# PMT scatter-plot items
+from ScatterPMT import ScatterPMT
+
 samplesPerFrame = 102400
 NSPERTICK = 15.625
 USPERTICK = NSPERTICK/1000.
@@ -64,6 +67,7 @@ class OpDetDisplay(QtGui.QWidget) :
         self.slot  = QtGui.QLineEdit("5")     # slot number
         self.collapse = QtGui.QCheckBox()  # collapse onto one another
         self.collapse.setChecked(False)
+        self.beam_window = QtGui.QPushButton("Beam Window")
         self.prev_event = QtGui.QPushButton("Previous")
         self.next_event = QtGui.QPushButton("Next")
         self.adc_scaledown = QtGui.QLineEdit("100.0")
@@ -82,6 +86,7 @@ class OpDetDisplay(QtGui.QWidget) :
         self.lay_inputs.addWidget( QtGui.QLabel("Draw all"), 0, 8 )
         self.lay_inputs.addWidget( self.draw_all, 0, 9 )
         self.lay_inputs.addWidget( self.prev_event, 0, 10 )
+        self.lay_inputs.addWidget( self.beam_window, 1, 10 )
         self.lay_inputs.addWidget( self.next_event, 0, 11 )
         self.last_clicked_channel = None
         self.user_plot_item = {} # storage for user plot items
@@ -98,11 +103,16 @@ class OpDetDisplay(QtGui.QWidget) :
         self.lay_inputs.addWidget( self.set_xaxis, 0, 12 )
 
         # range selections
-        self.time_range = pg.LinearRegionItem(values=[1600,3200], orientation=pg.LinearRegionItem.Vertical)
+        self.time_range = pg.LinearRegionItem(values=[0,23.6], orientation=pg.LinearRegionItem.Vertical)
         self.wfplot.addItem( self.time_range )
         
         # array of pmt-maxima in time_range
         self.pmt_max = np.zeros(32)
+
+        # PMT scatter points
+        self.pmtdiagram   = ScatterPMT()#pg.ScatterPlotItem(pxMode=False)
+        # Flash scatter points
+        self.flashdiagram = pg.ScatterPlotItem(pxMode=False) 
 
         # diagram objects
         self.definePMTdiagram()
@@ -118,7 +128,15 @@ class OpDetDisplay(QtGui.QWidget) :
         self.set_xaxis.clicked.connect( self.plotData )
         self.next_event.clicked.connect( self.nextEvent )
         self.prev_event.clicked.connect( self.prevEvent )
+        self.beam_window.clicked.connect( self.scaleToBeam )
 
+
+    # --------------------------
+    # scale event to beam window
+    def scaleToBeam( self ):
+
+        self.time_window.tick_range = [0,1500]
+        self.plotData()
 
     # ----------------------
     # draw data on GUI -----
@@ -182,8 +200,15 @@ class OpDetDisplay(QtGui.QWidget) :
         bounds[0] = int(bounds[0])
         bounds[1] = int(bounds[1])
 
+        # event time-range
+        event_time_range = self.opdata.opdetwf.event_time_range
+        event_time_len = event_time_range[1]-event_time_range[0]
         # time-tick values
-        TDCs = np.linspace( 0*USPERTICK, 3*samplesPerFrame*USPERTICK, 3*samplesPerFrame )
+        TDCs = np.linspace( event_time_range[0], event_time_range[1], int(event_time_len/USPERTICK) )
+
+        #print 'time-tick length = %i'%len(TDCs)
+        if (len(TDCs) > 102400*5):
+            return
 
         # for all PMTs
         for ipmt in wfs:
@@ -200,15 +225,19 @@ class OpDetDisplay(QtGui.QWidget) :
             # loop through all pulses found
             for pulse_start in pmt_pulses:
                 
+                # pulse_start is in usec
+                # get the corresponding time-tick
                 pulse_ADCs = pmt_pulses[pulse_start]
-                pulse_end = pulse_start + len(pulse_ADCs)
-                #print 'pulse region : [%i,%i]'%(pulse_start,pulse_end)
+                pulse_start_tick = int((pulse_start - event_time_range[0])/USPERTICK)       # ticks
+                pulse_end_tick   = pulse_start_tick + len(pulse_ADCs)  # ticks
+                pulse_end = pulse_start + len(pulse_ADCs)              # usec
+                #print 'pulse region : [%i,%i]'%(pulse_start_tick,pulse_end_tick)
                 #print 'adding wf to time-region [%i,%i]'%(pulse_start,pulse_end)
                 #print 'wf : ',pulse_ADCs
-                pmt_wf[ pulse_start : pulse_end ] = pulse_ADCs
+                pmt_wf[ pulse_start_tick : pulse_end_tick ] = pulse_ADCs
                 
                 # if pulse is in the pmt-color range
-                if ( ( (pulse_start*USPERTICK) > pmt_bnds[0]) and ( (pulse_end*USPERTICK) < pmt_bnds[1]) ):
+                if ( ( (pulse_start) > pmt_bnds[0]) and ( (pulse_end) < pmt_bnds[1]) ):
                     adcmax = np.max(pulse_ADCs) - self.getPedestal(ipmt)
                     if ( adcmax > self.pmt_max[ipmt] ):
                         self.pmt_max[ipmt] = adcmax
@@ -234,7 +263,7 @@ class OpDetDisplay(QtGui.QWidget) :
                     self.wfplot.addItem( useritem )
 
         # set the range for the view
-        self.wfplot.setXRange(bounds[0]*USPERTICK, bounds[1]*USPERTICK,update=True)
+        self.wfplot.setXRange(bounds[0]*USPERTICK, bounds[1]*USPERTICK, update=True)
 
         # add the time-range
         self.wfplot.addItem( self.time_range )
@@ -253,10 +282,10 @@ class OpDetDisplay(QtGui.QWidget) :
                     self.wfplot.addLine(time, movable=False, pen={'color':(255,255,0,255),'width':2})
 
         # do any additional drawing to the cosmics window
-        self.time_window.plotCosmicWindows()        
+        self.time_window.plotCosmicWindows(event_time_range)        
 
         
-        # pmt color-scale set here
+        # pmt and flash positions
         self.pmtspot = []
 
         # first append PMTs with their appropriate color
@@ -290,14 +319,13 @@ class OpDetDisplay(QtGui.QWidget) :
                 if (PE < 10) : continue
                 Ypos = flashInfo[1]
                 Zpos = -(flashInfo[2]-(1036./2))
-
                 PEsize = int(getFlashSize(PE))
             
                 # if the time is in the correct time-interval
                 if ( ( time > pmt_bnds[0]) and ( time < pmt_bnds[1]) ):
                     self.pmtspot.append( {"pos":(Zpos,Ypos), "size":PEsize, "pen":{'color':yellow,'width':2}, "brush":yellow, "symbol":"d"} )
 
-        self.pmtdiagram.setData( self.pmtspot  )
+        self.pmtdiagram.setData( self.pmtspot )
 
         # axis!
         ax = self.wfplot.getAxis('bottom')
@@ -322,7 +350,7 @@ class OpDetDisplay(QtGui.QWidget) :
         for pid in getPaddleIDList():
             pos = getPosFromID( pid )
             self.pmtspot.append( {"pos":(pos[2],pos[1]), "size":25, 'pen':{'color':(0,0,255,1.0),'width':2}, 'brush':(255,255,255,255), 'symbol':'s'} )
-        self.pmtdiagram = pg.ScatterPlotItem(pxMode=False)
+
         self.pmtdiagram.addPoints( self.pmtspot )
         self.pmt_map.addItem( self.pmtdiagram ) 
         self.pmtdiagram.sigClicked.connect( self.pmtDiagramClicked )
@@ -433,6 +461,9 @@ class OpDetDisplay(QtGui.QWidget) :
         act_pos = self.pmtdiagram.mapFromScene(pos)
 
         p1 = self.pmtdiagram.pointsAt(act_pos)
-
+        
         #if (len(p1) != 0):
-        #print p1[0]
+        #    print 'found %i SpotItems'%len(p1)
+        #    print p1[0]
+        #    print p1[0].brush
+        #    print p1[0].data

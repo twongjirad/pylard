@@ -6,14 +6,11 @@ import time
 
 class OpFlashData( OpDataPlottable ):
 
-    def __init__(self,inputfiles):
+    def __init__(self,producer='opflash'):
         super(OpFlashData, self).__init__()
 
-        # set input file name
-        self.files = inputfiles
-        
         # get the producer name
-        self.producer = 'opflash'
+        self.producer = producer
 
         # allow only the 32 "regular" PMTs
         self.pmt_max = 31
@@ -45,7 +42,7 @@ class OpFlashData( OpDataPlottable ):
 
     #---------------------------
     # get data for current event
-    def getEvent(self, mgr):
+    def getEvent(self, mgr, trig_time=None):
 
         self.flashes = {}
 
@@ -53,21 +50,23 @@ class OpFlashData( OpDataPlottable ):
         self.opflashdata = mgr.get_data(larlite.data.kOpFlash,
                                         self.producer)
 
-        # load each hit
+        # load each flash
+        print 'found %i flashes'%self.opflashdata.size()
+
         for n in xrange(self.opflashdata.size()):
 
             flash = self.opflashdata.at(n)
 
             # flash time
-            time = flash.Time()+1600.
+            time = flash.Time()
             abstime = flash.AbsTime()
             frame = flash.Frame()
             dt   = flash.TimeWidth()
             PE   = flash.TotalPE()
             Ypos = flash.YCenter()
             Zpos = flash.ZCenter()
-            #print '\t[Time, Abs Time, Frame]  : [%.02f, %.02f, %.02f]'%(time,abstime,frame)
+            #print '\t[Time, dt, Frame]  : [%.02f, %.02f, %.02f]'%(time,dt,frame)
             #print '\t[PE, Ypos, Zpos] : [%.02f, %.02f, %.02f]'%(PE,Ypos,Zpos)
             #print
-            
+            if (PE < 20): continue
             self.flashes[ (time, time+dt) ] = [ PE, Ypos, Zpos ]

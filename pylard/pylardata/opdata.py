@@ -3,6 +3,7 @@ from pylard.pylardata.opdataplottable import OpDataPlottable
 from ophit import OpHitData
 from opdetwf import OpDetWfData
 from opflash import OpFlashData
+from trigger import TriggerData
 import ROOT
 from ROOT import larlite
 
@@ -18,11 +19,13 @@ class OpticalData( OpDataPlottable ):
         self.opwf_producer    = 'pmtreadout'
         self.ophit_producer   = 'opflash'
         self.opflash_producer = 'opflash'
+        self.trigger_producer = 'daq'
 
         # prepare a list of files for each data-product & producer
         self.opwf_files    = []
         self.ophit_files   = []
         self.opflash_files = []
+        self.trigger_files = []
         self.SplitInputFiles()
 
         # call larlite manager
@@ -34,16 +37,17 @@ class OpticalData( OpDataPlottable ):
             self.manager.add_in_filename(f)
         for f in self.opflash_files:
             self.manager.add_in_filename(f)
+        for f in self.trigger_files:
+            self.manager.add_in_filename(f)
+
         self.manager.set_io_mode(larlite.storage_manager.kREAD)
         self.manager.open()
         
         # OpticalData owns instances of all data object classes
-        self.opdetwf = OpDetWfData(self.opwf_files)
-        self.opdetwf.setProducer(self.opwf_producer)
-        self.ophits  = OpHitData(self.ophit_files)
-        self.ophits.setProducer(self.ophit_producer)
-        self.opflash = OpFlashData(self.opflash_files)
-        self.opflash.setProducer(self.opflash_producer)
+        self.opdetwf = OpDetWfData(self.opwf_producer)
+        self.ophits  = OpHitData(self.ophit_producer)
+        self.opflash = OpFlashData(self.opflash_producer)
+        self.trigger = TriggerData(self.trigger_producer)
 
         self.manager.next_event()
 
@@ -64,6 +68,7 @@ class OpticalData( OpDataPlottable ):
         opdigit_t = 'opdigit_%s_tree'%self.opwf_producer
         ophit_t   = 'ophit_%s_tree'%self.opflash_producer
         opflash_t   = 'opflash_%s_tree'%self.opflash_producer
+        trigger_t   = 'trigger_%s_tree'%self.trigger_producer
 
         # go through list of files and sub-split files with
         # specific data-products
@@ -87,6 +92,10 @@ class OpticalData( OpDataPlottable ):
             # if the file contains flashes
             if (froot.GetListOfKeys().Contains(opflash_t) == True):
                 self.opflash_files.append(f)
+
+            # if the file contains trigger information
+            if (froot.GetListOfKeys().Contains(trigger_t) == True):
+                self.trigger_files.append(f)
                 
 
         print 'waveform files:'
@@ -97,6 +106,10 @@ class OpticalData( OpDataPlottable ):
         print
         print 'opflash files:'
         print self.opflash_files
+        print
+        print 'trigger files:'
+        print self.trigger_files
+        print
 
 
     # ------------------------
@@ -112,8 +125,14 @@ class OpticalData( OpDataPlottable ):
         self.event  = self.manager.event_id()
         self.subrun = self.manager.subrun_id()
         self.run    = self.manager.run_id()
+
+        # save the trigger information for this event
+        self.trigger.getEvent(self.manager)
+
+        # save the trigger time for the entire event
+        self.trigger_time = self.trigger.getTrigTime()
         
-        self.opdetwf.getEvent(self.manager)
+        self.opdetwf.getEvent(self.manager,self.trigger_time)
         
         self.ophits.getEvent(self.manager)
 

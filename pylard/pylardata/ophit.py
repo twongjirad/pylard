@@ -6,14 +6,11 @@ import time
 
 class OpHitData( OpDataPlottable ):
 
-    def __init__(self,inputfiles):
+    def __init__(self,producer='opflash'):
         super(OpHitData, self).__init__()
 
-        # set input file name
-        self.files = inputfiles
-        
         # get the producer name
-        self.producer = 'opflash'
+        self.producer = producer
         
         # allow only the 32 "regular" PMTs
         self.pmt_max = 31

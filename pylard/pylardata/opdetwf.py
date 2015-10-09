@@ -10,24 +10,20 @@ import time
 
 NCHAN = 48
 NSPERTICK = 15.625 # ns
+USPERTICK = 15.625/1000. # ns
 NSPERFRAME = 1600000.0 # 1.6 ms in ns
 
 class OpDetWfData( OpDataPlottable ):
 
-    def __init__(self,inputfiles):
+    def __init__(self,producer='pmtreadout'):
         super(OpDetWfData, self).__init__()
 
-        # set input file name
-        self.files = inputfiles
-
         # get the producer name
-        self.producer = 'pmtreadout'
+        self.producer = producer
         
         # wf and pedestal holder
         self.opdetdigits = {}
         self.pedestals   = {} 
-        # pulses, one per input wf
-        self.pulses = {}
 
         # cosmics window holder
         self.cosmics = cd.CosmicDiscVector()
@@ -40,6 +36,12 @@ class OpDetWfData( OpDataPlottable ):
         self.maxevent = None
         self.samplesPerFrame = 25600
         self.nspertick = 15.625
+
+        # event time-range
+        self.event_time_range = [+4800., -1600] # usec
+
+        # trigger time
+        self.trigger_time = None
         
         # number of samples in entire waveform
         self.nsamples = self.samplesPerFrame*4
@@ -62,7 +64,6 @@ class OpDetWfData( OpDataPlottable ):
         for pmt in xrange(self.n_pmts):
             self.opdetdigits[pmt] = {}
             self.pedestals[pmt] = 2048.
-            self.pulses[pmt] = [ [], [] ]
         return
 
     # ----------------------------------
@@ -84,7 +85,9 @@ class OpDetWfData( OpDataPlottable ):
 
     # ----------------------------
     # load the data for this event
-    def getEvent( self, mgr):
+    def getEvent( self, mgr, trig_time=None):
+
+        self.trigger_time = trig_time
 
         # reset channels
         self.resetChannels()
@@ -116,20 +119,28 @@ class OpDetWfData( OpDataPlottable ):
             wf = self.opdata.at(n)
 
             pmt = wf.ChannelNumber()
+
+            adcs = np.array(wf)
             
             # only use first 48 pmts
             if ( pmt >= self.n_pmts ):
                 continue
 
             # add the PMT wf to the dictionary of channels
-            time = wf.TimeStamp()-1600. # in usec
+            time = wf.TimeStamp() # in usec
+            if (self.trigger_time == None):
+                time -= 1600.
+            else:
+                time -= self.trigger_time
+            # keep finding event time-boundaries
+            if (time+len(adcs)*USPERTICK > self.event_time_range[1]):
+                self.event_time_range[1] = time+len(adcs)*USPERTICK
+            if (time < self.event_time_range[0]):
+                self.event_time_range[0] = time
+
             time_tick = int(time*1000/NSPERTICK)
             #print 'wf time is : ',time
-            self.opdetdigits[pmt][time_tick] = np.array(wf)
-
-            # add pulse
-            self.pulses[pmt][0].append(time_tick)
-            self.pulses[pmt][1].append(np.max(wf))
+            self.opdetdigits[pmt][time] = adcs
 
         return
 

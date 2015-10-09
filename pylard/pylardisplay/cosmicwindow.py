@@ -21,7 +21,7 @@ class CosmicWindow(pg.PlotItem):
 
         #self.beambox = pg.PlotDataItem( x=[0,0,samplesPerFrame,samplesPerFrame,0], y=[-5, 32, 32, -5, -5] )
 
-        self.tick_range = [samplesPerFrame,samplesPerFrame*2]
+        self.tick_range = [0,1500]
 
         self.time_range = pg.LinearRegionItem(values=[self.tick_range[0]*USPERTICK , self.tick_range[1]*USPERTICK ] , orientation=pg.LinearRegionItem.Vertical)
 
@@ -32,7 +32,7 @@ class CosmicWindow(pg.PlotItem):
 
     # -----------------------------------------------
     # PLOT Time-Window
-    def plotCosmicWindows( self ):
+    def plotCosmicWindows( self, event_time_range=[-1600., 4800.] ):
 
         #self.clear()
         #self.beambox = pg.PlotDataItem( x=[0,0,samplesPerFrame,samplesPerFrame,0], y=[-5, 32, 32, -5, -5] )
@@ -58,7 +58,7 @@ class CosmicWindow(pg.PlotItem):
         self.addItem( self.time_range )
 
         # set the axis range
-        self.setXRange(0,samplesPerFrame*3*USPERTICK)
+        self.setXRange(event_time_range[0], event_time_range[1])
 
         # axis
         ax = self.getAxis('bottom')
