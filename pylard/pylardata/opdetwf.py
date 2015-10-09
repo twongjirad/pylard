@@ -120,7 +120,10 @@ class OpDetWfData( OpDataPlottable ):
 
             pmt = wf.ChannelNumber()
 
-            adcs = np.array(wf)
+            adcs = []
+            for i in xrange(wf.size()):
+                adcs.append(wf.at(i))
+            adcs = np.array(adcs)
             
             # only use first 48 pmts
             if ( pmt >= self.n_pmts ):
@@ -132,6 +135,11 @@ class OpDetWfData( OpDataPlottable ):
                 time -= 1600.
             else:
                 time -= self.trigger_time
+
+            # sub-select time-region here
+            #if ( (time < -800) or (time > 800) ):
+            #    continue
+
             # keep finding event time-boundaries
             if (time+len(adcs)*USPERTICK > self.event_time_range[1]):
                 self.event_time_range[1] = time+len(adcs)*USPERTICK

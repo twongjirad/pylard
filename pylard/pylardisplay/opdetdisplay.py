@@ -85,8 +85,8 @@ class OpDetDisplay(QtGui.QWidget) :
         self.lay_inputs.addWidget( QtGui.QLabel("Draw all"), 0, 8 )
         self.lay_inputs.addWidget( self.draw_all, 0, 9 )
         self.lay_inputs.addWidget( self.prev_event, 0, 10 )
-        self.lay_inputs.addWidget( self.beam_window, 1, 10 )
         self.lay_inputs.addWidget( self.next_event, 0, 11 )
+        self.lay_inputs.addWidget( self.beam_window, 1, 12 )
         self.last_clicked_channel = None
         self.user_plot_item = {} # storage for user plot items
 
@@ -94,15 +94,19 @@ class OpDetDisplay(QtGui.QWidget) :
         self.set_xaxis = QtGui.QPushButton("Re-plot!")
         self.draw_flashes = QtGui.QCheckBox()  # draw user products
         self.draw_flashes.setChecked(True)
+        self.draw_ophits = QtGui.QCheckBox()  # draw user products
+        self.draw_ophits.setChecked(False)
         self.run_user_analysis = QtGui.QCheckBox()  # draw user products
         self.run_user_analysis.setChecked(True)
 
-        self.lay_inputs.addWidget( QtGui.QLabel("Draw Flashes"), 1, 8 )
-        self.lay_inputs.addWidget( self.draw_flashes, 1, 9 )
+        self.lay_inputs.addWidget( QtGui.QLabel("Draw Flashes"), 1, 6 )
+        self.lay_inputs.addWidget( self.draw_flashes, 1, 7 )
+        self.lay_inputs.addWidget( QtGui.QLabel("Draw OpHits"), 1, 8 )
+        self.lay_inputs.addWidget( self.draw_ophits, 1, 9 )
         self.lay_inputs.addWidget( self.set_xaxis, 0, 12 )
 
         # range selections
-        self.time_range = pg.LinearRegionItem(values=[0,23.6], orientation=pg.LinearRegionItem.Vertical)
+        self.time_range = pg.LinearRegionItem(values=[-0.01,24], orientation=pg.LinearRegionItem.Vertical)
         self.wfplot.addItem( self.time_range )
         
         # array of pmt-maxima in time_range
@@ -134,7 +138,7 @@ class OpDetDisplay(QtGui.QWidget) :
     # scale event to beam window
     def scaleToBeam( self ):
 
-        self.time_window.setTickWindow([0,1500])
+        self.time_window.setTickWindow([-50,1550])
         self.plotData()
 
     # ----------------------
@@ -171,11 +175,12 @@ class OpDetDisplay(QtGui.QWidget) :
         wfs = self.opdata.opdetwf.getData()
 
         # get OpHits
-        #hits = self.opdata.ophits.getData()
+        hits = self.opdata.ophits.getData()
+        self.hitdiagram = pg.ScatterPlotItem(pxMode=False) 
+        self.hitspots = []
 
         # what are the bounds that we want to plot in?
         bounds = self.time_window.time_range.getRegion() # usec
-        print bounds
         # pmt-color scale bounds
         pmt_bnds = self.time_range.getRegion() # usec
 
@@ -242,19 +247,23 @@ class OpDetDisplay(QtGui.QWidget) :
                 # pulse_start is in usec
                 # get the corresponding time-tick
                 pulse_ADCs = pmt_pulses[pulse_start]
+
                 pulse_start_tick = int((pulse_start - event_time_range[0])/USPERTICK)       # ticks
                 pulse_end_tick   = pulse_start_tick + len(pulse_ADCs)  # ticks
-                pulse_end = pulse_start + len(pulse_ADCs)              # usec
+                pulse_start_usec = pulse_start
+                pulse_end_usec   = pulse_start_usec + len(pulse_ADCs)*USPERTICK    # usec
                 #print 'pulse region : [%i,%i]'%(pulse_start_tick,pulse_end_tick)
                 #print 'adding wf to time-region [%i,%i]'%(pulse_start,pulse_end)
                 #print 'wf : ',pulse_ADCs
                 pmt_wf[ pulse_start_tick : pulse_end_tick ] = pulse_ADCs
                 
                 # if pulse is in the pmt-color range
-                if ( ( (pulse_start) > pmt_bnds[0]) and ( (pulse_end) < pmt_bnds[1]) ):
+                if ( ( (pulse_start_usec) > pmt_bnds[0]) and ( (pulse_end_usec) < pmt_bnds[1]) ):
                     adcmax = np.max(pulse_ADCs) - self.getPedestal(ipmt)
                     if ( adcmax > self.pmt_max[ipmt] ):
                         self.pmt_max[ipmt] = adcmax
+
+
                         
             pencolor = self.getChanColor( ipmt )
             if self.last_clicked_channel is not None and ipmt==self.last_clicked_channel:
@@ -268,6 +277,12 @@ class OpDetDisplay(QtGui.QWidget) :
             
             # plot the waveform
             self.wfplot.plot(x=TDCs, y=ADCs, pen=pencolor, name="PMT%d"%(ipmt))
+
+            # if we should draw hits
+            if (self.draw_ophits.isChecked() == True):
+                hits_pmt = hits[ipmt]
+                for hit in hits_pmt:
+                    self.hitspots.append( {"pos":(hit[0][0],ipmt*offset), "size":1, "pen":{'color':(255,0,0,200),'width':0}, "brush":(255,0,0,0), "symbol":"s"} )
             
             # plot the waveform in the cosmics window
             self.time_window.plot(x=TDCs, y=ADCs, pen=pencolor, name="PMT%d"%(ipmt))
@@ -278,6 +293,10 @@ class OpDetDisplay(QtGui.QWidget) :
 
         # set the range for the view
         self.wfplot.setXRange(bounds[0]*USPERTICK, bounds[1]*USPERTICK, update=True)
+
+        self.hitdiagram.setData( self.hitspots )
+        self.hitdiagram.addPoints( self.hitspots )
+        self.wfplot.addItem( self.hitdiagram ) 
 
         # add the time-range
         self.wfplot.addItem( self.time_range )
@@ -294,7 +313,6 @@ class OpDetDisplay(QtGui.QWidget) :
         for ich in xrange(32):
 
             ipmt = ich
-            #print 'max is : %.02f'%self.pmt_max[ich]
             col = self.pmtscale.colorMap().map( ( self.pmt_max[ich] ) /self.getPedestal(ipmt) )
             alpha = 255
             if len(self.channellist)>0 and ipmt not in self.channellist:
@@ -305,6 +323,8 @@ class OpDetDisplay(QtGui.QWidget) :
             if ipmt in getPMTIDList():
                 pos = getPosFromID(ipmt )
                 self.pmtspot.append( {"pos":(pos[2],pos[1]), "size":30, 'pen':{'color':bordercol,'width':2}, 'brush':col, 'symbol':'o', 'data':{"id":ipmt,"highlight":False}} )
+
+
 
         # yellow
         yellow = (255,255,0,255)
@@ -318,7 +338,6 @@ class OpDetDisplay(QtGui.QWidget) :
                 time = flash[0]
                 flashInfo = flashes[flash]
                 PE   = flashInfo[0]
-                if (PE < 10) : continue
                 Ypos = flashInfo[1]
                 Zpos = -(flashInfo[2]-(1036./2))
                 PEsize = int(getFlashSize(PE))
