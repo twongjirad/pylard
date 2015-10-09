@@ -68,5 +68,5 @@ class OpFlashData( OpDataPlottable ):
             #print '\t[Time, dt, Frame]  : [%.02f, %.02f, %.02f]'%(time,dt,frame)
             #print '\t[PE, Ypos, Zpos] : [%.02f, %.02f, %.02f]'%(PE,Ypos,Zpos)
             #print
-            if (PE < 20): continue
+            #if (PE < 20): continue
             self.flashes[ (time, time+dt) ] = [ PE, Ypos, Zpos ]

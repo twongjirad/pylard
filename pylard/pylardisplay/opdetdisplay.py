@@ -209,6 +209,20 @@ class OpDetDisplay(QtGui.QWidget) :
         #print 'time-tick length = %i'%len(TDCs)
         if (len(TDCs) > 102400*5):
             return
+            
+        if (self.draw_flashes.isChecked() == True):
+            # add all the flashes
+            flashes = self.opdata.opflash.flashes
+            for flash in flashes:
+                
+                time = flash[0]
+                flashInfo = flashes[flash]
+                PE = flashInfo[0]
+                Ypos = flashInfo[1]
+                Zpos = -(flashInfo[2]-(1036./2))
+                #if (PE > 10):
+                self.wfplot.addLine(time, movable=False, pen={'color':(255,255,0,255),'width':2})
+
 
         # for all PMTs
         for ipmt in wfs:
@@ -268,18 +282,6 @@ class OpDetDisplay(QtGui.QWidget) :
         # add the time-range
         self.wfplot.addItem( self.time_range )
 
-        if (self.draw_flashes.isChecked() == True):
-            # add all the flashes
-            flashes = self.opdata.opflash.flashes
-            for flash in flashes:
-                
-                time = flash[0]
-                flashInfo = flashes[flash]
-                PE = flashInfo[0]
-                Ypos = flashInfo[1]
-                Zpos = -(flashInfo[2]-(1036./2))
-                if (PE > 10):
-                    self.wfplot.addLine(time, movable=False, pen={'color':(255,255,0,255),'width':2})
 
         # do any additional drawing to the cosmics window
         self.time_window.plotCosmicWindows(event_time_range)        
