@@ -134,7 +134,7 @@ class OpticalData( OpDataPlottable ):
         
         self.opdetwf.getEvent(self.manager,self.trigger_time)
         
-        self.ophits.getEvent(self.manager)
+        #self.ophits.getEvent(self.manager)
 
         self.opflash.getEvent(self.manager)
 

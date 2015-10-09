@@ -64,7 +64,6 @@ class OpDetDisplay(QtGui.QWidget) :
             self.run    = QtGui.QLineEdit("0")   # run
             self.subrun = QtGui.QLineEdit("0") # subrun
             self.event  = QtGui.QLineEdit("0") # event
-        self.slot  = QtGui.QLineEdit("5")     # slot number
         self.collapse = QtGui.QCheckBox()  # collapse onto one another
         self.collapse.setChecked(False)
         self.beam_window = QtGui.QPushButton("Beam Window")
@@ -135,7 +134,7 @@ class OpDetDisplay(QtGui.QWidget) :
     # scale event to beam window
     def scaleToBeam( self ):
 
-        self.time_window.tick_range = [0,1500]
+        self.time_window.setTickWindow([0,1500])
         self.plotData()
 
     # ----------------------
@@ -143,7 +142,6 @@ class OpDetDisplay(QtGui.QWidget) :
     def plotData( self ):
 
         evt = int(self.event.text())
-        slot = int(self.slot.text())
         
         # if this is a new event
         if self.lastevent is None or evt!=self.lastevent:
@@ -171,11 +169,13 @@ class OpDetDisplay(QtGui.QWidget) :
         
         # start plotting waveforms
         wfs = self.opdata.opdetwf.getData()
+
         # get OpHits
-        hits = self.opdata.ophits.getData()
+        #hits = self.opdata.ophits.getData()
 
         # what are the bounds that we want to plot in?
         bounds = self.time_window.time_range.getRegion() # usec
+        print bounds
         # pmt-color scale bounds
         pmt_bnds = self.time_range.getRegion() # usec
 
@@ -371,7 +371,6 @@ class OpDetDisplay(QtGui.QWidget) :
 
     def prevEvent(self):
         evt = int(self.event.text())
-        slot = int(self.slot.text())
         try:
             self.opdata.getEvent( evt-1 )
             self.event.setText("%d"%(evt-1))
@@ -384,14 +383,11 @@ class OpDetDisplay(QtGui.QWidget) :
     
     def getPMTdiagram(self):
         return self.pmt_map
-            
+
+    # -------------------------------------
+    # go to a specific event --------------
     def gotoEvent( self, event, slot=None ):
         evt = int(self.event.text())
-        if slot is None:
-            slot = int(self.slot.text())
-        else:
-            self.slot.setText("%d"%(slot))
-        
         try:
             more = self.opdata.getEvent( event )
             self.event.setText( "%d"%(event) )

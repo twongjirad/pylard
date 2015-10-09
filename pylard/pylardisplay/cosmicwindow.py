@@ -30,6 +30,12 @@ class CosmicWindow(pg.PlotItem):
         # data
         self.cosmicwindowvector = None
 
+    # --------------------------
+    # reset time-window
+    def setTickWindow( self, tick_bounds ):
+        self.tick_range = tick_bounds
+        self.time_range = pg.LinearRegionItem(values=[self.tick_range[0]*USPERTICK , self.tick_range[1]*USPERTICK ] , orientation=pg.LinearRegionItem.Vertical)
+
     # -----------------------------------------------
     # PLOT Time-Window
     def plotCosmicWindows( self, event_time_range=[-1600., 4800.] ):
