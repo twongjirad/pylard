@@ -263,6 +263,7 @@ class RawDigitsOpData( OpDataPlottable ):
         # clear stores
         self.cosmics = cd.CosmicDiscVector()
         self.beamwin_wfms = {}
+        self.beamwin_info = {}
         q = self.wf_df.query('event==%d'%(eventid))
         self.firstframe = q["frame"].min()
         for femslot,slot_df in q.groupby('opslot'):
@@ -270,6 +271,7 @@ class RawDigitsOpData( OpDataPlottable ):
                 if ch>=self.getData(slot=femslot).shape[1]:
                     continue
                 self.beamwin_wfms[(femslot,ch)] = []
+                self.beamwin_info[(femslot,ch)] = { "tstamp":0 }
                 if "trig_timestamp" in ch_df:
                     vals = zip( ch_df['adcs'].values, ch_df['timestamp'].values,ch_df['frame'].values,ch_df['sample'].values,ch_df['opslot'].values,ch_df['trig_timestamp'])
                 else:
@@ -278,6 +280,13 @@ class RawDigitsOpData( OpDataPlottable ):
                     wf = np.array( awf )
                     if len(wf)>=1000:
                         self.beamwin_wfms[(femslot,ch)].append( wf )
+                        self.beamwin_info[(femslot,ch)]["tstamp"] = tstamp
+                        if ch<32:
+                            if "earliest_tstamp" not in self.beamwin_info or self.beamwin_info["earliest_tstamp"]>tstamp:
+                                self.beamwin_info["earliest_tstamp"] = tstamp
+                            tend = tstamp + (0.001*NSPERTICK)*len( wf ) # microseconds
+                            if "latest_tstamp" not in self.beamwin_info or self.beamwin_info["latest_tstamp"]<tend:
+                                self.beamwin_info["latest_tstamp"] = tend
                     else:                            
                         framesample = self.convertToFrameSample( tstamp, trig_timestamp )
                         cwd = cd.CosmicDiscWindow( wf, femslot, ch, framesample )
@@ -291,14 +300,34 @@ class RawDigitsOpData( OpDataPlottable ):
         return int( (timestamp-trig_timestamp)*1000.0/NSPERTICK ) # timestamps in microseconds of course
                                                   
     def fillBeamWindowArray( self ):
-        # Fill the beam sample array
-        nbeamsamples = self.getNBeamWinSamples()
+
+        # allocate correct array size
+        tstart = self.beamwin_info["earliest_tstamp"]
+        tend   = self.beamwin_info["latest_tstamp"]
+        nbeamsamples = int( (tend-tstart)/(0.001*NSPERTICK) )
+        self.beamwin_info["nsamples"] = nbeamsamples
+        self.update_the_sample_size = False
+        self.__nbeamsamples = nbeamsamples
+        print "BEAM WINDOW SAMPLES = ",nbeamsamples," tstart=",tstart," tend=",tend
+        for slot in [5,6]:
+            self.opdetdigits[slot] = np.ones( (nbeamsamples,48) )*2048.0
+
         for (femslot,ch),wfs in self.beamwin_wfms.items():
+            # first get earliest time stamp
+            tstamp = self.beamwin_info[(femslot,ch)]["tstamp"]
+            firstsample = int( (tstamp-tstart)/(0.001*NSPERTICK) )
+            firstwfmsample = 0
+            if firstsample<0:
+                firstsample = 0
+                firstwfmsample = -firstsample
+            print "slot ",femslot," ch",ch," first sample=",firstsample
             for wf in wfs:
-                samples = self.getData(slot=femslot).shape[0]
-                if samples!=nbeamsamples:
-                    remake = True
-                else:
-                    remake = False
-                self.getData(slot=femslot,remake=remake)[:np.minimum(nbeamsamples,len(wf)),ch] = wf[:np.minimum(nbeamsamples,len(wf))]
-                self.getPedestal(slot=femslot)[ch] = ped.getpedestal( wf[:samples], samples/20, 1.0, verbose=False )
+                copylen = np.minimum(firstsample+len(wf),nbeamsamples)-firstsample
+                if copylen>len(wf)-firstwfmsample:
+                    copylen = len(wf)-firstwfmsample
+                self.opdetdigits[femslot][firstsample:firstsample+copylen,ch] = wf[firstwfmsample:copylen]
+                if firstsample!=0:
+                    self.opdetdigits[femslot][:firstsample,ch] = wf[0]
+                if firstsample+copylen<nbeamsamples:
+                    self.opdetdigits[femslot][firstsample+copylen:,ch] = wf[-1]
+                self.getPedestal(slot=femslot)[ch] = ped.getpedestal( self.opdetdigits[femslot][:,ch], int(nbeamsamples/20), 1.0, verbose=False )

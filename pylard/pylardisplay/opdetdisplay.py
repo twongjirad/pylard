@@ -1,4 +1,4 @@
-import os,sys
+import os,sys,copy
 from pyqtgraph.Qt import QtGui, QtCore
 import pyqtgraph.opengl as gl
 import pyqtgraph as pg
@@ -208,6 +208,7 @@ class OpDetDisplay(QtGui.QWidget) :
 
         if self.draw_user_items.isChecked() and None in self.user_plot_item.keys():
             for useritem in self.user_plot_item[None]:
+                
                 self.plot.addItem( useritem )
 
         # ----------------------------------------------------
