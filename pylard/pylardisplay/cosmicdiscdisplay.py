@@ -63,6 +63,7 @@ class CosmicDiscDisplay(QtGui.QWidget) :
         self.spots = []
         for ch,windows in cwv.chwindows.items():
             for t,win in windows.items():
+                #print " cosmic window: ",ch,t
                 if t<-2*samplesPerFrame or t>3*samplesPerFrame:
                     print t,"<-",samplesPerFrame,">",3*samplesPerFrame
                     continue

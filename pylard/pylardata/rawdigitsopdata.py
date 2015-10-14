@@ -275,6 +275,7 @@ class RawDigitsOpData( OpDataPlottable ):
                 if "trig_timestamp" in ch_df:
                     vals = zip( ch_df['adcs'].values, ch_df['timestamp'].values,ch_df['frame'].values,ch_df['sample'].values,ch_df['opslot'].values,ch_df['trig_timestamp'])
                 else:
+                    # deprecated, should remove.
                     vals = zip( ch_df['adcs'].values, ch_df['timestamp'].values,ch_df['frame'].values,ch_df['sample'].values,ch_df['opslot'].values,ch_df['timestamp'].values)
                 for (awf,tstamp,frame,sample,slot,trig_timestamp) in vals:
                     wf = np.array( awf )
@@ -289,6 +290,7 @@ class RawDigitsOpData( OpDataPlottable ):
                                 self.beamwin_info["latest_tstamp"] = tend
                     else:                            
                         framesample = self.convertToFrameSample( tstamp, trig_timestamp )
+                        #print "cosmic window: ",femslot,ch,tstamp,trig_timestamp,framesample
                         cwd = cd.CosmicDiscWindow( wf, femslot, ch, framesample )
                         self.cosmics.addWindow( cwd )
         try:
@@ -297,7 +299,7 @@ class RawDigitsOpData( OpDataPlottable ):
             print "Event ",eventid," has ",self.cosmics.getNumWindows()," cosmic windows and ",len(self.beamwin_wfms)," beam windows (length=",self.getNBeamWinSamples(),")"
             
     def convertToFrameSample( self, timestamp, trig_timestamp  ):
-        return int( (timestamp-trig_timestamp)*1000.0/NSPERTICK ) # timestamps in microseconds of course
+        return int( (timestamp-trig_timestamp)/(0.001*NSPERTICK) ) # timestamps in microseconds of course
                                                   
     def fillBeamWindowArray( self ):
 
