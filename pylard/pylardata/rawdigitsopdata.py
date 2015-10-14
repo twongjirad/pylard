@@ -320,7 +320,7 @@ class RawDigitsOpData( OpDataPlottable ):
             if firstsample<0:
                 firstsample = 0
                 firstwfmsample = -firstsample
-            print "slot ",femslot," ch",ch," first sample=",firstsample
+            #print "slot ",femslot," ch",ch," first sample=",firstsample
             for wf in wfs:
                 copylen = np.minimum(firstsample+len(wf),nbeamsamples)-firstsample
                 if copylen>len(wf)-firstwfmsample:
