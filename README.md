@@ -80,6 +80,14 @@ Finally, to install the package, go to the base pylard directory and type
     python setup.py install
 
 ## Let's test this
+
+### 3D Detector Display
+
+Run
+
+   python run_detdisplay.py
+
+### Optical Data Display
 You can run view_opdata.py to see if the installation worked.  To get a datafile (output of RawDigitsWriter) go to the uboonegpvm machines and copy 
 
    /uboone/data/users/tmw/pylard_stuff/example_pmtrawdigits_run2499_subrun1.root
