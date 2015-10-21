@@ -1,4 +1,4 @@
-import pylard.pylardisplay as pd
+import pylard.pylardisplay.pylardisplay as pd
 #import pylard.pylarsoftzmq as larzmq
 
 # Physics/Reconstruction Goals
