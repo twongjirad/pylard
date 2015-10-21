@@ -79,9 +79,20 @@ Finally, to install the package, go to the base pylard directory and type
 
     python setup.py install
 
+## Let's test this
+You can run view_opdata.py to see if the installation worked.  To get a datafile (output of RawDigitsWriter) go to the uboonegpvm machines and copy 
+
+   /uboone/data/users/tmw/pylard_stuff/example_pmtrawdigits_run2499_subrun1.root
+
+Go into view_opdata.py and change the location of the file. Then run it by:
+
+    python
+    >>> import view_opdata
+
 
 ## sub-packages
 * pylardisplay: the main GUI windows are here
 * pylardata: interfaces to various types of data. currently supporting output from uboone/RawData/utils/RawDigitsWriter_module.cc and larlite.
 * pylareventmanager: zmq interface to data products. vaporware.
+
 
