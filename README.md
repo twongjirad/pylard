@@ -4,6 +4,16 @@ Goal is to provide a easily customizable MicroBooNE event display for both the T
 
 The idea is to provide basic displays which the user can draw on top of.
 
+## Screenshots
+
+3D model of detector
+
+![Detector Display Image](https://github.com/twongjirad/pylard/blob/develop/pylard/misc/detectormodel.png)
+
+Viewer for Optical Data
+![Optical Data Image](https://github.com/twongjirad/pylard/blob/develop/pylard/misc/example_michel1.png)
+
+
 ## Dependencies
 
 Pre-dependencies:
