@@ -85,7 +85,8 @@ Finally, to install the package, go to the base pylard directory and type
 
 Run
 
-   python run_detdisplay.py
+    python run_detdisplay.py
+
 
 ### Optical Data Display
 You can run view_opdata.py to see if the installation worked.  To get a datafile (output of RawDigitsWriter) go to the uboonegpvm machines and copy 
