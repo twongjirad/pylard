@@ -4,7 +4,7 @@ Goal is to provide a easily customizable MicroBooNE event display for both the T
 
 The idea is to provide basic displays which the user can draw on top of.
 
-### installation
+## installation
 
 I recommend installing everything inside a python virtual environment.  This is because this tool brings in a lot of python dependencies. At the end of the day, you might not want all of this.
 
@@ -17,27 +17,31 @@ Then make a folder somewhere not in the base pylard directory.
 
 In the new folder, create a new virtualenv.
 * To make an environment which will use the python packages you've already installed
-"""
+
     virtualenv --system-site-packages [env-name, e.g. env]
-"""
+
 * To start with a completely clean python environment 
-"""
+
     virtualenv [env-name, e.g. env]
-"""
+
 
 To activate the environment
-"""
-source [env-name]/bin/activate
-"""
+
+    source [env-name]/bin/activate
+
 
 You should now have a prompt indicating the environment is active
+
     ([env-name]) Taritreees-MacBook-Pro:test twongjirad$
 
 To get out of the environment
+
     deactive
 
 To destroy this installation
+
    rm -rf [env-name]
+
 Desotrying the python setup is that easy. That's why I like this.
 
 ## sub-packages
