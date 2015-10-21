@@ -9,9 +9,9 @@ The idea is to provide basic displays which the user can draw on top of.
 I recommend installing everything inside a python virtual environment.  This is because this tool brings in a lot of python dependencies. At the end of the day, you might not want all of this.
 
 To do start, get virtualenv
-"""   
-pip install virtualenv
-"""
+  
+    pip install virtualenv
+
    
 Then make a folder somewhere not in the base pylard directory.  
 
