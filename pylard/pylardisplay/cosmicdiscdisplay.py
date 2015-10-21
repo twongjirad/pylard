@@ -22,6 +22,8 @@ class CosmicDiscDisplay(QtGui.QWidget) :
         if opdetdisplay is not None:
             self.connectOpDetDisplay( opdetdisplay )
 
+        # the owning opdetdisplay
+
         # layout
         self.layout = QtGui.QGridLayout()
         self.setLayout( self.layout )
@@ -31,7 +33,9 @@ class CosmicDiscDisplay(QtGui.QWidget) :
         self.colorscale = pg.GradientEditorItem(orientation='bottom')
         self.diagram = pg.PlotItem(name="Cosmic Readout Windows")
         self.beambox = pg.PlotDataItem( x=[0,0,samplesPerFrame,samplesPerFrame,0], y=[-5, 32, 32, -5, -5] )
-        self.time_range = pg.LinearRegionItem(values=[0,1000], orientation=pg.LinearRegionItem.Vertical)
+        self.cosmicwin_start = -100
+        self.cosmicwin_end   = 2000
+        self.time_range = pg.LinearRegionItem(values=[self.cosmicwin_start,self.cosmicwin_end], orientation=pg.LinearRegionItem.Vertical)
 
         self.layout.addWidget( self.graphics, 0, 0 )
         self.graphics.addItem( self.diagram, 0, 0 )
@@ -56,7 +60,7 @@ class CosmicDiscDisplay(QtGui.QWidget) :
     def plotCosmicWindows( self, cosmicwindowvector ):
         self.diagram.clear()
         self.beambox = pg.PlotDataItem( x=[0,0,samplesPerFrame,samplesPerFrame,0], y=[-5, 32, 32, -5, -5] )
-        #self.time_range = pg.LinearRegionItem(values=[0,1000], orientation=pg.LinearRegionItem.Vertical)
+
         self.cosmicwindowvector = cosmicwindowvector
         cwv = cosmicwindowvector
         print "Number of cosmics: ",cwv.getNumWindows()
@@ -87,7 +91,7 @@ class CosmicDiscDisplay(QtGui.QWidget) :
         yStyle = {'color':'#FFFFFF','font-size':'14pt'}
         ay.setLabel('FEM CH Number (PMTID-1)',**yStyle)
         
-    def applyCosmicDiscRange( self ):
+    def applyCosmicDiscRange( self, clearplot=True ):
         if self.opdetdisplay is None:
             print "Need to connect CosmicDiscDisplay to an OpdetDisplay"
             return
@@ -106,7 +110,8 @@ class CosmicDiscDisplay(QtGui.QWidget) :
         
         slot = int(self.opdetdisplay.slot.text())
         
-        self.opdetdisplay.plot.clear()
+        if clearplot:
+            self.opdetdisplay.plot.clear()
         offset = 1.0
         scaledown = float( self.opdetdisplay.adc_scaledown.text() )
         if self.opdetdisplay.collapse.isChecked():
@@ -137,5 +142,5 @@ class CosmicDiscDisplay(QtGui.QWidget) :
             self.opdetdisplay.plot.plot( x=x, y=y, pen=pencolor, name="PMT%d"%(ipmt))
 
 
-        self.opdetdisplay.plot.autoRange()
+        #self.opdetdisplay.plot.autoRange()
             

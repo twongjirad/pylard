@@ -281,6 +281,7 @@ class RawDigitsOpData( OpDataPlottable ):
                     vals = zip( ch_df['adcs'].values, ch_df['timestamp'].values,ch_df['frame'].values,ch_df['sample'].values,ch_df['opslot'].values,ch_df['timestamp'].values)
                 for (awf,tstamp,frame,sample,slot,trig_timestamp) in vals:
                     wf = np.array( awf )
+                    framesample = self.convertToFrameSample( tstamp, trig_timestamp )
                     if "earliest_tstamp" not in self.beamwin_info:
                         self.beamwin_info["earliest_tstamp"] = trig_timestamp
                         self.beamwin_info["latest_tstamp"] = trig_timestamp+0.015625*1000
@@ -299,7 +300,6 @@ class RawDigitsOpData( OpDataPlottable ):
                                 self.beamwin_info["latest_tstamp"] = tend
                     else:              
                         # cosmic windows!
-                        framesample = self.convertToFrameSample( tstamp, trig_timestamp )
                         print "cosmic window len=",len(wf),": slot=",femslot,"ch=",ch,"tstamp=",tstamp,"trig_stamp=",trig_timestamp,"framesample=",framesample
                         cwd = cd.CosmicDiscWindow( wf, femslot, ch, framesample )
                         self.cosmics.addWindow( cwd )

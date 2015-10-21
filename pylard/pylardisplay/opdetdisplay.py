@@ -74,8 +74,7 @@ class OpDetDisplay(QtGui.QWidget) :
         self.run_user_analysis.setChecked(True)
 
         self.lay_inputs.addWidget( self.openCosmicWindow, 1, 0, 1, 2 )
-        self.lay_inputs.addWidget( self.draw_cosmics, 1, 8 )
-        self.lay_inputs.addWidget( QtGui.QLabel("Draw user items"), 1, 9 )
+        self.lay_inputs.addWidget( self.draw_cosmics, 1, 9 )
         self.lay_inputs.addWidget( self.draw_user_items, 1, 10 )
         self.lay_inputs.addWidget( self.run_user_analysis, 1, 11 )
         self.lay_inputs.addWidget( self.set_xaxis, 1, 12 )
@@ -95,7 +94,7 @@ class OpDetDisplay(QtGui.QWidget) :
         self.user_analysis_products = []
         self.user_analyses = []
 
-        # subwindow
+        # cosmic display subwindow
         self.cosmicdisplay = CosmicDiscDisplay(self)
 
         # connect
@@ -113,12 +112,12 @@ class OpDetDisplay(QtGui.QWidget) :
             self.lastevent = evt
             self.newevent = True
         else:
-            print "old event: ",self.lastevent
+            #print "old event: ",self.lastevent
             self.newevent = False
         
         scaledown = float( self.adc_scaledown.text() )
         
-
+        # --------------------------------------------------
         # BEAM SAMPLE WINDOW
         self.plot.clear()
         offset = 1.0
@@ -151,7 +150,13 @@ class OpDetDisplay(QtGui.QWidget) :
 
         if "cosmics" in dir(self.opdata):
             if self.newevent:
+                # refresh the cosmic window display
                 self.cosmicdisplay.plotCosmicWindows( self.opdata.cosmics )
+            if self.draw_cosmics.isChecked():
+                # overlay the cosmic waveforms
+                self.cosmicdisplay.applyCosmicDiscRange( clearplot=False )
+                    
+                
 
         # ----------------------------------------------------
         # diagram object
