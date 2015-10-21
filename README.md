@@ -36,13 +36,18 @@ You should now have a prompt indicating the environment is active
 
 To get out of the environment
 
-    deactive
+    deactivate
 
 To destroy this installation
 
    rm -rf [env-name]
 
-Desotrying the python setup is that easy. That's why I like this.
+Destroying the python setup is that easy. That's why I like this.
+
+Finally, to install the package, go to the base pylard directory and type
+
+    python setup.py install
+
 
 ## sub-packages
 
