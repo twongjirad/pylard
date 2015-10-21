@@ -21,9 +21,9 @@ Pre-dependencies:
 * virtualenv: not required, but highly-recommended. It allows you to build a sandbox environment for python. If you install pylard in such a sandbox, the package and its dependencies can be removed easily (and installed without root privileges).
 
 Get these first, since they can't be grabbed by PIP via setuptools:
-* ROOT: This is the only one which the setup.py script won't try to install itself. You need the pyroot module to be installed
+* ROOT: High-energy physics staple. Note: you need the pyroot module to be installed
 * pyqt4: best installed using apt-get (or it's equivalent on linux) and macports (or its equivalent on OS X)
-* sip: needed by pyqt4. best installed uisng apt-get
+* sip: needed by pyqt4. This (and pyqt4) best installed using apt-get
 
 These should be installed by the setup script:
 * pyqtgraph: visualization package used to make GUI and plots. utilizes 3D acceleration.
