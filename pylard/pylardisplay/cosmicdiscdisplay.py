@@ -86,7 +86,6 @@ class CosmicDiscDisplay(QtGui.QWidget) :
         ay = self.diagram.getAxis('left')
         yStyle = {'color':'#FFFFFF','font-size':'14pt'}
         ay.setLabel('FEM CH Number (PMTID-1)',**yStyle)
-
         
     def applyCosmicDiscRange( self ):
         if self.opdetdisplay is None:
@@ -118,7 +117,7 @@ class CosmicDiscDisplay(QtGui.QWidget) :
         
         cosmics = self.cosmicwindowvector.getWindowsBetweenTimes( start, end )
         for win in cosmics:
-            if win.slot!=slot:
+            if (win.ch<36 and win.slot!=slot):
                 continue
             ipmt = win.ch
             wfm = win.wfm

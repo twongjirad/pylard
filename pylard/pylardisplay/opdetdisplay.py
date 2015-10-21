@@ -27,8 +27,6 @@ class OpDetDisplay(QtGui.QWidget) :
         # main layout
         self.layout = QtGui.QGridLayout()
         self.setLayout(self.layout)
-        #self.layout.addWidget( self.diagram, 0, 0 )
-        #self.layout.addWidget( self.plot, 1, 0 )
         self.layout.addWidget( self.graphics, 0, 0 )
         self.graphics.addItem( self.diagram, 0, 0 )
         self.graphics.addItem( self.pmtscale, 1, 0 )
@@ -45,22 +43,22 @@ class OpDetDisplay(QtGui.QWidget) :
         else:
             self.event = QtGui.QLineEdit("0") # event number
         self.slot  = QtGui.QLineEdit("5")     # slot number
-        self.collapse = QtGui.QCheckBox()  # collapse onto one another
+        self.collapse = QtGui.QCheckBox("Overlay Mode")  # collapse onto one another
         self.collapse.setChecked(False)
         self.prev_event = QtGui.QPushButton("Previous")
         self.next_event = QtGui.QPushButton("Next")
         self.adc_scaledown = QtGui.QLineEdit("100.0")
-        self.draw_all = QtGui.QCheckBox()  # collapse onto one another
+        self.draw_all = QtGui.QCheckBox("draw all")  # collapse onto one another
         self.draw_all.setChecked(False)
+        self.draw_cosmics = QtGui.QCheckBox("draw cosmics")
+        self.draw_cosmics.setChecked(True)
         self.lay_inputs.addWidget( QtGui.QLabel("Event"), 0, 0 )
         self.lay_inputs.addWidget( self.event, 0, 1 )
         self.lay_inputs.addWidget( QtGui.QLabel("FEM Slot"), 0, 2 )
         self.lay_inputs.addWidget( self.slot, 0, 3 )
         self.lay_inputs.addWidget( QtGui.QLabel("ADC scale-down"), 0, 4 )
         self.lay_inputs.addWidget( self.adc_scaledown, 0, 5 )
-        self.lay_inputs.addWidget( QtGui.QLabel("Overlay Mode"), 0, 6 )
-        self.lay_inputs.addWidget( self.collapse, 0, 7 )
-        self.lay_inputs.addWidget( QtGui.QLabel("Draw all"), 0, 8 )
+        self.lay_inputs.addWidget( self.collapse, 0, 8 )
         self.lay_inputs.addWidget( self.draw_all, 0, 9 )
         self.lay_inputs.addWidget( self.prev_event, 0, 11 )
         self.lay_inputs.addWidget( self.next_event, 0, 12 )
@@ -70,15 +68,15 @@ class OpDetDisplay(QtGui.QWidget) :
         # axis options
         self.set_xaxis = QtGui.QPushButton("Re-plot!")
         self.openCosmicWindow = QtGui.QPushButton("Cosmic Disc. Viewer")
-        self.draw_user_items = QtGui.QCheckBox()  # draw user products
+        self.draw_user_items = QtGui.QCheckBox("draw user items")  # draw user products
         self.draw_user_items.setChecked(True)
-        self.run_user_analysis = QtGui.QCheckBox()  # draw user products
+        self.run_user_analysis = QtGui.QCheckBox("run user funcs.")  # draw user products
         self.run_user_analysis.setChecked(True)
 
         self.lay_inputs.addWidget( self.openCosmicWindow, 1, 0, 1, 2 )
-        self.lay_inputs.addWidget( QtGui.QLabel("Draw user items"), 1, 8 )
-        self.lay_inputs.addWidget( self.draw_user_items, 1, 9 )
-        self.lay_inputs.addWidget( QtGui.QLabel("Run user funcs."), 1, 10 )
+        self.lay_inputs.addWidget( self.draw_cosmics, 1, 8 )
+        self.lay_inputs.addWidget( QtGui.QLabel("Draw user items"), 1, 9 )
+        self.lay_inputs.addWidget( self.draw_user_items, 1, 10 )
         self.lay_inputs.addWidget( self.run_user_analysis, 1, 11 )
         self.lay_inputs.addWidget( self.set_xaxis, 1, 12 )
 

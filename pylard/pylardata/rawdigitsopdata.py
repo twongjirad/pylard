@@ -266,6 +266,8 @@ class RawDigitsOpData( OpDataPlottable ):
         self.beamwin_info = {}
         q = self.wf_df.query('event==%d'%(eventid))
         self.firstframe = q["frame"].min()
+        the_trig_timestamp = 0.0
+        nbeamwindows = 0
         for femslot,slot_df in q.groupby('opslot'):
             for ch,ch_df in slot_df.groupby('opfemch'):
                 if ch>=self.getData(slot=femslot).shape[1]:
@@ -279,22 +281,31 @@ class RawDigitsOpData( OpDataPlottable ):
                     vals = zip( ch_df['adcs'].values, ch_df['timestamp'].values,ch_df['frame'].values,ch_df['sample'].values,ch_df['opslot'].values,ch_df['timestamp'].values)
                 for (awf,tstamp,frame,sample,slot,trig_timestamp) in vals:
                     wf = np.array( awf )
-                    if len(wf)>=1000:
+                    if "earliest_tstamp" not in self.beamwin_info:
+                        self.beamwin_info["earliest_tstamp"] = trig_timestamp
+                        self.beamwin_info["latest_tstamp"] = trig_timestamp+0.015625*1000
+                    if len(wf)>=500:
+                        # beam windows!
+                        print "beamwindow waveform len=",len(wf),femslot,"ch=",ch,"tstamp=",tstamp,"trig_stamp=",trig_timestamp,"framesample=",framesample
+                        nbeamwindows += 1
                         self.beamwin_wfms[(femslot,ch)].append( wf )
                         self.beamwin_info[(femslot,ch)]["tstamp"] = tstamp
+                        the_trig_timestamp = trig_timestamp
                         if ch<32:
                             if "earliest_tstamp" not in self.beamwin_info or self.beamwin_info["earliest_tstamp"]>tstamp:
                                 self.beamwin_info["earliest_tstamp"] = tstamp
                             tend = tstamp + (0.001*NSPERTICK)*len( wf ) # microseconds
                             if "latest_tstamp" not in self.beamwin_info or self.beamwin_info["latest_tstamp"]<tend:
                                 self.beamwin_info["latest_tstamp"] = tend
-                    else:                            
+                    else:              
+                        # cosmic windows!
                         framesample = self.convertToFrameSample( tstamp, trig_timestamp )
-                        #print "cosmic window: ",femslot,ch,tstamp,trig_timestamp,framesample
+                        print "cosmic window len=",len(wf),": slot=",femslot,"ch=",ch,"tstamp=",tstamp,"trig_stamp=",trig_timestamp,"framesample=",framesample
                         cwd = cd.CosmicDiscWindow( wf, femslot, ch, framesample )
                         self.cosmics.addWindow( cwd )
         try:
-            print "Event %d has %d cosmic windows and %d beam windows (beam window length=%d)" % ( eventid, self.cosmics.getNumWindows(), len(self.beamwin_wfms), self.getNBeamWinSamples() )
+            print "Event %d has %d cosmic windows and %d beam windows (beam window length=%d)" % ( eventid, self.cosmics.getNumWindows(), nbeamwindows, self.getNBeamWinSamples() ),
+            print " earliest tstamp=",self.beamwin_info["earliest_tstamp"]," trig time=",the_trig_timestamp
         except:
             print "Event ",eventid," has ",self.cosmics.getNumWindows()," cosmic windows and ",len(self.beamwin_wfms)," beam windows (length=",self.getNBeamWinSamples(),")"
             
