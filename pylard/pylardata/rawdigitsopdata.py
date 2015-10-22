@@ -8,71 +8,10 @@ import ROOT
 import time
 
 """
-******************************************************************************
-*Tree    :OpDetWaveforms: PMT Readout Waveforms                                  *
-*Entries :   638639 : Total =       361102141 bytes  File  Size =   99788152 *
-*        :          : Tree compression factor =   3.62                       *
-******************************************************************************
-*Br    0 :run       : run/I                                                  *
-*Entries :   638639 : Total  Size=    2557942 bytes  File Size  =      16047 *
-*Baskets :       31 : Basket Size=     339968 bytes  Compression= 159.35     *
-*............................................................................*
-*Br    1 :subrun    : subrun/I                                               *
-*Entries :   638639 : Total  Size=    2558047 bytes  File Size  =      14728 *
-*Baskets :       31 : Basket Size=     339968 bytes  Compression= 173.62     *
-*............................................................................*
-*Br    2 :event     : event/I                                                *
-*Entries :   638639 : Total  Size=    2558012 bytes  File Size  =      20771 *
-*Baskets :       31 : Basket Size=     339968 bytes  Compression= 123.11     *
-*............................................................................*
-*Br    3 :opcrate   : opcrate/I                                              *
-*Entries :   638639 : Total  Size=    2558082 bytes  File Size  =      16115 *
-*Baskets :       31 : Basket Size=     339968 bytes  Compression= 158.68     *
-*............................................................................*
-*Br    4 :opslot    : opslot/I                                               *
-*Entries :   638639 : Total  Size=    2558047 bytes  File Size  =      29055 *
-*Baskets :       31 : Basket Size=     339968 bytes  Compression=  88.01     *
-*............................................................................*
-*Br    5 :opfemch   : opfemch/I                                              *
-*Entries :   638639 : Total  Size=    2558082 bytes  File Size  =     206079 *
-*Baskets :       31 : Basket Size=     339968 bytes  Compression=  12.41     *
-*............................................................................*
-*Br    6 :frame     : frame/I                                                *
-*Entries :   638639 : Total  Size=    2558012 bytes  File Size  =     269925 *
-*Baskets :       31 : Basket Size=     339968 bytes  Compression=   9.47     *
-*............................................................................*
-*Br    7 :sample    : sample/I                                               *
-*Entries :   638639 : Total  Size=    2558047 bytes  File Size  =    1141255 *
-*Baskets :       31 : Basket Size=     339968 bytes  Compression=   2.24     *
-*............................................................................*
-*Br    8 :timestamp : timestamp/D                                            *
-*Entries :   638639 : Total  Size=    5115260 bytes  File Size  =    1498956 *
-*Baskets :       55 : Basket Size=     679936 bytes  Compression=   3.41     *
-*............................................................................*
-*Br    9 :readoutch : readoutch/I                                            *
-*Entries :   638639 : Total  Size=    2558152 bytes  File Size  =     222101 *
-*Baskets :       31 : Basket Size=     339968 bytes  Compression=  11.51     *
-*............................................................................*
-*Br   10 :category  : category/I                                             *
-*Entries :   638639 : Total  Size=    2558117 bytes  File Size  =      26441 *
-*Baskets :       31 : Basket Size=     339968 bytes  Compression=  96.71     *
-*............................................................................*
-*Br   11 :gaintype  : gaintype/I                                             *
-*Entries :   638639 : Total  Size=    2558117 bytes  File Size  =      26419 *
-*Baskets :       31 : Basket Size=     339968 bytes  Compression=  96.79     *
-*............................................................................*
-*Br   12 :trig_timestamp : trig_timestamp/D                                  *
-*Entries :   638639 : Total  Size=    5115555 bytes  File Size  =      44556 *
-*Baskets :       55 : Basket Size=     679936 bytes  Compression= 114.78     *
-*............................................................................*
-*Br   13 :beam_timestamp : beam_timestamp/D                                  *
-*Entries :   638639 : Total  Size=    5115555 bytes  File Size  =      34756 *
-*Baskets :       55 : Basket Size=     679936 bytes  Compression= 147.14     *
-*............................................................................*
-*Br   14 :adcs      : vector<short>                                          *
-*Entries :   638639 : Total  Size=  317616581 bytes  File Size  =   96187862 *
-*Baskets :     3055 : Basket Size=   25600000 bytes  Compression=   3.30     *
-*............................................................................*
+This module loads beam and window optical waveforms such that opdetdisplay can retrieve them.
+It is able to parse data from
+(1) RawDigitsWriter_module.cc (found in uboonecode/uboone/RawData/utils)
+(2) WF tree, which is an output by larlite (still experimental)
 """
 
 NCHAN = 48
@@ -80,16 +19,34 @@ NSPERTICK = 15.625 # ns
 NSPERFRAME = 1600000.0 # 1.6 ms in ns
 
 class RawDigitsOpData( OpDataPlottable ):
-    def __init__(self,inputfile):
+    def __init__(self,inputfile, tree_type=None):
         super(RawDigitsOpData, self).__init__()
         self.fname = inputfile
-        print "Loading adcs (vector<short>) from 'rawdigitwriter/RawData/OpDetWaveforms' into pandas data frame ..."
+
+        # if not supplied, determine type of data we've been given
+        if tree_type==None:
+            f = ROOT.TFile( self.fname )
+            if f.GetListOfKeys().Contains("rawdigitwriter/RawData/OpDetWaveforms"):
+                self.tree_type = "rawdigits"
+            elif f.GetListOfKeys().Contains("raw_wf_tree"):
+                self.tree_type = "wftree"
+
+        if self.tree_type=="rawdigits":
+            self.ttree = ROOT.TChain('rawdigitwriter/RawData/OpDetWaveforms')
+            self.configForRawDigits()
+            print "Loading adcs (vector<short>) from 'rawdigitwriter/RawData/OpDetWaveforms' into pandas data frame ..."
+        elif self.tree_type=="wftree":
+            self.ttree = ROOT.TChain('raw_wf_tree')
+            self.configForWFTree()
+            print "Loading adcs (vector<short>) from 'raw_wf_tree' into pandas data frame..."
+        else:
+            raise ValueError("tree type must be either 'rawdigits' or 'wftree'")
+
         # find first event number, define first entry range
-        self.ttree = ROOT.TChain('rawdigitwriter/RawData/OpDetWaveforms')
         self.ttree.Add( self.fname )
         self.tree_entry = 0
         self.ttree.GetEntry(self.tree_entry)
-        self.first_event = self.ttree.event
+        self.first_event = self.ttree.event # this is a fortitous accident that both types of trees uses event
         self.current_event = None
         self.event_range = [self.first_event, self.first_event+100]
         self.entry_points = {}
@@ -198,7 +155,7 @@ class RawDigitsOpData( OpDataPlottable ):
         print "Time to load: ",time.time()-s
 
     def determineWaveformLengths( self ):
-        df = self.wf_df['adcs'].apply( len )
+        df = self.wf_df[self.__adcs].apply( len )
         self.wf_df['nsamples'] = pd.Series( df, index=self.wf_df.index )
 
     def getNBeamWinSamples( self):
@@ -265,20 +222,42 @@ class RawDigitsOpData( OpDataPlottable ):
         self.beamwin_wfms = {}
         self.beamwin_info = {}
         q = self.wf_df.query('event==%d'%(eventid))
-        self.firstframe = q["frame"].min()
-        the_trig_timestamp = 0.0
+        if self.__frame is not None and self.__frame in q:
+            self.firstframe = q["frame"].min()
+        else:
+            self.firstframe = 0
+        the_trig_timestamp = None
         nbeamwindows = 0
-        for femslot,slot_df in q.groupby('opslot'):
-            for ch,ch_df in slot_df.groupby('opfemch'):
+
+        for femslot,slot_df in q.groupby(self.__slot):
+            for ch,ch_df in slot_df.groupby(self.__ch):
                 if ch>=self.getData(slot=femslot).shape[1]:
                     continue
+
                 self.beamwin_wfms[(femslot,ch)] = []
                 self.beamwin_info[(femslot,ch)] = { "tstamp":0 }
-                if "trig_timestamp" in ch_df:
-                    vals = zip( ch_df['adcs'].values, ch_df['timestamp'].values,ch_df['frame'].values,ch_df['sample'].values,ch_df['opslot'].values,ch_df['trig_timestamp'])
+
+                # must handle old content: we must provide blanks where columns don't exist
+                # must work
+                __nentries__ = len(ch_df[self.__tstamp].values)
+                v_adc   = ch_df[self.__adcs].values
+                v_ts    = ch_df[self.__tstamp].values
+                v_slot  = ch_df[self.__slot].values
+                # we can make due
+                if self.__frame is not None:
+                    v_fr  = ch_df[self.__frame].values
                 else:
-                    # deprecated, should remove.
-                    vals = zip( ch_df['adcs'].values, ch_df['timestamp'].values,ch_df['frame'].values,ch_df['sample'].values,ch_df['opslot'].values,ch_df['timestamp'].values)
+                    v_fr  = np.zeros( __nentries__, dtype=np.int )
+                if self.__sample is not None:
+                    v_sample = ch_df[self.__sample]
+                else:
+                    v_sample = np.zeros( __nentries__, dtype=np.int )
+                if self.__trig is not None:
+                    v_trig = ch_df[self.__trig]
+                else:
+                    v_trig   = v_ts
+                vals = zip( v_adc, v_ts, v_fr, v_sample, v_slot, v_trig )
+
                 for (awf,tstamp,frame,sample,slot,trig_timestamp) in vals:
                     wf = np.array( awf )
                     framesample = self.convertToFrameSample( tstamp, trig_timestamp )
@@ -286,6 +265,9 @@ class RawDigitsOpData( OpDataPlottable ):
                         self.beamwin_info["earliest_tstamp"] = trig_timestamp
                         self.beamwin_info["latest_tstamp"] = trig_timestamp+0.015625*1000
                     if len(wf)>=500:
+                        if len( self.beamwin_wfms[(femslot,ch)] )>=1:
+                            print "double beam window. skip the second one."
+                            continue
                         # beam windows!
                         print "beamwindow waveform len=",len(wf),femslot,"ch=",ch,"tstamp=",tstamp,"trig_stamp=",trig_timestamp,"framesample=",framesample
                         nbeamwindows += 1
@@ -344,3 +326,32 @@ class RawDigitsOpData( OpDataPlottable ):
                 if firstsample+copylen<nbeamsamples:
                     self.opdetdigits[femslot][firstsample+copylen:,ch] = wf[-1]
                 self.getPedestal(slot=femslot)[ch] = ped.getpedestal( self.opdetdigits[femslot][:,ch], int(nbeamsamples/20), 1.0, verbose=False )
+
+    def configForRawDigits(self):
+        self.__event  = "event"
+        self.__slot   = "opslot"
+        self.__ch     = "opfemch"
+        self.__tstamp = "timestamp"
+        self.__frame  = "frame"
+        self.__sample = "sample"
+        self.__trig   = "trig_timestamp"
+        self.__adcs   = "adcs"
+
+    def configForWFTree(self):
+        self.__event  = "event"
+        self.__slot   = "slot"
+        self.__ch     = "ch"
+        self.__tstamp = "timestamp"
+        self.__adcs   = "wf"
+        if "frame" in dir(self.ttree):
+            self.__frame = "frame"
+        else:
+            self.__frame = None
+        if "sample" in dir(self.ttree):
+            self.__sample = "sample"
+        else:
+            self.__sample = None
+        if "trig" in dir(self.ttree):
+            self.__trig = "trig"
+        else:
+            self.__trig = None
