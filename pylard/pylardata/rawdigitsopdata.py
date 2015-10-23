@@ -26,10 +26,12 @@ class RawDigitsOpData( OpDataPlottable ):
         # if not supplied, determine type of data we've been given
         if tree_type==None:
             f = ROOT.TFile( self.fname )
-            if f.GetListOfKeys().Contains("rawdigitwriter/RawData/OpDetWaveforms"):
+            if f.GetListOfKeys().Contains("rawdigitwriter"):
                 self.tree_type = "rawdigits"
             elif f.GetListOfKeys().Contains("raw_wf_tree"):
                 self.tree_type = "wftree"
+            else:
+                raise ValueError("Cannot determine tree type")
 
         if self.tree_type=="rawdigits":
             self.ttree = ROOT.TChain('rawdigitwriter/RawData/OpDetWaveforms')
