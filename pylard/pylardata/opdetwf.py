@@ -10,32 +10,20 @@ import time
 
 NCHAN = 48
 NSPERTICK = 15.625 # ns
+USPERTICK = 15.625/1000. # ns
 NSPERFRAME = 1600000.0 # 1.6 ms in ns
 
-class RawDigitsOpData( OpDataPlottable ):
+class OpDetWfData( OpDataPlottable ):
 
-    def __init__(self,inputfile):
-        super(RawDigitsOpData, self).__init__()
-
-        # set input file name
-        self.fname = inputfile
+    def __init__(self,producer='pmtreadout'):
+        super(OpDetWfData, self).__init__()
 
         # get the producer name
-        self.producer = 'pmtreadout'
+        self.producer = producer
         
-        # call larlite manager
-        self.manager = larlite.storage_manager()
-        self.manager.reset()
-        self.manager.add_in_filename(self.fname)
-        self.manager.set_io_mode(larlite.storage_manager.kREAD)
-        self.manager.open()
-
         # wf and pedestal holder
         self.opdetdigits = {}
         self.pedestals   = {} 
-
-        # slot number
-        self.slot = 5
 
         # cosmics window holder
         self.cosmics = cd.CosmicDiscVector()
@@ -46,44 +34,69 @@ class RawDigitsOpData( OpDataPlottable ):
         self.entry_points = {}
         self.entry_points[ self.first_event ] = 0
         self.maxevent = None
-        self.samplesPerFrame = 102400
+        self.samplesPerFrame = 25600
         self.nspertick = 15.625
+
+        # event time-range
+        self.event_time_range = [+4800., -1600] # usec
+
+        # trigger time
+        self.trigger_time = None
         
-        # number of samples per beam-gate window
-        self.nsamples = 1000
+        # number of samples in entire waveform
+        self.nsamples = self.samplesPerFrame*4
+        # number of samples in beam-gate window
+        self.beam_samples = 1000
         # number of PMT channels to use
-        self.n_pmts = 48
+        self.n_pmts = 32
         # fill pedestals w/ baseline
-        self.pedestals[self.slot] = np.ones( self.n_pmts ) *2048.
+        self.resetChannels()
 
-    def getData( self, slot=5, remake=False ):
-        if slot not in self.opdetdigits or remake==True:
-            print "Allocating array for slot ",slot," with length: ",self.getNBeamWinSamples()
-            self.opdetdigits[slot] = np.ones( ( self.nsamples , self.n_pmts ) )*2048.0
-        return self.opdetdigits[slot]
+    # -----------------------------
+    # define producer name
+    def setProducer(self, producer):
+        self.producer = producer
 
-    def getPedestal(self,slot=5):
-        if slot not in self.pedestals:
-            self.pedestals[slot] = np.ones( self.n_pmts )*2048.0
-        return self.pedestals[slot]
+    # -----------------------------
+    # reset waveforms
+    def resetChannels(self):
+        
+        for pmt in xrange(self.n_pmts):
+            self.opdetdigits[pmt] = {}
+            self.pedestals[pmt] = 2048.
+        return
+
+    # ----------------------------------
+    # get the data for the current event
+    # return the dictionary of waveforms
+    def getData( self, remake=False ):
+
+        if remake==True:
+            self.resetChannels()
+        return self.opdetdigits
+
+    # ---------------------------
+    # get the pedestal vector
+    def getPedestal(self):
+        return self.pedestals
 
     def getSampleLength(self):
         return self.nsamples
 
-    def getEvent( self, eventid, slot=5 ):
+    # ----------------------------
+    # load the data for this event
+    def getEvent( self, mgr, trig_time=None):
 
-        # move to next event
-        #self.manager.next_event()
-        self.manager.go_to(eventid)
-        
+        self.trigger_time = trig_time
+
+        # reset channels
+        self.resetChannels()
+
         # load optical waveforms
-        self.opdata = self.manager.get_data(larlite.data.kOpDetWaveform,self.producer)
+        self.opdata = mgr.get_data(larlite.data.kOpDetWaveform,self.producer)
 
-        # prepare the cosmics data
-        self.fillCosmicsData()
-
-        # store the beam windows into the numpy array expected by the parent class
-        self.fillBeamWindow()
+        # prepare the wf data
+        self.fillWaveforms()
 
         return True
 
@@ -93,72 +106,50 @@ class RawDigitsOpData( OpDataPlottable ):
 
     def convertToFrameSample( self, timestamp, trig_timestamp  ):
         return int( (timestamp-trig_timestamp)*1000.0/NSPERTICK ) # timestamps in microseconds of course
-                                                  
-    def fillBeamWindow( self ):
-
-        # Fill the beam sample array
-        wf_v = np.ones( (self.nsamples, self.n_pmts ) )*2048.
-
-        # self.opdata contains the larlite::ev_opdetwaveform object
-        for n in xrange(self.opdata.size()):
-
-            wf = self.opdata.at(n)
-
-            # only select beam-gate windows
-            if (wf.size() != self.nsamples):
-                continue
-
-            pmt = wf.ChannelNumber()
-            
-            # only use first 48 pmts
-            if ( pmt >= self.n_pmts ):
-                continue
-
-            adcs = np.array(wf)[:self.nsamples]
-            #print adcs
-            #wf_v[:self.nsamples,pmt] = adcs
-
-        self.opdetdigits[self.slot] = wf_v
-            
-        return
-
-
-    def fillCosmicsData(self):
+                     
         
-        # keep track of max and min times
-        t_min = 102400
-        t_max = 0
+    # ------------------------
+    # function to fill wf info
+    def fillWaveforms( self ):
 
-        self.cosmics = cd.CosmicDiscVector()
-
+        # loop through all waveforms and add them to the wf dictionary
         # self.opdata contains the larlite::ev_opdetwaveform object
         for n in xrange(self.opdata.size()):
-
+        
             wf = self.opdata.at(n)
-            
-            # only select cosmic windows
-            if (wf.size() >= self.nsamples):
-                continue
 
             pmt = wf.ChannelNumber()
+
+            adcs = []
+            for i in xrange(wf.size()):
+                adcs.append(wf.at(i))
+            adcs = np.array(adcs)
             
             # only use first 48 pmts
             if ( pmt >= self.n_pmts ):
                 continue
-                
-            # we have a good window -> save it!
-            adcs = np.array(wf)[:20]#-self.pedestals[self.slot][pmt]
-            femslot = self.slot
-            time_nsec = (wf.TimeStamp()-1600)*1000.
-            time_tick = int(time_nsec/self.nspertick)
-            if (time_tick < t_min) :
-                t_min = time_tick
-            if (time_tick > t_max) :
-                t_max = time_tick
-            #print 'ch : %02i \t time: %06i \t wf : '%(pmt,time_usec),adcs
-            cosmics_window = cd.CosmicDiscWindow( adcs , femslot , pmt , time_tick )
-            self.cosmics.addWindow( cosmics_window )
 
-        print 'time range : [%i,%i]'%(t_min,t_max)
+            # add the PMT wf to the dictionary of channels
+            time = wf.TimeStamp() # in usec
+            if (self.trigger_time == None):
+                time -= 1600.
+            else:
+                time -= self.trigger_time
+
+            # sub-select time-region here
+            #if ( (time < -800) or (time > 800) ):
+            #    continue
+
+            # keep finding event time-boundaries
+            if (time+len(adcs)*USPERTICK > self.event_time_range[1]):
+                self.event_time_range[1] = time+len(adcs)*USPERTICK
+            if (time < self.event_time_range[0]):
+                self.event_time_range[0] = time
+
+            time_tick = int(time*1000/NSPERTICK)
+            #print 'wf time is : ',time
+            self.opdetdigits[pmt][time] = adcs
 
         return
+
+

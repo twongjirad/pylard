@@ -30,7 +30,6 @@ class CosmicDiscDisplay(QtGui.QWidget) :
 
         # main scatter plot
         self.graphics = pg.GraphicsLayoutWidget() # graphics canvas
-        self.colorscale = pg.GradientEditorItem(orientation='bottom')
         self.diagram = pg.PlotItem(name="Cosmic Readout Windows")
         self.beambox = pg.PlotDataItem( x=[0,0,samplesPerFrame,samplesPerFrame,0], y=[-5, 32, 32, -5, -5] )
         self.cosmicwin_start = -100
@@ -39,7 +38,6 @@ class CosmicDiscDisplay(QtGui.QWidget) :
 
         self.layout.addWidget( self.graphics, 0, 0 )
         self.graphics.addItem( self.diagram, 0, 0 )
-        self.graphics.addItem( self.colorscale, 1, 0 )
         self.diagram.addItem( self.time_range )
         
         # buttons
