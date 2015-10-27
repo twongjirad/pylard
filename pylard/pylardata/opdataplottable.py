@@ -12,8 +12,8 @@ class OpDataPlottable(object):
         """ user must implement this. it instructs that the opdata should get the data for event, run, subrun """
         raise RuntimeError('need to overwrite this function')
     
-    @abs.abstracmethod:
-    def getNextEntryID( self ):
+    @abs.abstractmethod:
+    def getNextEntry( self ):
         """ user should fill self.run, self.subrun, self.event"""
         raise RuntimeError('need to overwrite this function')
 

@@ -49,7 +49,7 @@ class RawDigitsOpData( OpDataPlottable ):
         self.tree_entry = 0
         self.ttree.GetEntry(self.tree_entry)
         self.first_event = self.ttree.event # this is a fortitous accident that both types of trees uses event
-        self.current_event = None
+        self.event = None
         self.event_range = [self.first_event, self.first_event+100]
         self.entry_points = {}
         self.entry_points[ self.first_event ] = self.tree_entry
@@ -73,25 +73,24 @@ class RawDigitsOpData( OpDataPlottable ):
             self.pedestals[slot] = np.ones( 48 )*2048.0
         return self.pedestals[slot]
 
-    def getEvent( self, eventid, slot=5 ):
-        if self.maxevent is not None and eventid>self.maxevent:
-            print "No events for ",eventid,"!"
+    def gotoEvent( self, event, run, subrun ):
+        if self.maxevent is not None and event>self.maxevent:
+            print "No events for ",event,"!"
             return False
 
-        if eventid==self.current_event:
+        if event==self.event and run==self.run and subrun=self.subrun:
             return True
         self.update_the_sample_size = True # optimization
-        self.current_event = eventid
+        self.event  = event
+        self.run    = run
+        self.subrun = subrun
 
         # load TTree data into pandas array -- why? why not?
-        if eventid < self.event_range[0] or eventid > self.event_range[1]:
-            self.loadEventRange( eventid-10, eventid+100 )
+        if event < self.event_range[0] or event > self.event_range[1]:
+            self.loadEventRange( event-10, event+100 )
 
-        # sepaarate beam and cosmic readout windows
-        self.sortReadoutWindows( eventid )
-
-        # store the beam windows into the numpy array expected by the parent class
-        self.fillBeamWindowArray()
+        # separate beam and cosmic readout windows
+        self.sortReadoutWindows( event )
 
         # hack for flasher
         self.getData(slot=5)[:,39] = self.getData(slot=6)[:,39]
@@ -100,8 +99,8 @@ class RawDigitsOpData( OpDataPlottable ):
 
     def getNextEvent(self):
         # get next event
-        if self.current_event is not None:
-            nextevent = self.current_event+1
+        if self.event is not None:
+            nextevent = self.event+1
         else:
             nextevent = self.first_event
         if self.maxevent is not None and nextevent>=self.maxevent:
@@ -116,7 +115,7 @@ class RawDigitsOpData( OpDataPlottable ):
             events = self.entry_points.keys()
             events.sort()
             last_tree_entry = self.entry_points[ events[-1] ]
-            numpy_rec_array= tree2rec( self.ttree, selection="event>%d"%(self.current_event), start=last_tree_entry, stop=last_tree_entry+10 )
+            numpy_rec_array= tree2rec( self.ttree, selection="event>%d"%(self.event), start=last_tree_entry, stop=last_tree_entry+10 )
             wf_df = pd.DataFrame(numpy_rec_array)
             nextevent =  wf_df["event"].min()
             self.entry_points[ nextevent ] = last_tree_entry+1
@@ -128,10 +127,11 @@ class RawDigitsOpData( OpDataPlottable ):
             nextevent = q["event"].min()
             print "next event is ",nextevent
         
-        return self.getEvent( nextevent )
+        return self.gotoEvent( nextevent )
             
 
     def loadEventRange( self, start, end ):
+        """ load events between range from tree into pandas data frame """
         # load event range from tree
         s = time.time()
         print "Getting Data between Event %d and %d" % ( start, end )
@@ -161,11 +161,11 @@ class RawDigitsOpData( OpDataPlottable ):
         self.wf_df['nsamples'] = pd.Series( df, index=self.wf_df.index )
 
     def getNBeamWinSamples( self):
-        if self.current_event is None:
+        if self.event is None:
             print "no current event!"
             return None
         if self.update_the_sample_size:
-            df = self.wf_df.query("event==%d"%(int(self.current_event)))
+            df = self.wf_df.query("event==%d"%(int(self.event)))
             self.__nbeamsamples = df["nsamples"].max()
             self.update_the_sample_size = False
         return self.__nbeamsamples
@@ -218,12 +218,9 @@ class RawDigitsOpData( OpDataPlottable ):
         
         return self.entry_points[ oldevents[lopos] ]
 
-    def sortReadoutWindows( self, eventid ):
-        # clear stores
-        self.cosmics = cd.CosmicDiscVector()
-        self.beamwin_wfms = {}
-        self.beamwin_info = {}
-        q = self.wf_df.query('event==%d'%(eventid))
+    def sortReadoutWindows( self, event ):
+        self.beamwin_info = {} # stores trigger info
+        q = self.wf_df.query('event==%d'%(event))
         if self.__frame is not None and self.__frame in q:
             self.firstframe = q["frame"].min()
         else:
@@ -233,14 +230,11 @@ class RawDigitsOpData( OpDataPlottable ):
 
         for femslot,slot_df in q.groupby(self.__slot):
             for ch,ch_df in slot_df.groupby(self.__ch):
-                if ch>=self.getData(slot=femslot).shape[1]:
-                    continue
 
-                self.beamwin_wfms[(femslot,ch)] = []
                 self.beamwin_info[(femslot,ch)] = { "tstamp":0 }
 
                 # must handle old content: we must provide blanks where columns don't exist
-                # must work
+                # variables that must have values
                 __nentries__ = len(ch_df[self.__tstamp].values)
                 v_adc   = ch_df[self.__adcs].values
                 v_ts    = ch_df[self.__tstamp].values
@@ -273,7 +267,7 @@ class RawDigitsOpData( OpDataPlottable ):
                         # beam windows!
                         print "beamwindow waveform len=",len(wf),femslot,"ch=",ch,"tstamp=",tstamp,"trig_stamp=",trig_timestamp,"framesample=",framesample
                         nbeamwindows += 1
-                        self.beamwin_wfms[(femslot,ch)].append( wf )
+                        self.beamwindows.makeWindow( wf, framesample*NSPERTICK, femslot, ch, timepertick=NSPERTICK )
                         self.beamwin_info[(femslot,ch)]["tstamp"] = tstamp
                         the_trig_timestamp = trig_timestamp
                         if ch<32:
@@ -285,51 +279,19 @@ class RawDigitsOpData( OpDataPlottable ):
                     else:              
                         # cosmic windows!
                         print "cosmic window len=",len(wf),": slot=",femslot,"ch=",ch,"tstamp=",tstamp,"trig_stamp=",trig_timestamp,"framesample=",framesample
-                        cwd = cd.CosmicDiscWindow( wf, femslot, ch, framesample )
-                        self.cosmics.addWindow( cwd )
+                        self.cosmicwindows.makeWindow( wf, framesample*NSPERTICK, femslot, ch, timepertick=NSPERTCIK )
         try:
-            print "Event %d has %d cosmic windows and %d beam windows (beam window length=%d)" % ( eventid, self.cosmics.getNumWindows(), nbeamwindows, self.getNBeamWinSamples() ),
+            print "Event %d has %d cosmic windows and %d beam windows (beam window length=%d)" % ( event, self.cosmics.getNumWindows(), nbeamwindows, self.getNBeamWinSamples() ),
             print " earliest tstamp=",self.beamwin_info["earliest_tstamp"]," trig time=",the_trig_timestamp
         except:
-            print "Event ",eventid," has ",self.cosmics.getNumWindows()," cosmic windows and ",len(self.beamwin_wfms)," beam windows (length=",self.getNBeamWinSamples(),")"
+            print "Event ",event," has ",self.cosmics.getNumWindows()," cosmic windows and ",len(self.beamwin_wfms)," beam windows (length=",self.getNBeamWinSamples(),")"
             
     def convertToFrameSample( self, timestamp, trig_timestamp  ):
-        return int( (timestamp-trig_timestamp)/(0.001*NSPERTICK) ) # timestamps in microseconds of course
-                                                  
-    def fillBeamWindowArray( self ):
-
-        # allocate correct array size
-        tstart = self.beamwin_info["earliest_tstamp"]
-        tend   = self.beamwin_info["latest_tstamp"]
-        nbeamsamples = int( (tend-tstart)/(0.001*NSPERTICK) )
-        self.beamwin_info["nsamples"] = nbeamsamples
-        self.update_the_sample_size = False
-        self.__nbeamsamples = nbeamsamples
-        print "BEAM WINDOW SAMPLES = ",nbeamsamples," tstart=",tstart," tend=",tend
-        for slot in [5,6]:
-            self.opdetdigits[slot] = np.ones( (nbeamsamples,48) )*2048.0
-
-        for (femslot,ch),wfs in self.beamwin_wfms.items():
-            # first get earliest time stamp
-            tstamp = self.beamwin_info[(femslot,ch)]["tstamp"]
-            firstsample = int( (tstamp-tstart)/(0.001*NSPERTICK) )
-            firstwfmsample = 0
-            if firstsample<0:
-                firstsample = 0
-                firstwfmsample = -firstsample
-            #print "slot ",femslot," ch",ch," first sample=",firstsample
-            for wf in wfs:
-                copylen = np.minimum(firstsample+len(wf),nbeamsamples)-firstsample
-                if copylen>len(wf)-firstwfmsample:
-                    copylen = len(wf)-firstwfmsample
-                self.opdetdigits[femslot][firstsample:firstsample+copylen,ch] = wf[firstwfmsample:copylen]
-                if firstsample!=0:
-                    self.opdetdigits[femslot][:firstsample,ch] = wf[0]
-                if firstsample+copylen<nbeamsamples:
-                    self.opdetdigits[femslot][firstsample+copylen:,ch] = wf[-1]
-                self.getPedestal(slot=femslot)[ch] = ped.getpedestal( self.opdetdigits[femslot][:,ch], int(nbeamsamples/20), 1.0, verbose=False )
+        return int( (timestamp-trig_timestamp)/(0.001*NSPERTICK) ) # timestamps in microseconds of course                                                  
 
     def configForRawDigits(self):
+        self.__run    = "run"
+        self.__subrun = "subrun"
         self.__event  = "event"
         self.__slot   = "opslot"
         self.__ch     = "opfemch"
@@ -340,6 +302,8 @@ class RawDigitsOpData( OpDataPlottable ):
         self.__adcs   = "adcs"
 
     def configForWFTree(self):
+        self.__run    = "run"
+        self.__subrun = "subrun"
         self.__event  = "event"
         self.__slot   = "slot"
         self.__ch     = "ch"
