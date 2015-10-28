@@ -40,4 +40,6 @@ class TriggerData():
         # load trigger data
         self.triggerdata = mgr.get_data(larlite.data.kTrigger,self.producer)
         self.trigger_time = self.triggerdata.TriggerTime();
-        
+        if self.trigger_time>1e300:
+            print "larby's"
+            self.trigger_time = 3200.0

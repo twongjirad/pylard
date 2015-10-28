@@ -95,3 +95,9 @@ class OpWfmPlotVector:
         for (slot,ch),times in self.chtimes.items():
             n += len(times)
         return n
+
+    def clear( self ):
+        self.chtimes = {}    # key=(slot,channel), value=list of window start times
+        self.chtend = {}     # key=(slot,channel), value=list of window end times
+        self.chwindows = {}  # key=(slot,channel), value=dict of (timestamp,window)
+        return

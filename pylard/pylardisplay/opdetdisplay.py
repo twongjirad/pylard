@@ -9,6 +9,7 @@ from pylard.config.pmt_chmap import getPMTID, getChannel, getPMTIDList, getPaddl
 from pylard.config.pmtpos import getPosFromID 
 from pylard.pylardisplay.pmtposscatterplot import PMTScatterPlot
 from pylard.pylardisplay.cosmicwindow import CosmicWindow
+import pylard.pylardata.pedestal as pedestal
 
 NSPERTICK = 15.625
 
@@ -289,12 +290,12 @@ class OpDetDisplay(QtGui.QWidget) :
 
         ok = self.opdata.getNextEntry()
         if ok:
-            evt = int(self.event.text())
+            evt = self.opdata.event
             slot = int(self.slot.text())
             self.event.setText("%d"%(evt))
         else:
             print "Next event not ok"
-            self.opdata.gotoEvent( evt )
+            #self.opdata.gotoEvent( evt )
         self.plotData()
 
     def prevEvent(self):
@@ -302,8 +303,10 @@ class OpDetDisplay(QtGui.QWidget) :
         slot = int(self.slot.text())
         try:
             self.opdata.gotoEvent( evt-1 )
-            self.event.setText("%d"%(evt-1))
+            evt = self.opdata.event
+            self.event.setText("%d"%(evt))
         except:
+            # reload old event
             self.opdata.gotoEvent( evt )
         self.plotData()
             
@@ -393,12 +396,14 @@ class OpDetDisplay(QtGui.QWidget) :
 
     def getpedestal(self,wfm,femch=None):
         slot = int(self.slot.text())
-        #print "ped: ",self.opdata.getPedestal( slot=slot )
-        #raw_input()
-        if femch is not None:
-            return self.opdata.getPedestal( slot=slot )[femch]
+        if slot==5:
+            var = 1.0
         else:
-            return self.opdata.getPedestal( slot=slot )
+            var = 20.0
+        ped = pedestal.getpedestal( wfm, 10, var )
+        if ped is None:
+            ped = 2048.0
+        return ped
 
     def setPedestalFunction( self, pedfunc ):
         self.pedfunction = pedfunc

@@ -1,4 +1,5 @@
 import os,sys
+import numpy as np
 from pylard.pylardata.opdataplottable import OpDataPlottable
 from ophit import OpHitData
 from opflash import OpFlashData
@@ -16,7 +17,7 @@ class LArLiteOpticalData( OpDataPlottable ):
         self.files = inputfiles
 
         # producers for various data-products
-        self.opwf_producer    = 'daq' # pmtreadout for data
+        self.opwf_producer    = 'pmtreadout' # pmtreadout for data
         self.ophit_producer   = 'opFlash'
         self.opflash_producer = 'opFlash'
         self.trigger_producer = 'triggersim'
@@ -28,17 +29,28 @@ class LArLiteOpticalData( OpDataPlottable ):
         self.trigger_files = []
         self.SplitInputFiles()
 
+        # limiter for now
+        self.n_pmts = 48
+
         # call larlite manager
         self.manager = larlite.storage_manager()
         self.manager.reset()
+        self.usedfiles = []
         for f in self.opwf_files:
             self.manager.add_in_filename(f)
+            self.usedfiles.append( f )
         for f in self.ophit_files:
-            self.manager.add_in_filename(f)
+            if f not in self.usedfiles:
+                self.manager.add_in_filename(f)
+                self.usedfiles.append( f )
         for f in self.opflash_files:
-            self.manager.add_in_filename(f)
+            if f not in self.usedfiles:
+                self.manager.add_in_filename(f)
+                self.usedfiles.append( f )
         for f in self.trigger_files:
-            self.manager.add_in_filename(f)
+            if f not in self.usedfiles:
+                self.manager.add_in_filename(f)
+                self.usedfiles.append( f )
 
         self.manager.set_io_mode(larlite.storage_manager.kREAD)
         self.manager.open()
@@ -98,7 +110,6 @@ class LArLiteOpticalData( OpDataPlottable ):
             # if the file contains trigger information
             if (froot.GetListOfKeys().Contains(trigger_t) == True):
                 self.trigger_files.append(f)
-                
 
         print 'waveform files:'
         print self.opwf_files
@@ -132,6 +143,7 @@ class LArLiteOpticalData( OpDataPlottable ):
         """ required method from abc """
         self.manager.next_event()
         isok = self.loadEvent()
+        return isok
 
     def loadEvent( self ):
 
@@ -151,6 +163,10 @@ class LArLiteOpticalData( OpDataPlottable ):
 
         self.opflash.getEvent(self.manager)
 
+        self.event  = self.manager.event_id()
+        self.subrun = self.manager.subrun_id()
+        self.run    = self.manager.run_id()
+
         return True
 
         
@@ -159,8 +175,12 @@ class LArLiteOpticalData( OpDataPlottable ):
     # function to fill wf info
     def fillWaveforms( self ):
 
+        self.clearEvent()
+
         # load optical waveforms
         self.opdata = self.manager.get_data(larlite.data.kOpDetWaveform, self.opwf_producer)
+
+        print "number of opdet waveforms: ",self.opdata.size()," trigger time=",self.trigger_time
 
         # loop through all waveforms and add them to beam and cosmic containers
         # self.opdata contains the larlite::ev_opdetwaveform object
@@ -188,8 +208,10 @@ class LArLiteOpticalData( OpDataPlottable ):
                 time -= self.trigger_time
             
             if len(adcs)>=500: # is there another way to tag beam windows?
-                self.beamwindows.makeWindow( adcs, time, 5, pmt, timepertick=15.625 )
+                print "beam window: ch=",pmt," len=",len(adcs)," timestamp=",time," ticks=",time/0.015625
+                self.beamwindows.makeWindow( adcs, time*1000.0, 5, pmt, timepertick=15.625 )
             else:
-                self.cosmicwindows.makeWindow( adcs, time, 5, pmt, timepertick=15.625 )
+                print "cosmic window: ch=",pmt," len=",len(adcs)," timestamp=",time," ticks=",time/0.015625
+                self.cosmicwindows.makeWindow( adcs, time*1000.0, 5, pmt, timepertick=15.625 )
 
         return
