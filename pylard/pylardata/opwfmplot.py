@@ -16,6 +16,8 @@ class OpWfmPlot:
         """
         if type(times) is float and timepertick is None:
             raise ValueError( "if setting time using a float, need to set the time per tick" )
+        elif type(times) is not float and len(times)!=len(wfm):
+            raise ValueError( "time and wfm arrays do not match in length!" )
         self.wfm = wfm
         self.times = times
         self.timepertick = timepertick
@@ -37,18 +39,31 @@ class OpWfmPlot:
         else:
             return self.times[0]
 
+    def getEndstamp( self ):
+        """ return time stamp at end of array, which for arrays is the last entry """
+        if type(self.times) is float:
+            return self.times + len(self.wfm)*self.timepertick
+        else:
+            return self.times[-1]
+
 
 class OpWfmPlotVector:
     def __init__(self):
-        self.chtimes = {}    # key=(slot,channel), value=list of times
+        self.chtimes = {}    # key=(slot,channel), value=list of window start times
+        self.chtend = {}     # key=(slot,channel), value=list of window end times
         self.chwindows = {}  # key=(slot,channel), value=dict of (timestamp,window)
 
     def getWindowsBetweenTimes( self, start, end ):
         out = []
+        #print "Search : ",start,end
         for (slot,ch),times in self.chtimes.items():
-            times.sort()
-            t = np.asarray( times ) # we use an array to have access to numpy magic
-            tselect = t[ np.where( (t>=start) & (t<=end) ) ]
+
+            tstart = np.asarray( times ) # we use an array to have access to numpy magic
+            tend   = np.asarray( self.chtend[(slot,ch)] )
+            #print zip(times,self.chtend[(slot,ch)])
+            # (tstart within bounds | tend within bounds |  both tstart,tend enclose bounds )
+            tselect = tstart[ np.where( ( ((tstart>=start) & (tstart<=end)) | ((tend>=start) & (tend<=end)) ) | ( (tstart<=start) & (tend>=end) ) ) ] 
+            #tendselect = tend[ np.where( (tend>=start) & (tend<=end)  ) ]
 
             for n in range(0,len(tselect)):
                 out.append( self.chwindows[(slot,ch)][ tselect[n] ] )
@@ -64,8 +79,10 @@ class OpWfmPlotVector:
     def addWindow( self, cdw ):
         if (cdw.slot,cdw.ch) not in self.chtimes:
             self.chtimes[(cdw.slot,cdw.ch)] = []
+            self.chtend[(cdw.slot,cdw.ch)] = []
             self.chwindows[(cdw.slot,cdw.ch)] = {}
         self.chtimes[ (cdw.slot,cdw.ch) ].append( cdw.getTimestamp() )
+        self.chtend[ (cdw.slot,cdw.ch) ].append( cdw.getEndstamp() )
         self.chwindows[ (cdw.slot,cdw.ch) ][ cdw.getTimestamp() ] = cdw
 
     def makeWindow( self, wfm, times, slot, ch, default_color=(255,255,255,255), highlighted_color=(0,255,255,255), timepertick=None ):

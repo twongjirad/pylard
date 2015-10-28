@@ -195,20 +195,39 @@ class OpDetDisplay(QtGui.QWidget) :
         # ----------------------------------------------------
         # diagram object
         bnds = self.wf_time_range.getRegion()
-        istart = int( bnds[0]/NSPERTICK )
-        iend = int( bnds[1]/NSPERTICK )
-        if istart>iend:
-            tmp = istart
-            istart = iend
-            iend = tmp
+        wfms = self.opdata.getWaveformPlotData( bnds[0], bnds[1] ) # this won't work for beam windows...
+        #print "bounds: ",bnds," number of windows=",len(wfms)
 
+        # we get the max within range
+        chmaxes = {}
+        for wfm in wfms:
+            if slot!=wfm.slot:
+                continue
+            tstart = wfm.getTimestamp()
+            tend   = wfm.getEndstamp()
+            ch     = wfm.ch
+            if ch not in chmaxes:
+                chmaxes[ch] = 0.0
+
+            tstart_tick = int( np.maximum( 0, (bnds[0]-tstart)/wfm.timepertick ) )
+            tend_tick   = int( np.minimum( len(wfm.wfm), (bnds[1]-tstart)/wfm.timepertick ) )
+            ped = self.pedfunction(wfm.wfm,ch)
+            if ped is None:
+                ped = 2048.0
+            chmax = np.max( wfm.wfm[tstart_tick:tend_tick]-ped )
+            if chmax>chmaxes[ch]:
+                chmaxes[ch] = chmax
+
+        # better interface here is needed
         self.pmtspot = []
 
-        for ich in xrange(self.opdata.getData( slot=int(self.slot.text() ) ).shape[1],-1,-1):
+        for ich in range(0,36):
             if ich>=36:
                 continue
-            wfm =  self.opdata.getData( slot=int(self.slot.text() ) )[istart:iend,ich]
-            maxamp = np.max( wfm )-self.pedfunction(wfm,ich)
+            if ich not in chmaxes:
+                maxamp = 0.0
+            else:
+                maxamp = chmaxes[ich]
             ipmt = getPMTID( ich )-1
             #print "maxamp: id=",ipmt,' max=',maxamp,' ped=',self.pedfunction(wfm,ich)
             col = self.pmtscale.colorMap().map( (maxamp)/2048.0 )
