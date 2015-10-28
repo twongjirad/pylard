@@ -7,35 +7,61 @@ from collections import OrderedDict
 
 from pylard.config.pmt_chmap import getPMTID, getChannel, getPMTIDList, getPaddleIDList
 from pylard.config.pmtpos import getPosFromID 
-from pylard.pylardisplay.cosmicdiscdisplay import CosmicDiscDisplay
+from pylard.pylardisplay.pmtposscatterplot import PMTScatterPlot
+from pylard.pylardisplay.cosmicwindow import CosmicWindow
 
 NSPERTICK = 15.625
 
 class OpDetDisplay(QtGui.QWidget) :
     def __init__(self, opdata):
         super(OpDetDisplay,self).__init__()
+        self.resize( 1200, 700 )
+
+
+        # Set the data
         self.opdata = opdata
 
-        # Plots
+        # ---------------
+        # Display Widgets
+        # ---------------
+
+        # Mother canvas for plots
         self.graphics = pg.GraphicsLayoutWidget()
-        self.plot = pg.PlotItem(name='Plot1')
-        self.diagram = pg.PlotItem(name="plot2")
+
+        # 1) waveform plotting region
+        self.wfplot = pg.PlotItem(name="Waveform Plot")
+        self.wf_time_range = pg.LinearRegionItem(values=[50,1500], orientation=pg.LinearRegionItem.Vertical)
+        self.wfplot.addItem( self.wf_time_range )
+        
+        # 2) pmt plotting diagram
+        self.pmt_map = pg.PlotItem(name="PMT map")
+        # PMT scatter points
+        self.pmtdiagram   = PMTScatterPlot()
+        self.pmt_map.addItem( self.pmtdiagram ) 
         self.pmtscale =  pg.GradientEditorItem(orientation='bottom')
+
+        # 3) time-range selction window
+        self.time_window = CosmicWindow()
+
         self.lastevent = None
         self.newevent = True
 
-        # main layout
+        # Main Layout
         self.layout = QtGui.QGridLayout()
+        self.layout.addWidget( self.graphics, 0, 0, 1, 10 )
+        self.graphics.addItem( self.pmt_map, 0, 0, rowspan=2 )
+        self.graphics.addItem( self.pmtscale, 2, 0, rowspan=1 )
+        self.graphics.addItem( self.wfplot, 3, 0, rowspan=3 )
+        self.graphics.addItem( self.time_window, 6, 0, rowspan=1 )
         self.setLayout(self.layout)
-        self.layout.addWidget( self.graphics, 0, 0 )
-        self.graphics.addItem( self.diagram, 0, 0 )
-        self.graphics.addItem( self.pmtscale, 1, 0 )
-        self.graphics.addItem( self.plot, 2, 0 )
-        self.lay_inputs = QtGui.QGridLayout()
-        self.layout.addLayout( self.lay_inputs, 1, 0 )
+
+        # -------------
+        # Input Widgets
+        # -------------
         
-        # inputs layout
-        # widgets
+        # Layouts
+        self.lay_inputs = QtGui.QGridLayout()
+        self.layout.addLayout( self.lay_inputs, 7, 0 )
         
         # Plot optionsd
         if opdata is not None:
@@ -73,18 +99,10 @@ class OpDetDisplay(QtGui.QWidget) :
         self.run_user_analysis = QtGui.QCheckBox("run user funcs.")  # draw user products
         self.run_user_analysis.setChecked(True)
 
-        self.lay_inputs.addWidget( self.openCosmicWindow, 1, 0, 1, 2 )
         self.lay_inputs.addWidget( self.draw_cosmics, 1, 9 )
         self.lay_inputs.addWidget( self.draw_user_items, 1, 10 )
         self.lay_inputs.addWidget( self.run_user_analysis, 1, 11 )
         self.lay_inputs.addWidget( self.set_xaxis, 1, 12 )
-
-        # range selections
-        self.time_range = pg.LinearRegionItem(values=[50,150], orientation=pg.LinearRegionItem.Vertical)
-        self.plot.addItem( self.time_range )
-
-        # diagram objects
-        self.definePMTdiagram()
 
         # other options
         self.channellist = [] # when not None, only draw channels in this list
@@ -94,14 +112,13 @@ class OpDetDisplay(QtGui.QWidget) :
         self.user_analysis_products = []
         self.user_analyses = []
 
-        # cosmic display subwindow
-        self.cosmicdisplay = CosmicDiscDisplay(self)
-
         # connect
         self.set_xaxis.clicked.connect( self.plotData )
         self.next_event.clicked.connect( self.nextEvent )
         self.prev_event.clicked.connect( self.prevEvent )
-        self.openCosmicWindow.clicked.connect( self.showCosmicDisplay )
+        self.pmtdiagram.sigClicked.connect( self.pmtDiagramClicked )
+        #self.pmtdiagram.scene().sigMouseMoved.connect(self.onMovePMTdiagram)
+        
         
     def plotData( self ):
 
@@ -118,8 +135,8 @@ class OpDetDisplay(QtGui.QWidget) :
         scaledown = float( self.adc_scaledown.text() )
         
         # --------------------------------------------------
-        # BEAM SAMPLE WINDOW
-        self.plot.clear()
+        # WFM PLOT
+        self.wfplot.clear()
         offset = 1.0
         if self.collapse.isChecked():
             offset = 0.0
@@ -139,14 +156,14 @@ class OpDetDisplay(QtGui.QWidget) :
             wfm = self.opdata.getData( slot=int(self.slot.text() ) )[:,ipmt]
             y = (wfm-self.pedfunction(wfm,ipmt))/scaledown+ipmt*offset
 
-            self.plot.plot(x=x, y=y, pen=pencolor, name="PMT%d"%(ipmt))
+            self.wfplot.plot(x=x, y=y, pen=pencolor, name="PMT%d"%(ipmt))
 
             if ipmt in self.user_plot_item.keys():
                 for useritem in self.user_plot_item[ipmt]:
-                    self.plot.addItem( useritem )
+                    self.wfplot.addItem( useritem )
 
-        self.plot.setXRange(0,nbins*NSPERTICK,update=True)
-        self.plot.addItem( self.time_range )
+        self.wfplot.setXRange(0,nbins*NSPERTICK,update=True)
+        self.wfplot.addItem( self.wf_time_range )
 
         if "cosmics" in dir(self.opdata):
             if self.newevent:
@@ -160,7 +177,7 @@ class OpDetDisplay(QtGui.QWidget) :
 
         # ----------------------------------------------------
         # diagram object
-        bnds = self.time_range.getRegion()
+        bnds = self.wf_time_range.getRegion()
         istart = int( bnds[0]/NSPERTICK )
         iend = int( bnds[1]/NSPERTICK )
         if istart>iend:
@@ -194,12 +211,12 @@ class OpDetDisplay(QtGui.QWidget) :
         self.pmtdiagram.setData( self.pmtspot  )
 
         # axis!
-        ax = self.plot.getAxis('bottom')
+        ax = self.wfplot.getAxis('bottom')
         ax.setHeight(30)
         xStyle = {'color':'#FFFFFF','font-size':'14pt'}
         #ax.setLabel('64 MHz Sample Tick',**xStyle)
         ax.setLabel('ns from readout start',**xStyle)
-        ay = self.plot.getAxis('left')
+        ay = self.wfplot.getAxis('left')
         yStyle = {'color':'#FFFFFF','font-size':'14pt'}
         if self.collapse.isChecked():
             ay.setLabel('ADC counts - Pedestal',**yStyle)
@@ -212,7 +229,7 @@ class OpDetDisplay(QtGui.QWidget) :
         if self.draw_user_items.isChecked() and None in self.user_plot_item.keys():
             for useritem in self.user_plot_item[None]:
                 
-                self.plot.addItem( useritem )
+                self.wfplot.addItem( useritem )
 
         # ----------------------------------------------------
         # user analysis items
@@ -239,25 +256,11 @@ class OpDetDisplay(QtGui.QWidget) :
                         continue
                     item = product["plotitem"]
                     if product["screen"]=="diagram":
-                        self.diagram.addItem( item )
+                        self.pmtdiagram.addItem( item )
                     elif product["screen"]=="waveform":
-                        self.plot.addItem( item )
+                        self.wfplot.addItem( item )
                     else:
                         print "unknonw user product screen option, '",product["screen"],"'. Valid choices are 'diagram' and 'waveform'"
-
-    def definePMTdiagram(self):
-        self.pmtspot = []
-        for pid in getPMTIDList():
-            pos = getPosFromID( pid )
-            self.pmtspot.append( {"pos":(pos[2],pos[1]), "size":30, 'pen':{'color':'w','width':2}, 'brush':(255,255,255,255), 'symbol':'o'} )
-        for pid in getPaddleIDList():
-            pos = getPosFromID( pid )
-            self.pmtspot.append( {"pos":(pos[2],pos[1]), "size":25, 'pen':{'color':(0,0,255,1.0),'width':2}, 'brush':(255,255,255,255), 'symbol':'s'} )
-        self.pmtdiagram = pg.ScatterPlotItem(pxMode=False)
-        self.pmtdiagram.addPoints( self.pmtspot )
-        self.diagram.addItem( self.pmtdiagram ) 
-        self.pmtdiagram.sigClicked.connect( self.pmtDiagramClicked )
-
         
     def nextEvent(self):
 
@@ -282,10 +285,10 @@ class OpDetDisplay(QtGui.QWidget) :
         self.plotData()
             
     def getWaveformPlot(self):
-        return self.plot
+        return self.wfplot
     
     def getPMTdiagram(self):
-        return self.diagram
+        return self.pmtdiagram
             
     def gotoEvent( self, event, slot=None ):
         evt = int(self.event.text())
