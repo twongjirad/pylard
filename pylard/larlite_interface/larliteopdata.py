@@ -1,7 +1,6 @@
 import os,sys
 from pylard.pylardata.opdataplottable import OpDataPlottable
 from ophit import OpHitData
-from opdetwf import OpDetWfData
 from opflash import OpFlashData
 from trigger import TriggerData
 import ROOT
@@ -45,7 +44,6 @@ class LArLiteOpticalData( OpDataPlottable ):
         self.manager.open()
         
         # OpticalData owns instances of all data object classes
-        self.opdetwf = OpDetWfData(self.opwf_producer)
         self.ophits  = OpHitData(self.ophit_producer)
         self.opflash = OpFlashData(self.opflash_producer)
         self.trigger = TriggerData(self.trigger_producer)
@@ -118,13 +116,24 @@ class LArLiteOpticalData( OpDataPlottable ):
 
     # ------------------------
     # Move to a specific event
-    def getEvent(self, eventid):
+    def gotoEvent(self, eventid, run=None, subrun=None):
+        """ required method from abc """
 
         # what is the difference between the
         # requested event and the first one?
         evt_diff = eventid - self.first_event
 
         self.manager.go_to(evt_diff)
+        
+        isok = self.loadEvent()
+        return isok
+
+    def getNextEntry( self ):
+        """ required method from abc """
+        self.manager.next_event()
+        isok = self.loadEvent()
+
+    def loadEvent( self ):
 
         self.event  = self.manager.event_id()
         self.subrun = self.manager.subrun_id()
@@ -135,11 +144,52 @@ class LArLiteOpticalData( OpDataPlottable ):
 
         # save the trigger time for the entire event
         self.trigger_time = self.trigger.getTrigTime()
-        
-        self.opdetwf.getEvent(self.manager,self.trigger_time)
+
+        self.fillWaveforms()
         
         self.ophits.getEvent(self.manager)
 
         self.opflash.getEvent(self.manager)
 
         return True
+
+        
+
+    # ------------------------
+    # function to fill wf info
+    def fillWaveforms( self ):
+
+        # load optical waveforms
+        self.opdata = self.manager.get_data(larlite.data.kOpDetWaveform, self.opwf_producer)
+
+        # loop through all waveforms and add them to beam and cosmic containers
+        # self.opdata contains the larlite::ev_opdetwaveform object
+        for n in xrange(self.opdata.size()):
+        
+            wf = self.opdata.at(n)
+
+            pmt = wf.ChannelNumber()
+
+            # only use first 48 pmts (HG SLOT)
+            if ( pmt >= self.n_pmts ):
+                continue
+
+            # adcs
+            adcs = []
+            for i in xrange(wf.size()):
+                adcs.append(wf.at(i))
+            adcs = np.array(adcs)
+
+            # set relative time
+            time = wf.TimeStamp() # in usec
+            if (self.trigger_time == None):
+                time -= 1600.
+            else:
+                time -= self.trigger_time
+            
+            if len(adcs)>=500: # is there another way to tag beam windows?
+                self.beamwindows.makeWindow( adcs, time, 5, pmt, timepertick=15.625 )
+            else:
+                self.cosmicwindows.makeWindow( adcs, time, 5, pmt, timepertick=15.625 )
+
+        return

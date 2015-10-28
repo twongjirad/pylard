@@ -4,10 +4,9 @@ import ROOT
 from ROOT import larlite
 import time
 
-class OpFlashData( OpDataPlottable ):
+class OpFlashData():
 
     def __init__(self,producer='opflash'):
-        super(OpFlashData, self).__init__()
 
         # get the producer name
         self.producer = producer

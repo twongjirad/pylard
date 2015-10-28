@@ -4,10 +4,9 @@ import ROOT
 from ROOT import larlite
 import time
 
-class TriggerData( OpDataPlottable ):
+class TriggerData():
 
     def __init__(self,producer='daq'):
-        super(TriggerData, self).__init__()
 
         # get the producer name
         self.producer = producer
@@ -38,9 +37,7 @@ class TriggerData( OpDataPlottable ):
     # get data for current event
     def getEvent(self, mgr):
 
-        # load optical hits
-        self.triggerdata = mgr.get_data(larlite.data.kTrigger,
-                                        self.producer)
-        
+        # load trigger data
+        self.triggerdata = mgr.get_data(larlite.data.kTrigger,self.producer)
         self.trigger_time = self.triggerdata.TriggerTime();
         
