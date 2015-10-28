@@ -108,7 +108,7 @@ class OpDetDisplay(QtGui.QWidget) :
         evt = int(self.event.text())
         slot = int(self.slot.text())
         if self.lastevent is None or evt!=self.lastevent:
-            self.opdata.getEvent( evt, slot=slot )
+            self.opdata.gotoEvent( evt )
             self.lastevent = evt
             self.newevent = True
         else:
@@ -260,25 +260,25 @@ class OpDetDisplay(QtGui.QWidget) :
 
         
     def nextEvent(self):
-        evt = int(self.event.text())
-        slot = int(self.slot.text())
 
-        ok = self.opdata.getEvent( evt+1, slot=slot )
+        ok = self.opdata.getNextEntry()
         if ok:
-            self.event.setText("%d"%(evt+1))
+            evt = int(self.event.text())
+            slot = int(self.slot.text())
+            self.event.setText("%d"%(evt))
         else:
             print "Next event not ok"
-            self.opdata.getEvent( evt, slot=slot )
+            self.opdata.gotoEvent( evt )
         self.plotData()
 
     def prevEvent(self):
         evt = int(self.event.text())
         slot = int(self.slot.text())
         try:
-            self.opdata.getEvent( evt-1, slot=slot )
+            self.opdata.gotoEvent( evt-1 )
             self.event.setText("%d"%(evt-1))
         except:
-            self.opdata.getEvent( evt, slot=slot )
+            self.opdata.gotoEvent( evt )
         self.plotData()
             
     def getWaveformPlot(self):
@@ -295,10 +295,10 @@ class OpDetDisplay(QtGui.QWidget) :
             self.slot.setText("%d"%(slot))
         
         try:
-            more = self.opdata.getEvent( event, slot=slot )
+            more = self.opdata.gotoEvent( event )
             self.event.setText( "%d"%(event) )
         except:
-            more = self.opdata.getEvent( evt, slot=slot )
+            more = self.opdata.gotoEvent( evt )
         self.plotData()
         return more
             

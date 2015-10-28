@@ -14,7 +14,7 @@ class OpWfmPlot:
         default_color: vector for pyqtgraph to draw color
         highlighted_color: color used when object is clicked on
         """
-        if type(self.times) is float and timepertick is None:
+        if type(times) is float and timepertick is None:
             raise ValueError( "if setting time using a float, need to set the time per tick" )
         self.wfm = wfm
         self.times = times
@@ -40,34 +40,41 @@ class OpWfmPlot:
 
 class OpWfmPlotVector:
     def __init__(self):
-        self.chtimes = {}    # key=channel, value=list of times
-        self.chwindows = {}  # key=channel, value=dict of (timestamp,window)
+        self.chtimes = {}    # key=(slot,channel), value=list of times
+        self.chwindows = {}  # key=(slot,channel), value=dict of (timestamp,window)
 
     def getWindowsBetweenTimes( self, start, end ):
         out = []
-        for ch,times in self.chtimes.items():
+        for (slot,ch),times in self.chtimes.items():
             times.sort()
             t = np.asarray( times ) # we use an array to have access to numpy magic
             tselect = t[ np.where( (t>=start) & (t<=end) ) ]
 
             for n in range(0,len(tselect)):
-                out.append( self.chwindows[ch][ tselect[n] ] )
+                out.append( self.chwindows[(slot,ch)][ tselect[n] ] )
         return out
 
+    def getWindows( self, ch, slot ):
+        windows = []
+        if (slot,ch) in self.chwindows:
+            for t,window in self.chwindows[(slot,ch)].items():
+                windows.append( window )
+        return windows
+
     def addWindow( self, cdw ):
-        if cdw.ch not in self.chtimes:
-            self.chtimes[cdw.ch] = []
-            self.chwindows[cdw.ch] = {}
-        self.chtimes[cdw.ch].append( cdw.getTimestamp() )
-        self.chwindows[ cdw.ch ][ cdw.getTimestamp() ] = cdw
+        if (cdw.slot,cdw.ch) not in self.chtimes:
+            self.chtimes[(cdw.slot,cdw.ch)] = []
+            self.chwindows[(cdw.slot,cdw.ch)] = {}
+        self.chtimes[ (cdw.slot,cdw.ch) ].append( cdw.getTimestamp() )
+        self.chwindows[ (cdw.slot,cdw.ch) ][ cdw.getTimestamp() ] = cdw
 
     def makeWindow( self, wfm, times, slot, ch, default_color=(255,255,255,255), highlighted_color=(0,255,255,255), timepertick=None ):
         """ pass through function to OpWfmPlot constructor """
-        self.addWindow( wfm, times, slot, ch, default_color=default_color, highlighted_color=highlighted_color, timepertick=timepertick )
+        self.addWindow( OpWfmPlot( wfm, times, slot, ch, default_color=default_color, highlighted_color=highlighted_color, timepertick=timepertick ) )
             
         
     def getNumWindows( self ):
         n = 0
-        for ch,times in self.chtimes.items():
+        for (slot,ch),times in self.chtimes.items():
             n += len(times)
         return n

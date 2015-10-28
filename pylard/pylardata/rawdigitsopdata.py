@@ -73,12 +73,13 @@ class RawDigitsOpData( OpDataPlottable ):
             self.pedestals[slot] = np.ones( 48 )*2048.0
         return self.pedestals[slot]
 
-    def gotoEvent( self, event, run, subrun ):
+    def gotoEvent( self, event, run=None, subrun=None ):
+        """ concrete instantiation of abc method """
         if self.maxevent is not None and event>self.maxevent:
             print "No events for ",event,"!"
             return False
 
-        if event==self.event and run==self.run and subrun=self.subrun:
+        if event==self.event and run==self.run and subrun==self.subrun:
             return True
         self.update_the_sample_size = True # optimization
         self.event  = event
@@ -93,11 +94,12 @@ class RawDigitsOpData( OpDataPlottable ):
         self.sortReadoutWindows( event )
 
         # hack for flasher
-        self.getData(slot=5)[:,39] = self.getData(slot=6)[:,39]
+        #self.getData(slot=5)[:,39] = self.getData(slot=6)[:,39]
         self.newevent = False
         return True
 
-    def getNextEvent(self):
+    def getNextEntry(self):
+        """ concrete instantiation of abc method """
         # get next event
         if self.event is not None:
             nextevent = self.event+1
@@ -125,6 +127,7 @@ class RawDigitsOpData( OpDataPlottable ):
                 return False # no more
         else:
             nextevent = q["event"].min()
+            #print  q["event"]
             print "next event is ",nextevent
         
         return self.gotoEvent( nextevent )
@@ -261,7 +264,7 @@ class RawDigitsOpData( OpDataPlottable ):
                         self.beamwin_info["earliest_tstamp"] = trig_timestamp
                         self.beamwin_info["latest_tstamp"] = trig_timestamp+0.015625*1000
                     if len(wf)>=500:
-                        if len( self.beamwin_wfms[(femslot,ch)] )>=1:
+                        if len( self.beamwindows.getWindows( femslot, ch ) )>=1:
                             print "double beam window. skip the second one."
                             continue
                         # beam windows!
@@ -279,12 +282,12 @@ class RawDigitsOpData( OpDataPlottable ):
                     else:              
                         # cosmic windows!
                         print "cosmic window len=",len(wf),": slot=",femslot,"ch=",ch,"tstamp=",tstamp,"trig_stamp=",trig_timestamp,"framesample=",framesample
-                        self.cosmicwindows.makeWindow( wf, framesample*NSPERTICK, femslot, ch, timepertick=NSPERTCIK )
+                        self.cosmicwindows.makeWindow( wf, framesample*NSPERTICK, femslot, ch, timepertick=NSPERTICK )
         try:
             print "Event %d has %d cosmic windows and %d beam windows (beam window length=%d)" % ( event, self.cosmics.getNumWindows(), nbeamwindows, self.getNBeamWinSamples() ),
             print " earliest tstamp=",self.beamwin_info["earliest_tstamp"]," trig time=",the_trig_timestamp
         except:
-            print "Event ",event," has ",self.cosmics.getNumWindows()," cosmic windows and ",len(self.beamwin_wfms)," beam windows (length=",self.getNBeamWinSamples(),")"
+            print "Event ",event," has ",self.cosmicwindows.getNumWindows()," cosmic windows and ",self.beamwindows.getNumWindows()," beam windows (length=",self.getNBeamWinSamples(),")"
             
     def convertToFrameSample( self, timestamp, trig_timestamp  ):
         return int( (timestamp-trig_timestamp)/(0.001*NSPERTICK) ) # timestamps in microseconds of course                                                  
