@@ -136,15 +136,30 @@ class OpDetDisplay(QtGui.QWidget) :
         
         # --------------------------------------------------
         # WFM PLOT
+
+        # reset
         self.wfplot.clear()
+
+        # get plotting options
         offset = 1.0
         if self.collapse.isChecked():
             offset = 0.0
             scaledown = 1.0
+
+        # get discriminator window time range
+        nsrange = self.time_window.getTimeRangeNS()
+
+        # get the windows to draw
+        wfmdata = self.opdata.getWaveformPlotData( nsrange[0], nsrange[1] )
         
-        nbins = self.opdata.getData( slot=int(self.slot.text() ) ).shape[0]
-        x = np.linspace( 0, nbins*NSPERTICK, num=nbins )
-        for ipmt in xrange(0,self.opdata.getData( slot=int(self.slot.text() ) ).shape[1]):
+        for window in wfmdata:
+            
+            ipmt = window.ch
+            islot = window.slot            
+
+            # check if we draw this channel
+            if islot!=slot:
+                continue
 
             if len(self.channellist)>0 and ipmt not in self.channellist and not self.draw_all.isChecked():
                 continue
@@ -153,27 +168,29 @@ class OpDetDisplay(QtGui.QWidget) :
             if self.last_clicked_channel is not None and ipmt==self.last_clicked_channel:
                 pencolor = (0, 255, 255 )
 
-            wfm = self.opdata.getData( slot=int(self.slot.text() ) )[:,ipmt]
-            y = (wfm-self.pedfunction(wfm,ipmt))/scaledown+ipmt*offset
+            y = (window.wfm-self.pedfunction(window.wfm,ipmt))/scaledown+ipmt*offset
+            x = window.genTimeArray()
 
-            self.wfplot.plot(x=x, y=y, pen=pencolor, name="PMT%d"%(ipmt))
-
-            if ipmt in self.user_plot_item.keys():
-                for useritem in self.user_plot_item[ipmt]:
-                    self.wfplot.addItem( useritem )
-
-        self.wfplot.setXRange(0,nbins*NSPERTICK,update=True)
+            self.wfplot.plot(x=x, y=y, pen=pencolor)
+            
+        # refresh range object
         self.wfplot.addItem( self.wf_time_range )
 
-        if "cosmics" in dir(self.opdata):
-            if self.newevent:
-                # refresh the cosmic window display
-                self.cosmicdisplay.plotCosmicWindows( self.opdata.cosmics )
-            if self.draw_cosmics.isChecked():
-                # overlay the cosmic waveforms
-                self.cosmicdisplay.applyCosmicDiscRange( clearplot=False )
-                    
-                
+        # axis!
+        ax = self.wfplot.getAxis('bottom')
+        ax.setHeight(30)
+        xStyle = {'color':'#FFFFFF','font-size':'14pt'}
+        #ax.setLabel('64 MHz Sample Tick',**xStyle)
+        ax.setLabel('ns from readout start',**xStyle)
+        ay = self.wfplot.getAxis('left')
+        yStyle = {'color':'#FFFFFF','font-size':'14pt'}
+        if self.collapse.isChecked():
+            ay.setLabel('ADC counts - Pedestal',**yStyle)
+        else:
+            ay.setLabel('PMT Channel Number',**yStyle)
+
+        # Cosmic Window
+        self.time_window.plotCosmicWindows( self.opdata.cosmicwindows )
 
         # ----------------------------------------------------
         # diagram object
@@ -209,19 +226,6 @@ class OpDetDisplay(QtGui.QWidget) :
                 pos = getPosFromID( ipmt )
                 self.pmtspot.append( {"pos":(pos[2],pos[1]), "size":25, 'pen':{'color':bordercol,'width':2}, 'brush':col, 'symbol':'s', 'data':{"id":ipmt,"highlight":False}} )
         self.pmtdiagram.setData( self.pmtspot  )
-
-        # axis!
-        ax = self.wfplot.getAxis('bottom')
-        ax.setHeight(30)
-        xStyle = {'color':'#FFFFFF','font-size':'14pt'}
-        #ax.setLabel('64 MHz Sample Tick',**xStyle)
-        ax.setLabel('ns from readout start',**xStyle)
-        ay = self.wfplot.getAxis('left')
-        yStyle = {'color':'#FFFFFF','font-size':'14pt'}
-        if self.collapse.isChecked():
-            ay.setLabel('ADC counts - Pedestal',**yStyle)
-        else:
-            ay.setLabel('PMT Channel Number',**yStyle)
 
         # ----------------------------------------------------
         # added user items
