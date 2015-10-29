@@ -45,3 +45,7 @@ class OpDataPlottable(object):
     def getUserPlotData( self, tstart, tend, remake_cache=False ):
         userwfms = self.userwindows.getWindowsBetweenTimes( tstart, tend )
         return userwfms
+
+    def getBeamWindows( self, slot, ch ):
+        return self.beamwindows.getWindows( ch, slot )
+

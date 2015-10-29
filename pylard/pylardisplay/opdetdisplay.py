@@ -169,7 +169,9 @@ class OpDetDisplay(QtGui.QWidget) :
             if self.last_clicked_channel is not None and ipmt==self.last_clicked_channel:
                 pencolor = (0, 255, 255 )
 
-            y = (window.wfm-self.pedfunction(window.wfm,ipmt))/scaledown+ipmt*offset
+            ped = self.pedfunction(window.wfm,ipmt)
+            #print ipmt,": ",ped
+            y = (window.wfm-ped)/scaledown+ipmt*offset
             x = window.genTimeArray()
 
             self.wfplot.plot(x=x, y=y, pen=pencolor)
@@ -179,7 +181,7 @@ class OpDetDisplay(QtGui.QWidget) :
             print "number of user wfms: ",len(userwfms)
             for wfm in userwfms:
                 ipmt = wfm.ch
-                if len(self.channellist)>0 and ipmt not in self.channellist and not self.draw_all.isChecked():
+                if ipmt is not None and (len(self.channellist)>0 and ipmt not in self.channellist and not self.draw_all.isChecked()):
                     continue
                 pencolor = wfm.default_color
                 if self.last_clicked_channel is not None and ipmt==self.last_clicked_channel:
@@ -227,8 +229,6 @@ class OpDetDisplay(QtGui.QWidget) :
             tstart_tick = int( np.maximum( 0, (bnds[0]-tstart)/wfm.timepertick ) )
             tend_tick   = int( np.minimum( len(wfm.wfm), (bnds[1]-tstart)/wfm.timepertick ) )
             ped = self.pedfunction(wfm.wfm,ch)
-            if ped is None:
-                ped = 2048.0
             chmax = np.max( wfm.wfm[tstart_tick:tend_tick]-ped )
             if chmax>chmaxes[ch]:
                 chmaxes[ch] = chmax
@@ -416,7 +416,11 @@ class OpDetDisplay(QtGui.QWidget) :
             var = 20.0
         ped = pedestal.getpedestal( wfm, 10, var )
         if ped is None:
-            ped = 2048.0
+            print "ped is None, try with higher threshold" 
+            ped = pedestal.getpedestal( wfm, 10, 20.0 )
+        if ped is None:
+            print "ped is still none, set to first sample: ",wfm[0]
+            ped = wfm[0]
         return ped
 
     def setPedestalFunction( self, pedfunc ):

@@ -17,7 +17,8 @@ class LArLiteOpticalData( OpDataPlottable ):
         self.files = inputfiles
 
         # producers for various data-products
-        self.opwf_producer    = 'pmtreadout' # pmtreadout for data
+        #self.opwf_producer    = 'pmtreadout' # pmtreadout for data
+        self.opwf_producer    = 'opreformat' # pmtreadout for data
         self.ophit_producer   = 'opFlash'
         self.opflash_producer = 'opFlash'
         self.trigger_producer = 'triggersim'
@@ -186,6 +187,10 @@ class LArLiteOpticalData( OpDataPlottable ):
     # function to fill wf info
     def fillWaveforms( self ):
 
+        # hack!!!
+        nloops = 0
+        lastpmt = -1
+
         # load optical waveforms
         self.opdata = self.manager.get_data(larlite.data.kOpDetWaveform, self.opwf_producer)
 
@@ -198,6 +203,17 @@ class LArLiteOpticalData( OpDataPlottable ):
             wf = self.opdata.at(n)
 
             pmt = wf.ChannelNumber()
+
+            # ----------------
+            # THIS IS A HACK
+            if lastpmt>pmt:
+                nloops += 1
+            lastpmt = pmt
+            if nloops in [0,3]:
+                slot = 5
+            else:
+                slot = 6
+            # ----------------
 
             # only use first 48 pmts (HG SLOT)
             if ( pmt >= self.n_pmts ):
@@ -218,10 +234,10 @@ class LArLiteOpticalData( OpDataPlottable ):
             
             if len(adcs)>=500: # is there another way to tag beam windows?
                 #print "beam window: ch=",pmt," len=",len(adcs)," timestamp=",time," ticks=",time/0.015625
-                self.beamwindows.makeWindow( adcs, time*1000.0, 5, pmt, timepertick=15.625 )
+                self.beamwindows.makeWindow( adcs, time*1000.0, slot, pmt, timepertick=15.625 )
             else:
                 #print "cosmic window: ch=",pmt," len=",len(adcs)," timestamp=",time," ticks=",time/0.015625
-                self.cosmicwindows.makeWindow( adcs, time*1000.0, 5, pmt, timepertick=15.625 )
+                self.cosmicwindows.makeWindow( adcs, time*1000.0, slot, pmt, timepertick=15.625 )
 
         return
 
@@ -246,11 +262,11 @@ class LArLiteOpticalData( OpDataPlottable ):
                 t = first_step.T() - offset
                 print "Track ",itrack,": pdg=",track.PdgCode(),"nsteps=",nsteps," tstart=",first_step.T()," tend=",last_step.T(),"pos=",(first_step.X(),first_step.Y(),first_step.Z())," E=",first_step.E(),"mct=",t
 
-                self.userwindows.makeWindow( np.linspace( 0.0, 40.0, 20 ), np.ones( 20 )*t, 5, 0, default_color=( 255, 0, 0, 255 ), highlighted_color=(255,0,0,255) )
+                self.userwindows.makeWindow( np.linspace( 0.0, 40.0, 20 ), np.ones( 20 )*t, 5, None, default_color=( 255, 0, 0, 255 ), highlighted_color=(255,0,0,255) )
                 if abs(pid)==13:
                     # decay electron
                     t2 = last_step.T() - offset
-                    self.userwindows.makeWindow( np.linspace( 0.0, 40.0, 20 ), np.ones( 20 )*t2, 5, 0, default_color=( 255, 0, 0, 255 ), highlighted_color=(255,0,0,255) )
+                    self.userwindows.makeWindow( np.linspace( 0.0, 40.0, 20 ), np.ones( 20 )*t2, 5, None, default_color=( 255, 0, 0, 255 ), highlighted_color=(255,0,0,255) )
             else:
                 print "Track ",itrack,": pdg=",track.PdgCode(),"nsteps=",nsteps
                 

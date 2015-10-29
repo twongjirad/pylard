@@ -70,7 +70,7 @@ class OpWfmPlotVector:
         return out
 
     def getWindows( self, ch, slot ):
-        windows = []
+        windows = [] 
         if (slot,ch) in self.chwindows:
             for t,window in self.chwindows[(slot,ch)].items():
                 windows.append( window )
