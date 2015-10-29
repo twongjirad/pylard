@@ -21,12 +21,18 @@ class LArLiteOpticalData( OpDataPlottable ):
         self.ophit_producer   = 'opFlash'
         self.opflash_producer = 'opFlash'
         self.trigger_producer = 'triggersim'
+        self.mctrack_producer = 'mcreco'
+        self.mctruth_producer = 'generator'
+
 
         # prepare a list of files for each data-product & producer
         self.opwf_files    = []
         self.ophit_files   = []
         self.opflash_files = []
         self.trigger_files = []
+        self.mctrack_files = []
+        self.mctruth_files = []
+
         self.SplitInputFiles()
 
         # limiter for now
@@ -36,19 +42,8 @@ class LArLiteOpticalData( OpDataPlottable ):
         self.manager = larlite.storage_manager()
         self.manager.reset()
         self.usedfiles = []
-        for f in self.opwf_files:
-            self.manager.add_in_filename(f)
-            self.usedfiles.append( f )
-        for f in self.ophit_files:
-            if f not in self.usedfiles:
-                self.manager.add_in_filename(f)
-                self.usedfiles.append( f )
-        for f in self.opflash_files:
-            if f not in self.usedfiles:
-                self.manager.add_in_filename(f)
-                self.usedfiles.append( f )
-        for f in self.trigger_files:
-            if f not in self.usedfiles:
+        for filelist in [ self.opwf_files, self.ophit_files, self.opflash_files, self.trigger_files, self.mctrack_files, self.mctruth_files ]:
+            for f in filelist:
                 self.manager.add_in_filename(f)
                 self.usedfiles.append( f )
 
@@ -80,6 +75,8 @@ class LArLiteOpticalData( OpDataPlottable ):
         ophit_t   = 'ophit_%s_tree'%self.opflash_producer
         opflash_t   = 'opflash_%s_tree'%self.opflash_producer
         trigger_t   = 'trigger_%s_tree'%self.trigger_producer
+        mctrack_t   = 'mctrack_%s_tree'%(self.mctrack_producer)
+        mctruth_t   = 'mctruth_%s_tree'%(self.mctruth_producer)
 
         # go through list of files and sub-split files with
         # specific data-products
@@ -111,18 +108,28 @@ class LArLiteOpticalData( OpDataPlottable ):
             if (froot.GetListOfKeys().Contains(trigger_t) == True):
                 self.trigger_files.append(f)
 
+            # if the file contains mc information
+            if (froot.GetListOfKeys().Contains(mctrack_t) == True):
+                self.mctrack_files.append(f)
+
+            # if the file contains mc information
+            if (froot.GetListOfKeys().Contains(mctruth_t) == True):
+                self.mctruth_files.append(f)
+            else:
+                print "no mctruth tree was loaded: ",mctruth_t
+
         print 'waveform files:'
         print self.opwf_files
-        print
-        print 'hit files:'
-        print self.ophit_files
-        print
-        print 'opflash files:'
-        print self.opflash_files
         print
         print 'trigger files:'
         print self.trigger_files
         print
+#         print 'hit files:'
+#         print self.ophit_files
+#         print
+#         print 'opflash files:'
+#         print self.opflash_files
+#         print
 
 
     # ------------------------
@@ -157,11 +164,15 @@ class LArLiteOpticalData( OpDataPlottable ):
         # save the trigger time for the entire event
         self.trigger_time = self.trigger.getTrigTime()
 
+        self.clearEvent()
+
         self.fillWaveforms()
         
         self.ophits.getEvent(self.manager)
 
         self.opflash.getEvent(self.manager)
+
+        self.drawMCTrackWfmData()
 
         self.event  = self.manager.event_id()
         self.subrun = self.manager.subrun_id()
@@ -174,8 +185,6 @@ class LArLiteOpticalData( OpDataPlottable ):
     # ------------------------
     # function to fill wf info
     def fillWaveforms( self ):
-
-        self.clearEvent()
 
         # load optical waveforms
         self.opdata = self.manager.get_data(larlite.data.kOpDetWaveform, self.opwf_producer)
@@ -203,15 +212,49 @@ class LArLiteOpticalData( OpDataPlottable ):
             # set relative time
             time = wf.TimeStamp() # in usec
             if (self.trigger_time == None):
-                time -= 1600.
+                time -= 1600. #?
             else:
                 time -= self.trigger_time
             
             if len(adcs)>=500: # is there another way to tag beam windows?
-                print "beam window: ch=",pmt," len=",len(adcs)," timestamp=",time," ticks=",time/0.015625
+                #print "beam window: ch=",pmt," len=",len(adcs)," timestamp=",time," ticks=",time/0.015625
                 self.beamwindows.makeWindow( adcs, time*1000.0, 5, pmt, timepertick=15.625 )
             else:
-                print "cosmic window: ch=",pmt," len=",len(adcs)," timestamp=",time," ticks=",time/0.015625
+                #print "cosmic window: ch=",pmt," len=",len(adcs)," timestamp=",time," ticks=",time/0.015625
                 self.cosmicwindows.makeWindow( adcs, time*1000.0, 5, pmt, timepertick=15.625 )
 
         return
+
+    # ---------------------
+    # Get MC Track information
+    def drawMCTrackWfmData( self ):
+        """ draws MC info """
+        self.mctrackdata = self.manager.get_data( larlite.data.kMCTrack, self.mctrack_producer )
+        self.mctruthdata = self.manager.get_data( larlite.data.kMCTruth, self.mctruth_producer )
+
+        mct0 = 3200.0 # us time stamp (weird quirk or data I looked at?)
+        offset = (self.trigger_time-3200.0)*1000.0
+        print "mc tracks: ",self.mctrackdata.size()," tracks"
+        print "offset=",(self.trigger_time-3200.0)*1000.0
+        for itrack in range(0,self.mctrackdata.size()):
+            track = self.mctrackdata.at(itrack)
+            nsteps = track.size()
+            pid = track.PdgCode()
+            if nsteps>0:
+                first_step = track.at(0);
+                last_step  = track.at(nsteps-1)
+                t = first_step.T() - offset
+                print "Track ",itrack,": pdg=",track.PdgCode(),"nsteps=",nsteps," tstart=",first_step.T()," tend=",last_step.T(),"pos=",(first_step.X(),first_step.Y(),first_step.Z())," E=",first_step.E(),"mct=",t
+
+                self.userwindows.makeWindow( np.linspace( 0.0, 40.0, 20 ), np.ones( 20 )*t, 5, 0, default_color=( 255, 0, 0, 255 ), highlighted_color=(255,0,0,255) )
+                if abs(pid)==13:
+                    # decay electron
+                    t2 = last_step.T() - offset
+                    self.userwindows.makeWindow( np.linspace( 0.0, 40.0, 20 ), np.ones( 20 )*t2, 5, 0, default_color=( 255, 0, 0, 255 ), highlighted_color=(255,0,0,255) )
+            else:
+                print "Track ",itrack,": pdg=",track.PdgCode(),"nsteps=",nsteps
+                
+        print "mc truth (",self.mctruthdata.size()," instances): ",self.mctruthdata.at(0).GetParticles().size()," particles in first instance"
+        for ipart in range(0,self.mctruthdata.at(0).GetParticles().size()):
+            mcpart = self.mctruthdata.at(0).GetParticles().at(ipart)
+            print "particle ",mcpart.TrackId()," pdg=",mcpart.PdgCode()," ndaughters=",mcpart.Daughters().size()

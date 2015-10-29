@@ -40,6 +40,8 @@ class OpDataPlottable(object):
         """ loop through beam, cosmic and user data to be plotted on the waveform canvas.  make plots, return."""
         beamwfm = self.beamwindows.getWindowsBetweenTimes( tstart, tend )
         cosmicwfms = self.cosmicwindows.getWindowsBetweenTimes( tstart, tend )
-        # userwfms will go here as well
         return beamwfm+cosmicwfms
-    
+
+    def getUserPlotData( self, tstart, tend, remake_cache=False ):
+        userwfms = self.userwindows.getWindowsBetweenTimes( tstart, tend )
+        return userwfms

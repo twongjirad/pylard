@@ -21,7 +21,7 @@ class CosmicWindow(pg.PlotItem):
 
         self.beambox = pg.PlotDataItem( x=[0,0,samplesPerFrame*USPERTICK,samplesPerFrame*USPERTICK,0], y=[-5, 32, 32, -5, -5] )
 
-        self.tick_range = [-50,1550]
+        self.tick_range = [-200,1550]
 
         self.time_range = pg.LinearRegionItem(values=[self.tick_range[0]*USPERTICK , self.tick_range[1]*USPERTICK ] , orientation=pg.LinearRegionItem.Vertical)
 
