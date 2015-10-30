@@ -175,7 +175,8 @@ class OpDetDisplay(QtGui.QWidget) :
             x = window.genTimeArray()
 
             self.wfplot.plot(x=x, y=y, pen=pencolor)
-
+            
+        # draw user items
         if  self.draw_user_items.isChecked():
             userwfms = self.opdata.getUserPlotData( nsrange[0], nsrange[1] )
             print "number of user wfms: ",len(userwfms)
@@ -186,7 +187,11 @@ class OpDetDisplay(QtGui.QWidget) :
                 pencolor = wfm.default_color
                 if self.last_clicked_channel is not None and ipmt==self.last_clicked_channel:
                     pencolor = wfm.highlighted_color
-                y = wfm.wfm
+                
+                if ipmt is not None:
+                    y = np.asarray(wfm.wfm)/scaledown + ipmt*offset
+                else:
+                    y = wfm.wfm
                 x = wfm.genTimeArray()
                 self.wfplot.plot( x=x, y=y, pen=pencolor )
             

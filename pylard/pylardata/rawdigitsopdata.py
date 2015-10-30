@@ -222,6 +222,9 @@ class RawDigitsOpData( OpDataPlottable ):
         return self.entry_points[ oldevents[lopos] ]
 
     def sortReadoutWindows( self, event ):
+
+        self.clearEvent()
+
         self.beamwin_info = {} # stores trigger info
         q = self.wf_df.query('event==%d'%(event))
         if self.__frame is not None and self.__frame in q:
@@ -264,11 +267,11 @@ class RawDigitsOpData( OpDataPlottable ):
                         self.beamwin_info["earliest_tstamp"] = trig_timestamp
                         self.beamwin_info["latest_tstamp"] = trig_timestamp+0.015625*1000
                     if len(wf)>=500:
-                        if len( self.beamwindows.getWindows( femslot, ch ) )>=1:
-                            print "double beam window. skip the second one."
+                        if len( self.getBeamWindows( femslot, ch ) )>=1:
+                            print "double beam window for (slot %d,ch %d). skip the second one."%(femslot,ch)
                             continue
                         # beam windows!
-                        print "beamwindow waveform len=",len(wf),femslot,"ch=",ch,"tstamp=",tstamp,"trig_stamp=",trig_timestamp,"framesample=",framesample
+                        #print "beamwindow waveform len=",len(wf),femslot,"ch=",ch,"tstamp=",tstamp,"trig_stamp=",trig_timestamp,"framesample=",framesample
                         nbeamwindows += 1
                         self.beamwindows.makeWindow( wf, framesample*NSPERTICK, femslot, ch, timepertick=NSPERTICK )
                         self.beamwin_info[(femslot,ch)]["tstamp"] = tstamp
@@ -281,7 +284,7 @@ class RawDigitsOpData( OpDataPlottable ):
                                 self.beamwin_info["latest_tstamp"] = tend
                     else:              
                         # cosmic windows!
-                        print "cosmic window len=",len(wf),": slot=",femslot,"ch=",ch,"tstamp=",tstamp,"trig_stamp=",trig_timestamp,"framesample=",framesample
+                        #print "cosmic window len=",len(wf),": slot=",femslot,"ch=",ch,"tstamp=",tstamp,"trig_stamp=",trig_timestamp,"framesample=",framesample
                         self.cosmicwindows.makeWindow( wf, framesample*NSPERTICK, femslot, ch, timepertick=NSPERTICK )
         try:
             print "Event %d has %d cosmic windows and %d beam windows (beam window length=%d)" % ( event, self.cosmics.getNumWindows(), nbeamwindows, self.getNBeamWinSamples() ),
