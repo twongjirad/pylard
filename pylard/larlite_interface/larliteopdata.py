@@ -260,7 +260,10 @@ class LArLiteOpticalData( OpDataPlottable ):
                 first_step = track.at(0);
                 last_step  = track.at(nsteps-1)
                 t = first_step.T() - offset
-                print "Track ",itrack,": pdg=",track.PdgCode(),"nsteps=",nsteps," tstart=",first_step.T()," tend=",last_step.T(),"pos=",(first_step.X(),first_step.Y(),first_step.Z())," E=",first_step.E(),"mct=",t
+                print "Track ",itrack,": pdg=",track.PdgCode(),"nsteps=",nsteps," tstart=",first_step.T()," tend=",last_step.T(),
+                print " pos0=",(first_step.X(),first_step.Y(),first_step.Z())," E=",first_step.E(),
+                print " pos0=",(last_step.X(),last_step.Y(),last_step.Z())," E=",last_step.E(),
+                print "mct=",t
 
                 self.userwindows.makeWindow( np.linspace( 0.0, 40.0, 20 ), np.ones( 20 )*t, 5, None, default_color=( 255, 0, 0, 255 ), highlighted_color=(255,0,0,255) )
                 if abs(pid)==13:
