@@ -247,6 +247,10 @@ class LArLiteOpticalData( OpDataPlottable ):
         """ draws MC info """
         self.mctrackdata = self.manager.get_data( larlite.data.kMCTrack, self.mctrack_producer )
         self.mctruthdata = self.manager.get_data( larlite.data.kMCTruth, self.mctruth_producer )
+        
+        if self.mctrackdata is None or self.mctruthdata is None:
+            print "No MC information."
+            return
 
         mct0 = 3200.0 # us time stamp (weird quirk or data I looked at?)
         offset = (self.trigger_time-3200.0)*1000.0
