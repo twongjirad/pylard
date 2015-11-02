@@ -18,10 +18,10 @@ class LArLiteOpticalData( OpDataPlottable ):
 
         # producers for various data-products
         #self.opwf_producer    = 'pmtreadout' # pmtreadout for data
-        self.opwf_producer    = 'opreformat' # pmtreadout for data
+        self.opwf_producer    = 'pmtreadout'#'opreformat' # pmtreadout for data
         self.ophit_producer   = 'opFlash'
         self.opflash_producer = 'opFlash'
-        self.trigger_producer = 'triggersim'
+        self.trigger_producer = 'daq'#'triggersim'
         self.mctrack_producer = 'mcreco'
         self.mctruth_producer = 'generator'
 
@@ -72,17 +72,18 @@ class LArLiteOpticalData( OpDataPlottable ):
     def SplitInputFiles(self):
 
         # name of trees expected given the producer names
-        opdigit_t = 'opdigit_%s_tree'%self.opwf_producer
-        ophit_t   = 'ophit_%s_tree'%self.opflash_producer
-        opflash_t   = 'opflash_%s_tree'%self.opflash_producer
-        trigger_t   = 'trigger_%s_tree'%self.trigger_producer
-        mctrack_t   = 'mctrack_%s_tree'%(self.mctrack_producer)
-        mctruth_t   = 'mctruth_%s_tree'%(self.mctruth_producer)
+        opdigit_t = 'opdigit_%s_tree'%(self.opwf_producer)
+        ophit_t   = 'ophit_%s_tree'%(self.opflash_producer)
+        opflash_t = 'opflash_%s_tree'%(self.opflash_producer)
+        trigger_t = 'trigger_%s_tree'%(self.trigger_producer)
+        mctrack_t = 'mctrack_%s_tree'%(self.mctrack_producer)
+        mctruth_t = 'mctruth_%s_tree'%(self.mctruth_producer)
 
         # go through list of files and sub-split files with
         # specific data-products
         if type(self.files) is str:
             self.files = [self.files]
+
         for f in self.files:
             
             # skip if not root file
@@ -94,8 +95,6 @@ class LArLiteOpticalData( OpDataPlottable ):
             # if the file contains waveforms
             if (froot.GetListOfKeys().Contains(opdigit_t) == True):
                 self.opwf_files.append(f)
-            else:
-                print "no %s in %s"%(opdigit_t,f)
 
             # if the file contains hits
             if (froot.GetListOfKeys().Contains(ophit_t) == True):
@@ -247,9 +246,13 @@ class LArLiteOpticalData( OpDataPlottable ):
         """ draws MC info """
         self.mctrackdata = self.manager.get_data( larlite.data.kMCTrack, self.mctrack_producer )
         self.mctruthdata = self.manager.get_data( larlite.data.kMCTruth, self.mctruth_producer )
-        
-        if self.mctrackdata is None or self.mctruthdata is None:
-            print "No MC information."
+
+        if not self.mctrackdata:
+            print 'no mctrack data'
+            return
+
+        if not self.mctruthdata:
+            print 'no truth data'
             return
 
         mct0 = 3200.0 # us time stamp (weird quirk or data I looked at?)

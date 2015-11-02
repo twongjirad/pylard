@@ -10,11 +10,10 @@ print 'loading QtGui.QApplication'
 
 
 #  expects 'raw_wf_tree'
-#fname='~/uBooNE/data/PMTCommissioning/wf_000.root'
-fname= sys.argv[1]
-#fname = sys.argv[1]
-opdata = LArLiteOpticalData( fname )
-#opdata = RawDigitsOpData(fname)
+flist = []
+for i in xrange(len(sys.argv)-1):
+    flist.append(sys.argv[i+1])
+opdata = LArLiteOpticalData( flist )
 
 app = QtGui.QApplication([])
 print 'call OpDetDisplay()'
