@@ -3,9 +3,7 @@ from pyqtgraph.Qt import QtGui, QtCore
 
 # requires pyqtgraph, pandas, ROOT, rootpy
 from pylard.pylardisplay.opdetdisplay import OpDetDisplay
-from pylard.pylardata.wfopdata import WFOpData
-#from pylard.pylardata.rawdigitsopdata import RawDigitsOpData
-from pylard.pylardata.rawdigitlarlite import RawDigitsOpData
+from pylard.larlite_interface.larliteopdata import LArLiteOpticalData
 
 print 'loading QtGui.QApplication'
 
@@ -15,9 +13,7 @@ print 'loading QtGui.QApplication'
 #fname='~/uBooNE/data/PMTCommissioning/wf_000.root'
 fname= sys.argv[1]
 #fname = sys.argv[1]
-print 'call WFOpData()'
-#opdata = WFOpData( fname )
-opdata = RawDigitsOpData( fname )
+opdata = LArLiteOpticalData( fname )
 #opdata = RawDigitsOpData(fname)
 
 app = QtGui.QApplication([])
