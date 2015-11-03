@@ -8,11 +8,12 @@ class OpDataPlottable(object):
         self.beamwindows = OpWfmPlotVector()
         self.cosmicwindows = OpWfmPlotVector()
         self.userwindows = OpWfmPlotVector()
+        self.userDiagramPlotDataItems = []
 
     @abc.abstractmethod    
     def gotoEvent(self, event, run=None, subrun=None ):
         """ user must implement this. it instructs that the opdata should get the data for event, run, subrun """
-        raise RuntimeError('need to overwrite this function')
+        raise RuntimeErrxor('need to overwrite this function')
     
     @abc.abstractmethod
     def getNextEntry( self ):
@@ -23,6 +24,7 @@ class OpDataPlottable(object):
         self.beamwindows.clear()
         self.cosmicwindows.clear()
         self.userwindows.clear()
+        self.userDiagramPlotDataItems = []
         
     def makeBeamWindow( self, wfm, time, slot, ch, default_color=(255,255,255,255), highlighted_color=(0,255,255,255), timepertick=None ):
         """ pass through to self.beamwindows.makewindow """
@@ -48,4 +50,8 @@ class OpDataPlottable(object):
 
     def getBeamWindows( self, slot, ch ):
         return self.beamwindows.getWindows( ch, slot )
+
+    def addUserDiagramPlotDataItem( self, plotdata ):
+        self.userDiagramPlotDataItems.append( plotdata )
+        
 

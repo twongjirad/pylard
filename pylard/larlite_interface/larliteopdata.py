@@ -1,6 +1,8 @@
 import os,sys
 import numpy as np
+import pyqtgraph as pg
 from pylard.pylardata.opdataplottable import OpDataPlottable
+from pylard.config.pmtpos import getDetectorCenter
 from ophit import OpHitData
 from opflash import OpFlashData
 from trigger import TriggerData
@@ -9,6 +11,13 @@ from ROOT import larlite
 
 class LArLiteOpticalData( OpDataPlottable ):
     """ interface class between LArLite Optical data and OpDataPlottable """
+    colorcodes = { 13: (0,5,193,155), -13:(102,102,255),
+                   211: (153,0,76), -211:(255,102,178),
+                   11: (153,0,0), -11:(255, 102, 102 ),
+                   2212: (0,153,0), 2112:(128,128,128),
+                   12:(255,255,255), -12:(255,255,255),
+                   14:(255,255,255), -14:(255,255,255),
+                   16:(255,255,255), -16:(255,255,255) }
     
     def __init__(self,inputfiles):
         super( LArLiteOpticalData , self ).__init__()
@@ -18,10 +27,11 @@ class LArLiteOpticalData( OpDataPlottable ):
 
         # producers for various data-products
         #self.opwf_producer    = 'pmtreadout' # pmtreadout for data
-        self.opwf_producer    = 'pmtreadout'#'opreformat' # pmtreadout for data
+        self.opwf_producer    = 'opreformat' # pmtreadout for data
         self.ophit_producer   = 'opFlash'
         self.opflash_producer = 'opFlash'
-        self.trigger_producer = 'daq'#'triggersim'
+        self.trigger_producer = 'triggersim'
+        #self.trigger_producer = 'daq'
         self.mctrack_producer = 'mcreco'
         self.mctruth_producer = 'generator'
 
@@ -257,28 +267,37 @@ class LArLiteOpticalData( OpDataPlottable ):
 
         mct0 = 3200.0 # us time stamp (weird quirk or data I looked at?)
         offset = (self.trigger_time-3200.0)*1000.0
+        larsoft_offset = getDetectorCenter()
+        print "[LArLiteOpticalData ] MC Tracks"
         print "mc tracks: ",self.mctrackdata.size()," tracks"
         print "offset=",(self.trigger_time-3200.0)*1000.0
+        print "larsoft offset=",larsoft_offset
+
         for itrack in range(0,self.mctrackdata.size()):
             track = self.mctrackdata.at(itrack)
             nsteps = track.size()
             pid = track.PdgCode()
-            if nsteps>0:
-                first_step = track.at(0);
-                last_step  = track.at(nsteps-1)
-                t = first_step.T() - offset
-                print "Track ",itrack,": pdg=",track.PdgCode(),"nsteps=",nsteps," tstart=",first_step.T()," tend=",last_step.T(),
-                print " pos0=",(first_step.X(),first_step.Y(),first_step.Z())," E=",first_step.E(),
-                print " pos0=",(last_step.X(),last_step.Y(),last_step.Z())," E=",last_step.E(),
-                print "mct=",t
+            first_step = track.Start();
+            last_step  = track.End()
+            t = first_step.T() - offset
+            print "  Track ",itrack,": pdg=",track.PdgCode(),"nsteps=",nsteps," tstart=",first_step.T()," tend=",last_step.T(),
+            print " start=(%.1f,%.1f,%.1f)"%(first_step.X(),first_step.Y(),first_step.Z())," E=",first_step.E(),
+            print " end=(%.1f,%.1f,%1f)"%(last_step.X(),last_step.Y(),last_step.Z())," E=",last_step.E(),
+            print "mct=",t
+            # make waveform plot and diagram track
+            color = self.colorcodes[ pid ]
+            self.userwindows.makeWindow( np.linspace( 0.0, 40.0, 20 ), np.ones( 20 )*t, 100, None, default_color=color, highlighted_color=color )
+            # plot track on diagram. we want downstream to go right to left, while x is out of the page. must invert y and z when we draw
+            
+            z = np.linspace( -(first_step.Z()-larsoft_offset[2]), -(last_step.Z()-larsoft_offset[2]), 5 )
+            y = np.linspace( (first_step.Y()-larsoft_offset[1]), (last_step.Y()-larsoft_offset[1]), 5 )
+            self.addUserDiagramPlotDataItem( pg.PlotDataItem( z, y, pen={"color":color,"width":5} ) )
+            if abs(pid)==13: 
+                # muon makes decay electron
+                t2 = last_step.T() - offset
+                ecolor = self.colorcodes[ 11 ]
+                self.userwindows.makeWindow( np.linspace( 0.0, 40.0, 20 ), np.ones( 20 )*t2, 100, None, default_color=ecolor, highlighted_color=color )
 
-                self.userwindows.makeWindow( np.linspace( 0.0, 40.0, 20 ), np.ones( 20 )*t, 5, None, default_color=( 255, 0, 0, 255 ), highlighted_color=(255,0,0,255) )
-                if abs(pid)==13:
-                    # decay electron
-                    t2 = last_step.T() - offset
-                    self.userwindows.makeWindow( np.linspace( 0.0, 40.0, 20 ), np.ones( 20 )*t2, 5, None, default_color=( 255, 0, 0, 255 ), highlighted_color=(255,0,0,255) )
-            else:
-                print "Track ",itrack,": pdg=",track.PdgCode(),"nsteps=",nsteps
                 
         print "mc truth (",self.mctruthdata.size()," instances): ",self.mctruthdata.at(0).GetParticles().size()," particles in first instance"
         for ipart in range(0,self.mctruthdata.at(0).GetParticles().size()):

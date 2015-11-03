@@ -97,9 +97,12 @@ class OpDetDisplay(QtGui.QWidget) :
         self.openCosmicWindow = QtGui.QPushButton("Cosmic Disc. Viewer")
         self.draw_user_items = QtGui.QCheckBox("draw user items")  # draw user products
         self.draw_user_items.setChecked(True)
+        self.draw_chlabels = QtGui.QCheckBox("channel labels")  # draw user products
+        self.draw_chlabels.setChecked(False)
         self.run_user_analysis = QtGui.QCheckBox("run user funcs.")  # draw user products
         self.run_user_analysis.setChecked(True)
 
+        self.lay_inputs.addWidget( self.draw_chlabels, 1, 8 )
         self.lay_inputs.addWidget( self.draw_cosmics, 1, 9 )
         self.lay_inputs.addWidget( self.draw_user_items, 1, 10 )
         self.lay_inputs.addWidget( self.run_user_analysis, 1, 11 )
@@ -194,6 +197,7 @@ class OpDetDisplay(QtGui.QWidget) :
                     y = wfm.wfm
                 x = wfm.genTimeArray()
                 self.wfplot.plot( x=x, y=y, pen=pencolor )
+                
             
         # refresh range object
         self.wfplot.addItem( self.wf_time_range )
@@ -239,6 +243,7 @@ class OpDetDisplay(QtGui.QWidget) :
                 chmaxes[ch] = chmax
 
         # better interface here is needed
+        self.pmt_map.clear()
         self.pmtspot = []
 
         for ich in range(0,36):
@@ -257,22 +262,38 @@ class OpDetDisplay(QtGui.QWidget) :
             bordercol = self.getChanColor( ipmt, alpha=alpha )
             if self.last_clicked_channel is not None and ipmt==self.last_clicked_channel:
                 bordercol = ( 0, 255, 255, alpha )
-            if ipmt in getPMTIDList():
-                pos = getPosFromID(ipmt )
-                self.pmtspot.append( {"pos":(pos[2],pos[1]), "size":30, 'pen':{'color':bordercol,'width':2}, 'brush':col, 'symbol':'o', 'data':{"id":ipmt,"highlight":False}} )
 
+            # beam goes right to left!
+            # note that pmt pos are in larsoft coordinates with origin moved such that drawing is in center of detector
+            # we have to invert the z!
+            if ipmt in getPMTIDList():
+                pos = getPosFromID(ipmt, origin_at_detcenter=True )
+                self.pmtspot.append( {"pos":(-pos[2],pos[1]), "size":30, 'pen':{'color':bordercol,'width':2}, 'brush':col, 'symbol':'o', 'data':{"id":ipmt,"highlight":False}} )
             elif ipmt in getPaddleIDList():
-                pos = getPosFromID( ipmt )
-                self.pmtspot.append( {"pos":(pos[2],pos[1]), "size":25, 'pen':{'color':bordercol,'width':2}, 'brush':col, 'symbol':'s', 'data':{"id":ipmt,"highlight":False}} )
+                pos = getPosFromID( ipmt, origin_at_detcenter=True )
+                self.pmtspot.append( {"pos":(-pos[2],pos[1]), "size":25, 'pen':{'color':bordercol,'width':2}, 'brush':col, 'symbol':'s', 'data':{"id":ipmt,"highlight":False}} )
+            # add label
+            if self.draw_chlabels.isChecked():
+                pmtlabel = pg.TextItem( "CH%d" %(ipmt), color=bordercol, anchor=(0.5,0.5) )
+                pmtlabel.setFont( QtGui.QFont("Helvetica [Cronyx]",10) )
+                pmtlabel.setPos( -pos[2], pos[1]+26 )
+                self.pmt_map.addItem( pmtlabel )
+
         self.pmtdiagram.setData( self.pmtspot  )
+        self.pmt_map.addItem( self.pmtdiagram )
 
         # ----------------------------------------------------
         # added user items
 
-        if self.draw_user_items.isChecked() and None in self.user_plot_item.keys():
-            for useritem in self.user_plot_item[None]:
-                
-                self.wfplot.addItem( useritem )
+        if self.draw_user_items.isChecked():
+            print "number of user diagram items: ",len(self.opdata.userDiagramPlotDataItems)
+            for plotitem in self.opdata.userDiagramPlotDataItems:
+                print plotitem
+                self.pmt_map.addItem( plotitem )
+
+        if self.newevent:
+            self.pmt_map.setXRange(-500,500)
+            self.pmt_map.setYRange(-80,80)
 
         # ----------------------------------------------------
         # user analysis items
