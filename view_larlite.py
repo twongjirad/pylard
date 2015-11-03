@@ -2,7 +2,7 @@ import os,sys
 from pyqtgraph.Qt import QtGui, QtCore
 
 # requires pyqtgraph, pandas, ROOT, rootpy
-from pylard.pylardisplay.opdetdisplay import OpDetDisplay
+from pylard.pylardisplay.larliteopdetdisplay import LArLiteOpDetDisplay
 from pylard.larlite_interface.larliteopdata import LArLiteOpticalData
 
 print 'loading QtGui.QApplication'
@@ -17,7 +17,7 @@ opdata = LArLiteOpticalData( flist )
 
 app = QtGui.QApplication([])
 print 'call OpDetDisplay()'
-opdisplay = OpDetDisplay( opdata )
+opdisplay = LArLiteOpDetDisplay( opdata )
 print opdisplay
 print type(opdisplay)
 print 'call show()'

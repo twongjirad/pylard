@@ -27,14 +27,18 @@ class LArLiteOpticalData( OpDataPlottable ):
 
         # producers for various data-products
         #self.opwf_producer    = 'pmtreadout' # pmtreadout for data
-        self.opwf_producer    = 'opreformat' # pmtreadout for data
+        self.opwf_producer    = 'pmtreadout'#'opreformat' # pmtreadout for data
         self.ophit_producer   = 'opFlash'
         self.opflash_producer = 'opFlash'
-        self.trigger_producer = 'triggersim'
-        #self.trigger_producer = 'daq'
+        #self.trigger_producer = 'triggersim'
+        self.trigger_producer = 'daq'
         self.mctrack_producer = 'mcreco'
         self.mctruth_producer = 'generator'
 
+        # data-products that we are interested in
+        self.dataproduct_list = ['opdigit','ophit','opflash','trigger','mctruth','mctrack']
+        # dictionary linking producer name -> trees w/ that producer name
+        self.dataproduct_dict = {}
 
         # prepare a list of files for each data-product & producer
         self.opwf_files    = []
@@ -101,6 +105,22 @@ class LArLiteOpticalData( OpDataPlottable ):
                 continue
 
             froot = ROOT.TFile(f)
+
+            print froot.GetListOfKeys().Print()
+            for key in froot.GetListOfKeys():
+                # try and find the data-products we
+                # are interested in within the key name
+                for dataproduct in self.dataproduct_list:
+                    # if we find it right at the beginning of the tree name
+                    if (key.GetName().find(dataproduct) == 0):
+                        # find the producer name
+                        prod_name = key.GetName().split('_')[1]
+                        print 'found producer %s for data-product %s'%(prod_name,dataproduct)
+                        # add to dictionary
+                        if dataproduct in self.dataproduct_dict:
+                            self.dataproduct_dict[dataproduct].append(prod_name)
+                        else:
+                            self.dataproduct_dict[dataproduct] = [prod_name]
 
             # if the file contains waveforms
             if (froot.GetListOfKeys().Contains(opdigit_t) == True):
@@ -200,8 +220,15 @@ class LArLiteOpticalData( OpDataPlottable ):
         nloops = 0
         lastpmt = -1
 
+        print 'producer name requested: %s'%self.opwf_producer
+
         # load optical waveforms
-        self.opdata = self.manager.get_data(larlite.data.kOpDetWaveform, self.opwf_producer)
+        self.opdata = self.manager.get_data(larlite.data.kOpDetWaveform, str(self.opwf_producer) )
+
+        # if we did not succeed:
+        if not self.opdata:
+            print 'could not find kOpDetWaveform w/ producer name %s'%self.opwf_producer
+            return
 
         print "number of opdet waveforms: ",self.opdata.size()," trigger time=",self.trigger_time
 

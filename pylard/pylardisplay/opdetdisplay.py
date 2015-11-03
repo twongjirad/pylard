@@ -125,16 +125,19 @@ class OpDetDisplay(QtGui.QWidget) :
         
         
     def plotData( self ):
+        
+        print
+        print 'new event?', self.newevent
+        print
 
         evt = int(self.event.text())
         slot = int(self.slot.text())
         if self.lastevent is None or evt!=self.lastevent:
-            self.opdata.gotoEvent( evt )
             self.lastevent = evt
             self.newevent = True
-        else:
-            #print "old event: ",self.lastevent
-            self.newevent = False
+
+        if (self.newevent):
+            self.opdata.gotoEvent( evt )
         
         scaledown = float( self.adc_scaledown.text() )
         
@@ -325,6 +328,8 @@ class OpDetDisplay(QtGui.QWidget) :
                         self.wfplot.addItem( item )
                     else:
                         print "unknonw user product screen option, '",product["screen"],"'. Valid choices are 'diagram' and 'waveform'"
+
+        self.newevent = False
         
     def nextEvent(self):
 
