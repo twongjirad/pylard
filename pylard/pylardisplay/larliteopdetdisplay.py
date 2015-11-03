@@ -31,6 +31,7 @@ class LArLiteOpDetDisplay(OpDetDisplay) :
         # Display Widgets
         # ---------------
 
+        # OPDIGIT PRODUCER
         # producer name selection boxes
         self.opwf_prod = QtGui.QComboBox()
         # get list of possible producers for opdigit:
@@ -38,20 +39,46 @@ class LArLiteOpDetDisplay(OpDetDisplay) :
             self.opwf_prod.addItems(['NONE'])
         else:
             producers = self.opdata.dataproduct_dict['opdigit']
-            producers.insert(0,'NONE')
+            #producers.insert(0,'NONE')
             self.opwf_prod.addItems(producers)
 
 
         self.lay_inputs.addWidget( QtGui.QLabel('opdigit'), 1, 0 )
         self.lay_inputs.addWidget( self.opwf_prod, 1, 1 )
 
+        # TRIGGER PRODUCER
+        self.trig_prod = QtGui.QComboBox()
+        # get list of possible producers for opdigit:
+        if 'trigger' not in self.opdata.dataproduct_dict:
+            self.trig_prod.addItems(['NONE'])
+        else:
+            producers = self.opdata.dataproduct_dict['trigger']
+            #producers.insert(0,'NONE')
+            self.trig_prod.addItems(producers)
+
+
+        self.lay_inputs.addWidget( QtGui.QLabel('trigger'), 1, 2 )
+        self.lay_inputs.addWidget( self.trig_prod, 1, 3 )
+
         
+
     def plotData( self ):
 
-        if (self.opdata.opwf_producer != self.opwf_prod.currentText()):
+        newproducer = False
+        # check for critical producers
+        if (self.opdata.dataproduct_producer['opdigit'] != self.opwf_prod.currentText()):
             self.newevent = True
             print 'OPWF PRODUCER : ',self.opwf_prod.currentText()
-            self.opdata.opwf_producer = self.opwf_prod.currentText()
+            self.opdata.dataproduct_producer['opdigit'] = self.opwf_prod.currentText()
+            newproducer = True
+        if (self.opdata.dataproduct_producer['trigger'] != self.trig_prod.currentText()):
+            self.newevent = True
+            print 'TRIG PRODUCER : ',self.trig_prod.currentText()
+            self.opdata.dataproduct_producer['trigger'] = self.trig_prod.currentText()
+            newproducer = True
+        if newproducer:
+            # have to reconfigure data interface
+            self.opdata.configure()
 
         OpDetDisplay.plotData(self)
 

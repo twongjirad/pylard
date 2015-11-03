@@ -25,50 +25,22 @@ class LArLiteOpticalData( OpDataPlottable ):
         # input file name
         self.files = inputfiles
 
-        # producers for various data-products
-        #self.opwf_producer    = 'pmtreadout' # pmtreadout for data
-        self.opwf_producer    = 'pmtreadout'#'opreformat' # pmtreadout for data
-        self.ophit_producer   = 'opFlash'
-        self.opflash_producer = 'opFlash'
-        #self.trigger_producer = 'triggersim'
-        self.trigger_producer = 'daq'
-        self.mctrack_producer = 'mcreco'
-        self.mctruth_producer = 'generator'
-
         # data-products that we are interested in
         self.dataproduct_list = ['opdigit','ophit','opflash','trigger','mctruth','mctrack']
-        # dictionary linking producer name -> trees w/ that producer name
-        self.dataproduct_dict = {}
 
-        # prepare a list of files for each data-product & producer
-        self.opwf_files    = []
-        self.ophit_files   = []
-        self.opflash_files = []
-        self.trigger_files = []
-        self.mctrack_files = []
-        self.mctruth_files = []
+        # producers for various data-products
+        # try to be clever and figure out the producers
+        #self.opwf_producer    = 'pmtreadout' # pmtreadout for data
+        #self.opwf_producer    = 'pmtreadout'#'opreformat' # pmtreadout for data
+        #self.ophit_producer   = 'opFlash'
+        #self.opflash_producer = 'opFlash'
+        #self.trigger_producer = 'triggersim'
+        #self.trigger_producer = 'daq'
+        #self.mctrack_producer = 'mcreco'
+        #self.mctruth_producer = 'generator'
 
-        self.SplitInputFiles()
-
-        # limiter for now
-        self.n_pmts = 48
-
-        # call larlite manager
-        self.manager = larlite.storage_manager()
-        self.manager.reset()
-        self.usedfiles = []
-        for filelist in [ self.opwf_files, self.ophit_files, self.opflash_files, self.trigger_files, self.mctrack_files, self.mctruth_files ]:
-            for f in filelist:
-                self.manager.add_in_filename(f)
-                self.usedfiles.append( f )
-
-        self.manager.set_io_mode(larlite.storage_manager.kREAD)
-        self.manager.open()
-        
-        # OpticalData owns instances of all data object classes
-        self.ophits  = OpHitData(self.ophit_producer)
-        self.opflash = OpFlashData(self.opflash_producer)
-        self.trigger = TriggerData(self.trigger_producer)
+        self.manager = None
+        self.configure()
 
         self.manager.next_event()
 
@@ -85,13 +57,16 @@ class LArLiteOpticalData( OpDataPlottable ):
 
     def SplitInputFiles(self):
 
-        # name of trees expected given the producer names
-        opdigit_t = 'opdigit_%s_tree'%(self.opwf_producer)
-        ophit_t   = 'ophit_%s_tree'%(self.opflash_producer)
-        opflash_t = 'opflash_%s_tree'%(self.opflash_producer)
-        trigger_t = 'trigger_%s_tree'%(self.trigger_producer)
-        mctrack_t = 'mctrack_%s_tree'%(self.mctrack_producer)
-        mctruth_t = 'mctruth_%s_tree'%(self.mctruth_producer)
+        # files for each produce type
+        self.dataproduct_files = {}
+        for dataproduct in self.dataproduct_list:
+            self.dataproduct_files[dataproduct] = []
+            self.dataproduct_dict[dataproduct] = []
+            self.dataproduct_producer[dataproduct] = None
+
+        # string template that the tree will be in
+        # if not specified going with [dataproduct]_[producer]_tree
+        treenames = {}
 
         # go through list of files and sub-split files with
         # specific data-products
@@ -117,51 +92,71 @@ class LArLiteOpticalData( OpDataPlottable ):
                         prod_name = key.GetName().split('_')[1]
                         print 'found producer %s for data-product %s'%(prod_name,dataproduct)
                         # add to dictionary
-                        if dataproduct in self.dataproduct_dict:
+                        if dataproduct in self.dataproduct_dict and prod_name not in self.dataproduct_dict[dataproduct]:
                             self.dataproduct_dict[dataproduct].append(prod_name)
-                        else:
-                            self.dataproduct_dict[dataproduct] = [prod_name]
+
+                    if len(self.dataproduct_dict[dataproduct])==1:
+                        # only one option use it for the producer name
+                        self.dataproduct_producer[dataproduct] = self.dataproduct_dict[dataproduct][0]
 
             # if the file contains waveforms
-            if (froot.GetListOfKeys().Contains(opdigit_t) == True):
-                self.opwf_files.append(f)
+            for dataproduct in self.dataproduct_list:
+                if self.dataproduct_producer[dataproduct] is None:
+                    continue
+                if dataproduct in treenames:
+                    treename = treenames[dataproduct]%(self.dataproduct_producer[dataproduct])
+                else:
+                    treename = "%s_%s_tree"%(dataproduct,self.dataproduct_producer[dataproduct])
 
-            # if the file contains hits
-            if (froot.GetListOfKeys().Contains(ophit_t) == True):
-                self.ophit_files.append(f)
+                if (froot.GetListOfKeys().Contains(treename) == True):
+                    self.dataproduct_files[dataproduct].append(f)
 
-            # if the file contains flashes
-            if (froot.GetListOfKeys().Contains(opflash_t) == True):
-                self.opflash_files.append(f)
-
-            # if the file contains trigger information
-            if (froot.GetListOfKeys().Contains(trigger_t) == True):
-                self.trigger_files.append(f)
-
-            # if the file contains mc information
-            if (froot.GetListOfKeys().Contains(mctrack_t) == True):
-                self.mctrack_files.append(f)
-
-            # if the file contains mc information
-            if (froot.GetListOfKeys().Contains(mctruth_t) == True):
-                self.mctruth_files.append(f)
-            else:
-                print "no mctruth tree was loaded: ",mctruth_t
-
-        print 'waveform files:'
-        print self.opwf_files
-        print
-        print 'trigger files:'
-        print self.trigger_files
-        print
-#         print 'hit files:'
-#         print self.ophit_files
-#         print
-#         print 'opflash files:'
-#         print self.opflash_files
-#         print
+        print "[LArLite OpData] File Summary"
+        for dataproduct in self.dataproduct_list:
+            print "   ",dataproduct,": ",self.dataproduct_files[dataproduct]
 
 
+    def getLArLiteManager(self):
+        manager = larlite.storage_manager()
+        manager.reset()
+        self.usedfiles = []
+        for dataproduct,filelist in self.dataproduct_files.items():
+            for f in filelist:
+                manager.add_in_filename(f)
+                self.usedfiles.append( f )
+
+        manager.set_io_mode(larlite.storage_manager.kREAD)
+        manager.open()
+        return manager
+
+    def configure(self):
+        # assumed that we have set the producer names
+
+        # dictionary linking producer name -> trees w/ that producer name
+        self.dataproduct_producer = {} # producer name for each product
+        self.dataproduct_dict = {}
+
+        # prepare a list of files for each data-product & producer
+        self.SplitInputFiles()
+
+        # limiter for now
+        self.n_pmts = 48
+
+        # call larlite manager
+        del self.manager
+        self.manager = self.getLArLiteManager()
+        
+        # Setup data object classes
+        # OpticalData owns instances of all data object classes
+        self.ophits  = OpHitData(self.dataproduct_producer['ophit'])
+        self.opflash = OpFlashData(self.dataproduct_producer['opflash'])
+        self.trigger = TriggerData(self.dataproduct_producer['trigger'])
+        print self.ophits, self.opflash, self.trigger
+        print self.dataproduct_producer
+        print self.dataproduct_dict
+
+        
+        
     # ------------------------
     # Move to a specific event
     def gotoEvent(self, eventid, run=None, subrun=None):
@@ -220,14 +215,15 @@ class LArLiteOpticalData( OpDataPlottable ):
         nloops = 0
         lastpmt = -1
 
-        print 'producer name requested: %s'%self.opwf_producer
+        opwf_producer = self.dataproduct_producer['opdigit']
+        print 'producer name requested: %s'%(opwf_producer)
 
         # load optical waveforms
-        self.opdata = self.manager.get_data(larlite.data.kOpDetWaveform, str(self.opwf_producer) )
+        self.opdata = self.manager.get_data(larlite.data.kOpDetWaveform, str(opwf_producer) )
 
         # if we did not succeed:
         if not self.opdata:
-            print 'could not find kOpDetWaveform w/ producer name %s'%self.opwf_producer
+            print 'could not find kOpDetWaveform w/ producer name %s'%opwf_producer
             return
 
         print "number of opdet waveforms: ",self.opdata.size()," trigger time=",self.trigger_time
@@ -281,8 +277,10 @@ class LArLiteOpticalData( OpDataPlottable ):
     # Get MC Track information
     def drawMCTrackWfmData( self ):
         """ draws MC info """
-        self.mctrackdata = self.manager.get_data( larlite.data.kMCTrack, self.mctrack_producer )
-        self.mctruthdata = self.manager.get_data( larlite.data.kMCTruth, self.mctruth_producer )
+        mctrack_producer = self.dataproduct_producer['mctrack']
+        mctruth_producer = self.dataproduct_producer['mctruth']
+        self.mctrackdata = self.manager.get_data( larlite.data.kMCTrack, mctrack_producer )
+        self.mctruthdata = self.manager.get_data( larlite.data.kMCTruth, mctruth_producer )
 
         if not self.mctrackdata:
             print 'no mctrack data'
@@ -330,3 +328,5 @@ class LArLiteOpticalData( OpDataPlottable ):
         for ipart in range(0,self.mctruthdata.at(0).GetParticles().size()):
             mcpart = self.mctruthdata.at(0).GetParticles().at(ipart)
             print "particle ",mcpart.TrackId()," pdg=",mcpart.PdgCode()," ndaughters=",mcpart.Daughters().size()
+
+        
