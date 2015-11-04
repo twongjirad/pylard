@@ -64,21 +64,26 @@ class OpDetDisplay(QtGui.QWidget) :
         self.lay_inputs = QtGui.QGridLayout()
         self.layout.addLayout( self.lay_inputs, 7, 0 )
         
-        # Plot optionsd
+        # Navigation
         if opdata is not None:
             self.event = QtGui.QLineEdit("%d"%(opdata.first_event))     # event number
         else:
             self.event = QtGui.QLineEdit("0") # event number
         self.slot  = QtGui.QLineEdit("5")     # slot number
-        self.collapse = QtGui.QCheckBox("Overlay Mode")  # collapse onto one another
-        self.collapse.setChecked(False)
         self.prev_event = QtGui.QPushButton("Previous")
         self.next_event = QtGui.QPushButton("Next")
+
+        # control the waveform viewer
+        self.collapse = QtGui.QCheckBox("Overlay Mode")  # collapse onto one another
+        self.collapse.setChecked(False)
         self.adc_scaledown = QtGui.QLineEdit("100.0")
-        self.draw_all = QtGui.QCheckBox("draw all")  # collapse onto one another
-        self.draw_all.setChecked(False)
-        self.draw_cosmics = QtGui.QCheckBox("draw cosmics")
+        # options
+        self.draw_diag = QtGui.QCheckBox("draw diagram")  # collapse onto one another
+        self.draw_diag.setChecked(True)
+        self.draw_cosmics = QtGui.QCheckBox("draw disc. windows")
         self.draw_cosmics.setChecked(True)
+
+        # add to layout
         self.lay_inputs.addWidget( QtGui.QLabel("Event"), 0, 0 )
         self.lay_inputs.addWidget( self.event, 0, 1 )
         self.lay_inputs.addWidget( QtGui.QLabel("FEM Slot"), 0, 2 )
@@ -86,7 +91,8 @@ class OpDetDisplay(QtGui.QWidget) :
         self.lay_inputs.addWidget( QtGui.QLabel("ADC scale-down"), 0, 4 )
         self.lay_inputs.addWidget( self.adc_scaledown, 0, 5 )
         self.lay_inputs.addWidget( self.collapse, 0, 8 )
-        self.lay_inputs.addWidget( self.draw_all, 0, 9 )
+        self.lay_inputs.addWidget( self.draw_diag, 0, 9 )
+        self.lay_inputs.addWidget( self.draw_cosmics, 0, 10 )
         self.lay_inputs.addWidget( self.prev_event, 0, 11 )
         self.lay_inputs.addWidget( self.next_event, 0, 12 )
         self.last_clicked_channel = None
@@ -102,8 +108,7 @@ class OpDetDisplay(QtGui.QWidget) :
         self.run_user_analysis = QtGui.QCheckBox("run user funcs.")  # draw user products
         self.run_user_analysis.setChecked(True)
 
-        self.lay_inputs.addWidget( self.draw_chlabels, 1, 8 )
-        self.lay_inputs.addWidget( self.draw_cosmics, 1, 9 )
+        self.lay_inputs.addWidget( self.draw_chlabels, 1, 9 )
         self.lay_inputs.addWidget( self.draw_user_items, 1, 10 )
         self.lay_inputs.addWidget( self.run_user_analysis, 1, 11 )
         self.lay_inputs.addWidget( self.set_xaxis, 1, 12 )
@@ -139,6 +144,7 @@ class OpDetDisplay(QtGui.QWidget) :
         if (self.newevent):
             self.opdata.gotoEvent( evt )
         
+        self.setGraphicsLayout()
         scaledown = float( self.adc_scaledown.text() )
         
         # --------------------------------------------------
@@ -168,7 +174,7 @@ class OpDetDisplay(QtGui.QWidget) :
             if islot!=slot:
                 continue
 
-            if len(self.channellist)>0 and ipmt not in self.channellist and not self.draw_all.isChecked():
+            if len(self.channellist)>0 and ipmt not in self.channellist:
                 continue
             
             pencolor = self.getChanColor( ipmt )
@@ -188,7 +194,7 @@ class OpDetDisplay(QtGui.QWidget) :
             print "number of user wfms: ",len(userwfms)
             for wfm in userwfms:
                 ipmt = wfm.ch
-                if ipmt is not None and (len(self.channellist)>0 and ipmt not in self.channellist and not self.draw_all.isChecked()):
+                if ipmt is not None and (len(self.channellist)>0 and ipmt not in self.channellist):
                     continue
                 pencolor = wfm.default_color
                 if self.last_clicked_channel is not None and ipmt==self.last_clicked_channel:
@@ -248,6 +254,7 @@ class OpDetDisplay(QtGui.QWidget) :
         # better interface here is needed
         self.pmt_map.clear()
         self.pmtspot = []
+        self.pmtlabels = []
 
         for ich in range(0,36):
             if ich>=36:
@@ -280,6 +287,7 @@ class OpDetDisplay(QtGui.QWidget) :
                 pmtlabel = pg.TextItem( "CH%d" %(ipmt), color=bordercol, anchor=(0.5,0.5) )
                 pmtlabel.setFont( QtGui.QFont("Helvetica [Cronyx]",10) )
                 pmtlabel.setPos( -pos[2], pos[1]+26 )
+                self.pmtlabels.append( pmtlabel )
                 self.pmt_map.addItem( pmtlabel )
 
         self.pmtdiagram.setData( self.pmtspot  )
@@ -319,7 +327,7 @@ class OpDetDisplay(QtGui.QWidget) :
             if self.draw_user_items.isChecked():
                 for product in self.user_analysis_products:
                     ch = product["femch"]
-                    if len(self.channellist)>0 and ch not in self.channellist and not self.draw_all.isChecked():
+                    if len(self.channellist)>0 and ch not in self.channellist:
                         continue
                     item = product["plotitem"]
                     if product["screen"]=="diagram":
@@ -463,7 +471,20 @@ class OpDetDisplay(QtGui.QWidget) :
     def clearUserAnalyses( self ):
         self.user_analyses = []
         self.user_analysis_chproducts = {}
-        
-    def showCosmicDisplay( self ):
-        self.cosmicdisplay.show()
-                
+                              
+                                        
+    def setGraphicsLayout(self):
+        self.graphics.clear()
+        nextrow = 0
+        if self.draw_diag.isChecked():
+            self.graphics.addItem( self.pmt_map, nextrow, 0, rowspan=2 )
+            self.graphics.addItem( self.pmtscale, nextrow+2, 0, rowspan=1 )
+            nextrow += 3
+        if True:
+            # always draw waveforms
+            self.graphics.addItem( self.wfplot, nextrow, 0, rowspan=3 )
+            nextrow += 3
+        if self.draw_cosmics.isChecked():
+            self.graphics.addItem( self.time_window, nextrow, 0, rowspan=1 )
+
+

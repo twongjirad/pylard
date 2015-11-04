@@ -21,6 +21,7 @@ class OpDataPlottable(object):
         raise RuntimeError('need to overwrite this function')
 
     def clearEvent( self ):
+        print "[ OpDataPlottable ] clearing stored waveforms and diagram options"
         self.beamwindows.clear()
         self.cosmicwindows.clear()
         self.userwindows.clear()

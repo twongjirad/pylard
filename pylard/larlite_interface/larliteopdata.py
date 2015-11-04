@@ -179,9 +179,11 @@ class LArLiteOpticalData( OpDataPlottable ):
 
     def loadEvent( self ):
 
-        self.event  = self.manager.event_id()
-        self.subrun = self.manager.subrun_id()
-        self.run    = self.manager.run_id()
+        if self.event!=self.manager.event_id() or self.subrun!=self.manager.subrun_id() or self.run==self.manager.run_id():
+            self.newevent = True
+
+        if not self.newevent:
+            return
 
         # save the trigger information for this event
         self.trigger.getEvent(self.manager)
@@ -199,6 +201,7 @@ class LArLiteOpticalData( OpDataPlottable ):
 
         self.drawMCTrackWfmData()
 
+        # set event
         self.event  = self.manager.event_id()
         self.subrun = self.manager.subrun_id()
         self.run    = self.manager.run_id()
