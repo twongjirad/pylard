@@ -321,6 +321,7 @@ class LArLiteOpticalData( OpDataPlottable ):
                 # muon makes decay electron
                 t2 = last_step.T() - offset
                 ecolor = self.colorcodes[ 11 ]
+                print "   -- decay e-: ",t2
                 self.userwindows.makeWindow( np.linspace( 0.0, 40.0, 20 ), np.ones( 20 )*t2, 100, None, default_color=ecolor, highlighted_color=color )
 
                 
