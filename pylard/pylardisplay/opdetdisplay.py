@@ -101,6 +101,8 @@ class OpDetDisplay(QtGui.QWidget) :
         # axis options
         self.set_xaxis = QtGui.QPushButton("Re-plot!")
         self.openCosmicWindow = QtGui.QPushButton("Cosmic Disc. Viewer")
+        self.draw_only_PMTs = QtGui.QCheckBox("only PMTs")  # draw only PMTs
+        self.draw_only_PMTs.setChecked(False)
         self.draw_user_items = QtGui.QCheckBox("draw user items")  # draw user products
         self.draw_user_items.setChecked(True)
         self.draw_chlabels = QtGui.QCheckBox("channel labels")  # draw user products
@@ -110,6 +112,7 @@ class OpDetDisplay(QtGui.QWidget) :
 
         self.lay_inputs.addWidget( self.draw_chlabels, 1, 9 )
         self.lay_inputs.addWidget( self.draw_user_items, 1, 10 )
+        self.lay_inputs.addWidget( self.draw_only_PMTs, 0, 10 )
         self.lay_inputs.addWidget( self.run_user_analysis, 1, 11 )
         self.lay_inputs.addWidget( self.set_xaxis, 1, 12 )
 
@@ -169,6 +172,11 @@ class OpDetDisplay(QtGui.QWidget) :
             
             ipmt = window.ch
             islot = window.slot            
+
+            # if we are only to draw physical PMTs:
+            if ( self.draw_only_PMTs.isChecked() == True ):
+                if (ipmt%100 >= 32):
+                    continue
 
             # check if we draw this channel
             if islot!=slot:
