@@ -110,9 +110,9 @@ class OpDetDisplay(QtGui.QWidget) :
         self.run_user_analysis = QtGui.QCheckBox("run user funcs.")  # draw user products
         self.run_user_analysis.setChecked(True)
 
+        self.lay_inputs.addWidget( self.draw_only_PMTs, 1, 8 )
         self.lay_inputs.addWidget( self.draw_chlabels, 1, 9 )
         self.lay_inputs.addWidget( self.draw_user_items, 1, 10 )
-        self.lay_inputs.addWidget( self.draw_only_PMTs, 0, 10 )
         self.lay_inputs.addWidget( self.run_user_analysis, 1, 11 )
         self.lay_inputs.addWidget( self.set_xaxis, 1, 12 )
 
