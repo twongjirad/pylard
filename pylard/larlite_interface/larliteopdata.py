@@ -230,7 +230,7 @@ class LArLiteOpticalData( OpDataPlottable ):
             return
 
         print "number of opdet waveforms: ",self.opdata.size()," trigger time=",self.trigger_time
-        self.trigger_time = 3646.0 # temp
+        #self.trigger_time = 3646.0 # temp
 
         # loop through all waveforms and add them to beam and cosmic containers
         # self.opdata contains the larlite::ev_opdetwaveform object

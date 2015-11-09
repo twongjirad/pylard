@@ -168,6 +168,8 @@ class OpDetDisplay(QtGui.QWidget) :
         # get the windows to draw
         wfmdata = self.opdata.getWaveformPlotData( nsrange[0], nsrange[1] )
         print "number of waveforms between ",nsrange,": ",len(wfmdata)
+        #print self.opdata.beamwindows.chwindows
+        #print self.opdata.cosmicwindows.chwindows
 
         for window in wfmdata:
             
@@ -485,7 +487,11 @@ class OpDetDisplay(QtGui.QWidget) :
                                         
     def setGraphicsLayout(self):
         self.graphics.clear()
+        self.time_window.setRange()
+        tick_range = self.time_window.tick_range
+        print tick_range
         self.time_window = CosmicWindow()
+        self.time_window.setTickWindow( tick_range )
         nextrow = 0
         if self.draw_diag.isChecked():
             self.graphics.addItem( self.pmt_map, nextrow, 0, rowspan=2 )
