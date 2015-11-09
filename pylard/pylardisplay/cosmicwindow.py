@@ -63,7 +63,6 @@ class CosmicWindow(pg.PlotItem):
 
         self.clear()
 
-
         self.spots = []
         brush = (255,0,0,100)
 

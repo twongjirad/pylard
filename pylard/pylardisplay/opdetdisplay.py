@@ -167,11 +167,13 @@ class OpDetDisplay(QtGui.QWidget) :
 
         # get the windows to draw
         wfmdata = self.opdata.getWaveformPlotData( nsrange[0], nsrange[1] )
-        
+        print "number of waveforms between ",nsrange,": ",len(wfmdata)
+
         for window in wfmdata:
             
             ipmt = window.ch
             islot = window.slot            
+            #print "ch=",ipmt," slot=",islot
 
             # if we are only to draw physical PMTs:
             if ( self.draw_only_PMTs.isChecked() == True ):
@@ -483,6 +485,7 @@ class OpDetDisplay(QtGui.QWidget) :
                                         
     def setGraphicsLayout(self):
         self.graphics.clear()
+        self.time_window = CosmicWindow()
         nextrow = 0
         if self.draw_diag.isChecked():
             self.graphics.addItem( self.pmt_map, nextrow, 0, rowspan=2 )

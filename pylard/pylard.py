@@ -10,9 +10,9 @@
 
 # Modules
 # pylarsoftzmq: ZMQ socket application for requesting data
-# pylarev: class to flexibly pass data around
-# pylardisplay: the event display
-# pylaralgo: manager of the algorithm chain
+# pylardata: classes for data
+# pylardisplay: the event displays
+# pylaralgo: manager of the algorithm chain (use ER tools)
 #
 # envisioned flow
 # (1) provide pylargo the algoorithms to process
@@ -27,4 +27,9 @@
 # 
 # Event Display
 
+class PyLArdArgs( argparse.ArgumentParser() ):
+    def __init__( self, 
 
+class PyLArDManager:
+    def __init__( self, pylardargs
+    

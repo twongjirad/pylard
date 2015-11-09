@@ -230,6 +230,7 @@ class LArLiteOpticalData( OpDataPlottable ):
             return
 
         print "number of opdet waveforms: ",self.opdata.size()," trigger time=",self.trigger_time
+        self.trigger_time = 3646.0 # temp
 
         # loop through all waveforms and add them to beam and cosmic containers
         # self.opdata contains the larlite::ev_opdetwaveform object
@@ -241,14 +242,17 @@ class LArLiteOpticalData( OpDataPlottable ):
 
             # ----------------
             # THIS IS A HACK
-            if lastpmt>pmt:
-                nloops += 1
-            lastpmt = pmt
-            if nloops in [0,3]:
-                slot = 5
-            else:
-                slot = 6
+            # T: why is this here? It is moving channels from slot 5 into slot 6
+            #if lastpmt>pmt:
+            #    nloops += 1
+            #lastpmt = pmt
+            #if nloops in [0,3]:
+            #    slot = 5
+            #else:
+            #    slot = 6
             # ----------------
+            slot = 5 + pmt/100
+            pmt = pmt%100
 
             # only use first 48 pmts (HG SLOT)
             if ( pmt >= self.n_pmts ):
@@ -268,10 +272,10 @@ class LArLiteOpticalData( OpDataPlottable ):
                 time -= self.trigger_time
             
             if len(adcs)>=500: # is there another way to tag beam windows?
-                #print "beam window: ch=",pmt," len=",len(adcs)," timestamp=",time," ticks=",time/0.015625
+                print "beam window: ch=",pmt," slot=",slot," len=",len(adcs)," timestamp=",time,"(rel) ",time+self.trigger_time," (raw)"," ticks=",time/0.015625
                 self.beamwindows.makeWindow( adcs, time*1000.0, slot, pmt, timepertick=15.625 )
             else:
-                #print "cosmic window: ch=",pmt," len=",len(adcs)," timestamp=",time," ticks=",time/0.015625
+                print "cosmic window: ch=",pmt," slot=",slot," len=",len(adcs)," timestamp=",time," ticks=",time/0.015625
                 self.cosmicwindows.makeWindow( adcs, time*1000.0, slot, pmt, timepertick=15.625 )
 
         return
@@ -293,12 +297,13 @@ class LArLiteOpticalData( OpDataPlottable ):
             print 'no truth data'
             return
 
-        mct0 = 3200.0 # us time stamp (weird quirk or data I looked at?)
-        offset = (self.trigger_time-3200.0)*1000.0
+        mct0 = 3650.0 # us time stamp (weird quirk or data I looked at?)
+        # 3200 for mcc6.1
+        offset = (self.trigger_time-mct0)*1000.0
         larsoft_offset = getDetectorCenter()
         print "[LArLiteOpticalData ] MC Tracks"
         print "mc tracks: ",self.mctrackdata.size()," tracks"
-        print "offset=",(self.trigger_time-3200.0)*1000.0
+        print "offset=",offset
         print "larsoft offset=",larsoft_offset
 
         for itrack in range(0,self.mctrackdata.size()):
@@ -326,6 +331,13 @@ class LArLiteOpticalData( OpDataPlottable ):
                 ecolor = self.colorcodes[ 11 ]
                 print "   -- decay e-: ",t2
                 self.userwindows.makeWindow( np.linspace( 0.0, 40.0, 20 ), np.ones( 20 )*t2, 100, None, default_color=ecolor, highlighted_color=color )
+                self.addUserDiagramPlotDataItem( pg.ScatterPlotItem( x=np.asarray( [-(first_step.Z()-larsoft_offset[2])] ),
+                                                                     y=np.asarray( [first_step.Y()-larsoft_offset[1]] ),
+                                                                     symbol='o',
+                                                                     size='9',
+                                                                     pen=(255,0,0,255),
+                                                                     brush=(255,0,0,255) ) )
+                                                                     
 
                 
         print "mc truth (",self.mctruthdata.size()," instances): ",self.mctruthdata.at(0).GetParticles().size()," particles in first instance"

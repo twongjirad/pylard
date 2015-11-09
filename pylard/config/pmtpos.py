@@ -53,6 +53,12 @@ def getDetectorCenter():
     return [125.0,0.5*(-57.022+55.8),0.5*(990.356+51.1015)]
 
 if __name__ == "__main__":
+    print "FEMCH[36][3] = {",
     for ich in range(0,36):
-        print ich,(pmtpos[ich][0],pmtpos[ich][1],pmtpos[ich][2]+518.0)
+        print "{",pmtposmap[ich][0],",",pmtposmap[ich][1],",",pmtposmap[ich][2],"}",
+        if ich!=35:
+            print ",",
+        print "// FEMCH%02d"%(ich)
+    print "};"
+        
 
