@@ -28,17 +28,6 @@ class LArLiteOpticalData( OpDataPlottable ):
         # data-products that we are interested in
         self.dataproduct_list = ['opdigit','ophit','opflash','trigger','mctruth','mctrack']
 
-        # producers for various data-products
-        # try to be clever and figure out the producers
-        #self.opwf_producer    = 'pmtreadout' # pmtreadout for data
-        #self.opwf_producer    = 'pmtreadout'#'opreformat' # pmtreadout for data
-        #self.ophit_producer   = 'opFlash'
-        #self.opflash_producer = 'opFlash'
-        #self.trigger_producer = 'triggersim'
-        #self.trigger_producer = 'daq'
-        #self.mctrack_producer = 'mcreco'
-        #self.mctruth_producer = 'generator'
-
         self.manager = None
         self.configure()
 
@@ -185,21 +174,25 @@ class LArLiteOpticalData( OpDataPlottable ):
         if not self.newevent:
             return
 
+        # clear data
+        self.clearEvent()
+
         # save the trigger information for this event
         self.trigger.getEvent(self.manager)
 
         # save the trigger time for the entire event
         self.trigger_time = self.trigger.getTrigTime()
-
-        self.clearEvent()
-
-        self.fillWaveforms()
         
+        # get other data
         self.ophits.getEvent(self.manager)
-
         self.opflash.getEvent(self.manager)
+        self.mctrackdata = self.manager.get_data( larlite.data.kMCTrack, self.dataproduct_producer['mctrack'] )
+        self.mctruthdata = self.manager.get_data( larlite.data.kMCTruth, self.dataproduct_producer['mctruth'] )
 
+        # make plot items
+        self.fillWaveforms()
         self.drawMCTrackWfmData()
+        self.drawOpFlashAndHits()
 
         # set event
         self.event  = self.manager.event_id()
@@ -229,8 +222,10 @@ class LArLiteOpticalData( OpDataPlottable ):
             print 'could not find kOpDetWaveform w/ producer name %s'%opwf_producer
             return
 
+        if self.mctrackdata:
+            print "MC offset hack"
+            self.trigger_time = 3650.0 # temp
         print "number of opdet waveforms: ",self.opdata.size()," trigger time=",self.trigger_time
-        #self.trigger_time = 3646.0 # temp
 
         # loop through all waveforms and add them to beam and cosmic containers
         # self.opdata contains the larlite::ev_opdetwaveform object
@@ -240,17 +235,6 @@ class LArLiteOpticalData( OpDataPlottable ):
 
             pmt = wf.ChannelNumber()
 
-            # ----------------
-            # THIS IS A HACK
-            # T: why is this here? It is moving channels from slot 5 into slot 6
-            #if lastpmt>pmt:
-            #    nloops += 1
-            #lastpmt = pmt
-            #if nloops in [0,3]:
-            #    slot = 5
-            #else:
-            #    slot = 6
-            # ----------------
             slot = 5 + pmt/100
             pmt = pmt%100
 
@@ -267,15 +251,15 @@ class LArLiteOpticalData( OpDataPlottable ):
             # set relative time
             time = wf.TimeStamp() # in usec
             if (self.trigger_time == None):
-                time -= 1600. #?
+                time -= 3200. #?
             else:
                 time -= self.trigger_time
             
             if len(adcs)>=500: # is there another way to tag beam windows?
-                print "beam window: ch=",pmt," slot=",slot," len=",len(adcs)," timestamp=",time,"(rel) ",time+self.trigger_time," (raw)"," ticks=",time/0.015625
+                #print "beam window: ch=",pmt," slot=",slot," len=",len(adcs)," timestamp=",time,"(rel) ",time+self.trigger_time," (raw)"," ticks=",time/0.015625
                 self.beamwindows.makeWindow( adcs, time*1000.0, slot, pmt, timepertick=15.625 )
             else:
-                print "cosmic window: ch=",pmt," slot=",slot," len=",len(adcs)," timestamp=",time," ticks=",time/0.015625
+                #print "cosmic window: ch=",pmt," slot=",slot," len=",len(adcs)," timestamp=",time," ticks=",time/0.015625
                 self.cosmicwindows.makeWindow( adcs, time*1000.0, slot, pmt, timepertick=15.625 )
 
         return
@@ -284,10 +268,6 @@ class LArLiteOpticalData( OpDataPlottable ):
     # Get MC Track information
     def drawMCTrackWfmData( self ):
         """ draws MC info """
-        mctrack_producer = self.dataproduct_producer['mctrack']
-        mctruth_producer = self.dataproduct_producer['mctruth']
-        self.mctrackdata = self.manager.get_data( larlite.data.kMCTrack, mctrack_producer )
-        self.mctruthdata = self.manager.get_data( larlite.data.kMCTruth, mctruth_producer )
 
         if not self.mctrackdata:
             print 'no mctrack data'
@@ -298,6 +278,7 @@ class LArLiteOpticalData( OpDataPlottable ):
             return
 
         mct0 = 3650.0 # us time stamp (weird quirk or data I looked at?)
+        #mct0 = 0.0
         # 3200 for mcc6.1
         offset = (self.trigger_time-mct0)*1000.0
         larsoft_offset = getDetectorCenter()
@@ -345,4 +326,18 @@ class LArLiteOpticalData( OpDataPlottable ):
             mcpart = self.mctruthdata.at(0).GetParticles().at(ipart)
             print "particle ",mcpart.TrackId()," pdg=",mcpart.PdgCode()," ndaughters=",mcpart.Daughters().size()
 
+        
+    def drawOpFlashAndHits( self ):
+        """ draws OpFlash and OpHit data """
+        color = (255,0,0,125)
+        if self.ophits.hashitdata:
+            for ch,hits in self.ophits.hits.items():
+                for hit_info in hits:
+                    # we make a box around Ophits in the waveform
+                    print ch,hit_info
+                    x = np.asarray( [ hit_info[0][0], hit_info[0][0], hit_info[0][1], hit_info[0][1], hit_info[0][0] ] )
+                    y = [ 0.0, hit_info[1], hit_info[1], 0.0, 0.0 ]
+                    x *= 1000.0
+                    #x += hit_info[2]
+                    self.userwindows.makeWindow( np.asarray( y ), x, 5, ch, default_color=color, highlighted_color=color )
         

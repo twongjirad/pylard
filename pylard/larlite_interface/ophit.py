@@ -16,10 +16,10 @@ class OpHitData():
         
         # larlite OpHit stored here:
         self.ophitdata = None
+        self.hashitdata = False
         
         # keep track of hits
         # hits saved in per-pmt dictionary
-        self.hits = {}
         # create an empty vector in which to store wfs for each PMT
         self.initialize_hits()
 
@@ -33,7 +33,7 @@ class OpHitData():
     # -----------------------
     # initialize PMT hits
     def initialize_hits(self):
-        
+        self.hits = {}
         for x in xrange(self.pmt_max+1):
             self.hits[x] = []
 
@@ -53,6 +53,9 @@ class OpHitData():
     # get data for current event
     def getEvent(self, mgr):
 
+        # clear and define container
+        self.initialize_hits()
+        
         # load optical hits
         self.ophitdata = mgr.get_data(larlite.data.kOpHit,
                                       self.producer)
@@ -72,9 +75,12 @@ class OpHitData():
                 hit_start = hit.PeakTime()-hit.Width()
                 hit_end   = hit.PeakTime()+hit.Width()
                 hit_amp   = hit.Amplitude()
-                hit_info  = [ (hit_start,hit_end) , hit_amp ]
+                tabs = hit.PeakTimeAbs()
+                offset = tabs - hit.PeakTime()
+                hit_info  = [ (hit_start,hit_end) , hit_amp, offset ]
                 # print 'found hit for PMT %i : '%hit_chan,hit_info
 
                 self.hits[hit_chan].append( hit_info)
+            self.hashitdata = True
         except:
-            pass
+            self.hashitdata = False

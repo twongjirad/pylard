@@ -46,8 +46,7 @@ class OpFlashData():
         self.flashes = {}
 
         # load optical hits
-        self.opflashdata = mgr.get_data(larlite.data.kOpFlash,
-                                        self.producer)
+        self.opflashdata = mgr.get_data(larlite.data.kOpFlash, self.producer)
 
         # load each flash
         try:
