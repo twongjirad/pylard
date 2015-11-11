@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import os,sys
 from pyqtgraph.Qt import QtGui, QtCore
 import pyqtgraph as pg
