@@ -70,7 +70,6 @@ class LArLiteOpticalData( OpDataPlottable ):
 
             froot = ROOT.TFile(f)
 
-            print froot.GetListOfKeys().Print()
             for key in froot.GetListOfKeys():
                 # try and find the data-products we
                 # are interested in within the key name
@@ -140,11 +139,6 @@ class LArLiteOpticalData( OpDataPlottable ):
         self.ophits  = OpHitData(self.dataproduct_producer['ophit'])
         self.opflash = OpFlashData(self.dataproduct_producer['opflash'])
         self.trigger = TriggerData(self.dataproduct_producer['trigger'])
-        print self.ophits, self.opflash, self.trigger
-        print self.dataproduct_producer
-        print self.dataproduct_dict
-
-        
         
     # ------------------------
     # Move to a specific event
@@ -184,7 +178,7 @@ class LArLiteOpticalData( OpDataPlottable ):
         self.trigger_time = self.trigger.getTrigTime()
         
         # get other data
-        self.ophits.getEvent(self.manager)
+        self.ophits.getEvent(self.manager, trigger_time=self.trigger_time)
         self.opflash.getEvent(self.manager)
         self.mctrackdata = self.manager.get_data( larlite.data.kMCTrack, self.dataproduct_producer['mctrack'] )
         self.mctruthdata = self.manager.get_data( larlite.data.kMCTruth, self.dataproduct_producer['mctruth'] )
@@ -224,7 +218,8 @@ class LArLiteOpticalData( OpDataPlottable ):
 
         if self.mctrackdata:
             print "MC offset hack"
-            self.trigger_time = 3650.0 # temp
+            self.trigger_time = 3196.0 # temp
+        #self.trigger_time = 3650.0 # temp
         print "number of opdet waveforms: ",self.opdata.size()," trigger time=",self.trigger_time
 
         # loop through all waveforms and add them to beam and cosmic containers
@@ -256,7 +251,7 @@ class LArLiteOpticalData( OpDataPlottable ):
                 time -= self.trigger_time
             
             if len(adcs)>=500: # is there another way to tag beam windows?
-                #print "beam window: ch=",pmt," slot=",slot," len=",len(adcs)," timestamp=",time,"(rel) ",time+self.trigger_time," (raw)"," ticks=",time/0.015625
+                print "beam window: ch=",pmt," slot=",slot," len=",len(adcs)," timestamp=",time,"(rel) ",time+self.trigger_time," (raw)"," ticks=",time/0.015625
                 self.beamwindows.makeWindow( adcs, time*1000.0, slot, pmt, timepertick=15.625 )
             else:
                 #print "cosmic window: ch=",pmt," slot=",slot," len=",len(adcs)," timestamp=",time," ticks=",time/0.015625
@@ -270,16 +265,17 @@ class LArLiteOpticalData( OpDataPlottable ):
         """ draws MC info """
 
         if not self.mctrackdata:
-            print 'no mctrack data'
+            print '[LArLite OpData] no mctrack data'
             return
 
         if not self.mctruthdata:
-            print 'no truth data'
+            print '[LArLite OpData] no truth data'
             return
 
-        mct0 = 3650.0 # us time stamp (weird quirk or data I looked at?)
+        mct0 = self.trigger_time # us time stamp (weird quirk or data I looked at?)
         #mct0 = 0.0
         # 3200 for mcc6.1
+        mct0 = 3200
         offset = (self.trigger_time-mct0)*1000.0
         larsoft_offset = getDetectorCenter()
         print "[LArLiteOpticalData ] MC Tracks"
@@ -299,7 +295,10 @@ class LArLiteOpticalData( OpDataPlottable ):
             print " end=(%.1f,%.1f,%1f)"%(last_step.X(),last_step.Y(),last_step.Z())," E=",last_step.E(),
             print "mct=",t
             # make waveform plot and diagram track
-            color = self.colorcodes[ pid ]
+            if pid in self.colorcodes:
+                color = self.colorcodes[ pid ]
+            else:
+                color = (125,125,20,255)
             self.userwindows.makeWindow( np.linspace( 0.0, 40.0, 20 ), np.ones( 20 )*t, 100, None, default_color=color, highlighted_color=color )
             # plot track on diagram. we want downstream to go right to left, while x is out of the page. must invert y and z when we draw
             
@@ -312,8 +311,8 @@ class LArLiteOpticalData( OpDataPlottable ):
                 ecolor = self.colorcodes[ 11 ]
                 print "   -- decay e-: ",t2
                 self.userwindows.makeWindow( np.linspace( 0.0, 40.0, 20 ), np.ones( 20 )*t2, 100, None, default_color=ecolor, highlighted_color=color )
-                self.addUserDiagramPlotDataItem( pg.ScatterPlotItem( x=np.asarray( [-(first_step.Z()-larsoft_offset[2])] ),
-                                                                     y=np.asarray( [first_step.Y()-larsoft_offset[1]] ),
+                self.addUserDiagramPlotDataItem( pg.ScatterPlotItem( x=np.asarray( [-(last_step.Z()-larsoft_offset[2])] ),
+                                                                     y=np.asarray( [last_step.Y()-larsoft_offset[1]] ),
                                                                      symbol='o',
                                                                      size='9',
                                                                      pen=(255,0,0,255),

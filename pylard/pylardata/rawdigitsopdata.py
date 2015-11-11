@@ -254,6 +254,7 @@ class RawDigitsOpData( OpDataPlottable ):
                     v_sample = ch_df[self.__sample]
                 else:
                     v_sample = np.zeros( __nentries__, dtype=np.int )
+                #if self.__trig is not None and self.__trig in ch_df:
                 if self.__trig is not None:
                     v_trig = ch_df[self.__trig]
                 else:

@@ -51,14 +51,14 @@ class OpHitData():
 
     #---------------------------
     # get data for current event
-    def getEvent(self, mgr):
+    def getEvent(self, mgr, trigger_time=None):
 
         # clear and define container
         self.initialize_hits()
         
         # load optical hits
-        self.ophitdata = mgr.get_data(larlite.data.kOpHit,
-                                      self.producer)
+        self.ophitdata = mgr.get_data(larlite.data.kOpHit, self.producer)
+                                      
         
         # load each hit
         try:
@@ -72,8 +72,14 @@ class OpHitData():
                     continue
 
                 # hit stored as [ (t_start, t_end) , amp ]
-                hit_start = hit.PeakTime()-hit.Width()
-                hit_end   = hit.PeakTime()+hit.Width()
+                if self.producer=="seflash":
+                    hit_start = hit.PeakTime()
+                    hit_end   = (hit.PeakTime()+hit.Width())
+                    print hit_start,hit_end
+                else:
+                    hit_start = hit.PeakTime()-hit.Width()
+                    hit_end   = hit.PeakTime()+hit.Width()
+                    
                 hit_amp   = hit.Amplitude()
                 tabs = hit.PeakTimeAbs()
                 offset = tabs - hit.PeakTime()
