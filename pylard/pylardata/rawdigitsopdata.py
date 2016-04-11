@@ -34,7 +34,9 @@ class RawDigitsOpData( OpDataPlottable ):
                 raise ValueError("Cannot determine tree type")
 
         if self.tree_type=="rawdigits":
-            self.ttree = ROOT.TChain('rawdigitwriter/RawData/OpDetWaveforms')
+            self.ttree = ROOT.TChain('rawdigitwriter/OpDetWaveforms')
+            if self.ttree is None:
+                self.ttree = ROOT.TChain('rawdigitwriter/RawData/OpDetWaveforms')
             self.configForRawDigits()
             print "Loading adcs (vector<short>) from 'rawdigitwriter/RawData/OpDetWaveforms' into pandas data frame ..."
         elif self.tree_type=="wftree":
