@@ -88,11 +88,11 @@ Run
 ### Optical Data Display
 You can run view_opdata.py to see if the installation worked.  To get a datafile (output of RawDigitsWriter) go to the uboonegpvm machines and copy 
 
-   rsync -av --progress [username]@uboonegpvm02.fnal.gov:/uboone/app/users/tmw/pylardsample/rawdigits_sample.root .
+    rsync -av --progress [username]@uboonegpvm02.fnal.gov:/uboone/app/users/tmw/pylardsample/rawdigits_sample.root .
 
 Test this via:
 
-   python view_opdata.py rawdigits_sample.root
+    python view_opdata.py rawdigits_sample.root
 
 
 ## sub-packages
