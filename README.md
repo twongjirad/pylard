@@ -101,3 +101,8 @@ Test this via:
 * pylareventmanager: zmq interface to data products. vaporware.
 
 
+## Making data for the viewer
+
+Check out the wiki page [here](https://github.com/twongjirad/pylard/wiki/Making-data-for-the-viewer).
+
+
