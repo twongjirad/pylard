@@ -24,6 +24,6 @@ setup(name='pylard',
       author='Taritree Wongjirad',
       author_email='taritree@mit.edu',
       url='https://github.com/twongjirad/pylard',
-      packages=['pylard','pylard.pylardata','pylard.pylardisplay','pylard.pylarsoftzmq','pylard.config','pylard.larlite_interface'],
-      install_requires=['lz4','PyOpenGL','numpy>=1.9.1','pyqtgraph','numexpr','root_numpy','pyzmq','pexpect','pandas','pycollada'],
+      packages=['pylard','pylard.core','pylard.config'],
+      install_requires=['lz4','numpy>=1.9.1','pyqtgraph','numexpr','root_numpy','pyzmq','pexpect'],
      )
