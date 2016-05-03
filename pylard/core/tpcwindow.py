@@ -17,9 +17,9 @@ class TPCWindow(QtGui.QWidget):
 
         self.layout = QtGui.QGridLayout()
         # TPC View
-        self.tpcview = TPCImageView()
+        self.tpcview = pg.ImageView()
 
-        #self._gendummydata()
+        self._gendummydata()
 
         # Buttons
         # later
