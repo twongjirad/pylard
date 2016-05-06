@@ -3,17 +3,27 @@ from pylard.core.eventdata import EventData
 from pylard.core.eventindex import EventIndex
 import ROOT
 import numpy as np
+from threading import Thread
+from time import sleep
 
 # should turn these into class variables
 NCHAN = 48
 NSPERTICK = 15.625 # ns
 NSPERFRAME = 1600000.0 # 1.6 ms in ns
 
+def fill_meta( rawdatainstance ):
+    index = rawdatainstance.getNextEventIndexOnly()
+    while index is not None:
+        index = rawdatainstance.getNextEventIndexOnly()
+    rawdatainstance.meta_filled = True
+    print "Meta filled."
+
 class RawDigitData(DataInterface):
     def __init__(self):
         super(DataInterface,self).__init__()
         self.entry_list = []
         self.event_dict = {} # index to start of entry
+        self.meta_filled = False
 
     def loadFilelist(self, filelist, tree_type=None ):
         # if not supplied, determine type of data we've been given
@@ -52,6 +62,10 @@ class RawDigitData(DataInterface):
         # load the first meta index
         self.current_index = 0
         self.current_eventindex = self.getNextEventIndexOnly()
+        # start thread to fill the meta
+        self.meta_thread = Thread( target=fill_meta, args=(self,) )
+        self.meta_thread.setDaemon(True)
+        self.meta_thread.start()
 
     def processEventData( self, eventdata ):
         pass
@@ -213,7 +227,9 @@ class RawDigitData(DataInterface):
             print " earliest tstamp=",eventdata.opdata.beamwin_info["earliest_tstamp"],"the trig=",the_trig_timestamp
         except:
             print "RawDigitData: Event ",eventdata.index.event," has ",eventdata.opdata.cosmicwindows.getNumWindows()," cosmic windows and ",eventdata.opdata.beamwindows.getNumWindows()," beam windows (length=",eventdata.opdata.getNBeamWinSamples(),")"
-            
+    
+    def isMetaFilled(self):
+        return self.meta_filled
 
 
 
@@ -222,9 +238,10 @@ if __name__=="__main__":
     filelist = ["run5269_subrun79.root"]
     test = RawDigitData()
     test.loadFilelist(filelist)
-    for i in range(10):
-        index = test.getNextEventIndexOnly()
-    test.printEventTable()
+    while not test.isMetaFilled():
+        print "wait 1 s"
+        sleep(1)
+        test.printEventTable()
     print "CURRENT: ",test.current_eventindex
     test.getCurrentEvent()
 

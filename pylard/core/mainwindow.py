@@ -4,6 +4,7 @@ from pylard.core.tpcwindow import TPCWindow
 from pylard.core.eventnavigator import EventNavigator
 from pylard.core.processmonitor import ProcessMonitor
 from pylard.core.opdetwindow import OpDetWindow
+from pylard.core.processmanager import getTheProcessManager
 
 class PyLArD( QtGui.QMainWindow ):
     def __init__(self, config_yaml="", use_cache=True, cache_dir="./cache"):
@@ -20,8 +21,9 @@ class PyLArD( QtGui.QMainWindow ):
         self.viewstack.addWidget( self.opdetview )
 
         # Event Nav/Process Man Window
-        self.evnav   = EventNavigator()
-        self.procman = ProcessMonitor()
+        self.process_manager = getTheProcessManager()
+        self.procman = ProcessMonitor(self.process_manager)
+        self.evnav   = EventNavigator(self.procman) # get this, so that it has the ability to drive the process chain, which begins with a data layer
         self.navstack = QtGui.QStackedWidget()
         self.navstack.addWidget( self.evnav )
         self.navstack.addWidget( self.procman )
