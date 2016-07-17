@@ -34,20 +34,29 @@ class RawDigitsOpData( OpDataPlottable ):
                 raise ValueError("Cannot determine tree type")
 
         if self.tree_type=="rawdigits":
-            self.ttree = ROOT.TChain('rawdigitwriter/OpDetWaveforms')
-            if self.ttree is None:
-                self.ttree = ROOT.TChain('rawdigitwriter/RawData/OpDetWaveforms')
-            self.configForRawDigits()
+            #self.ttree = ROOT.TChain('rawdigitwriter/OpDetWaveforms')
+            """ for backwards compatibility we try the new and old name of the tree. """
+            for treename in ['rawdigitwriter/OpDetWaveforms','rawdigitwriter/RawData/OpDetWaveforms']:
+                self.ttree = ROOT.TChain(treename)
+                self.configForRawDigits()
+                self.ttree.Add( self.fname )
+                if self.ttree.GetEntries()==0:
+                    del self.ttree
+                    continue
+                else:
+                    break
             print "Loading adcs (vector<short>) from 'rawdigitwriter/RawData/OpDetWaveforms' into pandas data frame ..."
+            if self.ttree.GetEntries()==0:
+                raise RuntimeError("Rawdigits tree is empty or not found.")
         elif self.tree_type=="wftree":
             self.ttree = ROOT.TChain('raw_wf_tree')
             self.configForWFTree()
+            self.ttree.Add( self.fname )
             print "Loading adcs (vector<short>) from 'raw_wf_tree' into pandas data frame..."
         else:
             raise ValueError("tree type must be either 'rawdigits' or 'wftree'")
 
         # find first event number, define first entry range
-        self.ttree.Add( self.fname )
         self.tree_entry = 0
         self.ttree.GetEntry(self.tree_entry)
         self.first_event = self.ttree.event # this is a fortitous accident that both types of trees uses event
