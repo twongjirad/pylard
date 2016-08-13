@@ -1,4 +1,6 @@
-# pylard: python Liquid Argon (Event) Display
+# pylard 2: The Lardening
+
+### python Liquid Argon (Event) Display 2
 
 Goal is to provide a easily customizable MicroBooNE event display for both the TPC and PMT data.
 
