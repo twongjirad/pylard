@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import os,sys
-from setuptools import setup
+from distutils.core import setup, Extension
 
 # We need to determine if ROOT is installed first before we do anything!
 
@@ -24,6 +24,6 @@ setup(name='pylard',
       author='Taritree Wongjirad',
       author_email='taritree@mit.edu',
       url='https://github.com/twongjirad/pylard',
-      packages=['pylard','pylard.core','pylard.config'],
-      install_requires=['lz4','numpy>=1.9.1','pyqtgraph','numexpr','root_numpy','pyzmq','pexpect'],
+      packages=['pylard','pylard/config','pylard/display'],
+      install_requires=['cython','numpy>=1.9.1','pyqtgraph'],
      )
