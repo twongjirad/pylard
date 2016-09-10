@@ -1,14 +1,15 @@
 import os,sys
 import ROOT as rt
 import hashlib
+from filemanager import FileManager
 
 try:
-    import larlite as larlt
+    from larlite import larlite as larlt
 except:
     print "Could not load LArLite"
     sys.exit(-1)
 try:
-    import larcv as larcv
+    from larcv import larcv as larcv
 except:
     print "Could no load LArCV"
     sys.exit(-1)
@@ -31,10 +32,11 @@ class ProcessManager:
             if critvar is None:
                 print "Could not load process manager."
                 return False
-    
-        self._parse_filelist()
         
         self.ana_processman = larlt.ana_processor()
+        self._parse_filelist()
+        self.ana_processman.set_io_mode(larlt.storage_manager.kREAD)
+        self.ana_processman.set_ana_output_file("")
         
     def isConfigured(self):
         return self.ready
@@ -50,15 +52,10 @@ class ProcessManager:
         if os.path.exists(self.filelist):
             print "couldn't find ",self.filelist
 
-        f = open( self.filelist, 'r' )
-        flist = f.readlines()
-        self.larlitefilelist = []
-        for f in flist:
-            if ".root" in f:
-                self.larlitefilelist.append( f )
-        
-        self.ana_processman.add_input_file( f )
-        self.ana_processman.set_io_mode(larlt.storage_manager.kREAD)
+        self.fileman = FileManager( self.filelist )
+        for f in self.fileman.sorted_filelist:
+            self.ana_processman.add_input_file( f )
+            self.ana_processman.set_io_mode(larlt.storage_manager.kREAD)
                 
             
 
