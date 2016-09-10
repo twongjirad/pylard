@@ -84,6 +84,11 @@ class FileManager:
         events_to_files = {}
         events_to_flavors = {}
 
+        # this loop is going into each file in our list and
+        #  - taking the list of trees in the file and making a has out of their names
+        #  - this hash is used to define the 'flavor' of the file
+        #  - we also make a list of events in the tree, labeling each entry with (run,subrun,event) ID
+        #  - we keep track of such list of entries and group files (and flavors) with the same event list
         for f in self.larlitefilelist:
             r = rt.TFile(f)
             nfkeys = r.GetListOfKeys().GetEntries()
@@ -135,8 +140,12 @@ class FileManager:
             events_to_flavors[eventset].append( flavor )
         self.parsed = True
 
+        # now we take our collection of event lists and
+        #  - sort the event lists
+        #  - make lists of files with the same set of events in the order of the sorted event list
+        #  - for each list we also make a dictionary between (run,subrun,event) index to the entry number
+        #  - we pick the list with the biggest number of events as the "official" file list
         eventsets.sort()
-        # events_to_files: files with the same event set
         flavorfiles = {}
         flavorsets = []
 
@@ -162,6 +171,7 @@ class FileManager:
             if n>nfiles:
                 nfiles = n
                 maxset = fset
+        # these are the final file list and event dictionary we want
         self.sorted_filelist = flavorfiles[maxset]
         self.rse_dict        = flavorset_rse_dict[maxset]
 
