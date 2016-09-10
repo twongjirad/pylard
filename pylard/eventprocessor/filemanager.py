@@ -1,0 +1,171 @@
+import os,sys
+import ROOT as rt
+import hashlib
+import time
+import pickle
+
+class FileManager:
+    def __init__( self, flist, use_cache=True ):
+        self.parsed = False
+        self.filelist = flist
+        
+        # get the file cache
+        m = hashlib.md5()
+        fin = open( flist, 'r' )
+        fdata = fin.read()
+        m.update(fdata)
+        self.fhash = m.hexdigest()
+
+        if use_cache and os.path.exists(".pylardcache/"+str(self.fhash)):
+            print "Cache exists"
+            start = time.time()
+            fmanpickled = open( ".pylardcache/"+str(self.fhash)+"/fmandata.pickle", 'r' )
+            fmandata = pickle.load( fmanpickled )
+            self.sorted_filelist = fmandata["sorted_filelist"]
+            self.rse_dict        = fmandata["rse_dict"]
+            self.parsed = True
+            self.summary()
+            elapsed = time.time()-start
+            print "Loading FileManager Data with the cache: ",elapsed,"secs"
+        else:
+            self._parse_filelist()
+            start = time.time()
+            self._buildindex()
+            self.summary()
+            elapsed = time.time()-start
+            print "Parsed files in ",elapsed,"seconds."
+            if use_cache:
+                os.system("mkdir -p .pylardcache/"+str(self.fhash))
+                fmanpickled = open( ".pylardcache/"+str(self.fhash)+"/fmandata.pickle", 'w' )
+                data = { "sorted_filelist":self.sorted_filelist, "rse_dict":self.rse_dict }
+                pickle.dump( data, fmanpickled )
+                print "Caching FileManager Data to ",".pylardcache/"+str(self.fhash)+"/fmandata.pickle"
+
+
+        
+        
+    def _parse_filelist(self):
+        """ this has a lot to do. we read in the files. we then build an index."""
+        if os.path.exists(self.filelist):
+            print "couldn't find ",self.filelist
+
+        f = open( self.filelist, 'r' )
+        flist = f.readlines()
+        self.larlitefilelist = []
+        for f in flist:
+            if ".root" in f:
+                self.larlitefilelist.append( f.strip() )
+
+
+    def _buildindex( self ):
+        """ 
+        we make an list of run,subrun,event (or RSE)
+        and provide a map going from RSE to entry
+        """
+        
+        self.producers = []
+        self.datatypes = []
+        self.flavors = [] # files with a particular collection of trees
+        self.flavor_eventset = {}
+        self.flavor_def = {}
+        eventsets = []
+        events_to_files = {}
+        events_to_flavors = {}
+
+        for f in self.larlitefilelist:
+            r = rt.TFile(f)
+            nfkeys = r.GetListOfKeys().GetEntries()
+            found_id_tree = False
+            trees = []
+            for i in range(nfkeys):
+                keyname = r.GetListOfKeys().At(i).GetName()
+                if keyname=="larlite_id_tree":
+                    found_id_tree = True
+                elif "_tree" in keyname:
+                    producer = keyname.split("_")[1]
+                    dtype    = keyname.split("_")[0]
+                    if producer not in self.producers:
+                        self.producers.append( producer )
+                    if dtype not in self.datatypes:
+                        self.datatypes.append( dtype )
+                if keyname not in trees:
+                    trees.append(keyname)
+            hashstr = ""
+            trees.sort()
+            for keyname in trees:
+                hashstr += keyname +";"
+
+            if not found_id_tree:
+                continue
+            m = hashlib.md5()
+            m.update(hashstr)
+            flavor = m.digest()
+            if flavor not in self.flavors:
+                self.flavors.append( flavor )
+                self.flavor_eventset[flavor] = []
+                self.flavor_def[flavor] = hashstr
+            idtree = r.Get("larlite_id_tree")
+            eventset = [] # list of events
+            for n in range(idtree.GetEntries()):
+                idtree.GetEntry(n)
+                rse = ( idtree._run_id, idtree._subrun_id, idtree._event_id )
+                eventset.append(rse)
+                if rse not in self.flavor_eventset[flavor]:
+                    self.flavor_eventset[flavor].append( rse )
+                else:
+                    raise ValueError( "found a repeated run/subrun/event index (%s). what?"%( str(rse) ) )
+            eventset = tuple(eventset)
+            if eventset not in events_to_files:
+                events_to_files[eventset] = {}
+                events_to_flavors[eventset] = []
+                eventsets.append( eventset )
+            events_to_files[eventset][flavor] = f
+            events_to_flavors[eventset].append( flavor )
+        self.parsed = True
+
+        eventsets.sort()
+        # events_to_files: files with the same event set
+        flavorfiles = {}
+        flavorsets = []
+
+        flavorset_rse_dict  = {}
+        for eventset in eventsets:
+            events_to_flavors[eventset].sort() # sort the flavors with this event-set
+            flavorset = tuple( events_to_flavors[eventset] )
+            if flavorset not in flavorfiles:
+                flavorfiles[flavorset] = []
+                flavorsets.append(flavorset)
+                flavorset_rse_dict[flavorset] = {}
+            for flavor in flavorset:
+                flavorfiles[flavorset].append( events_to_files[eventset][flavor] )
+            for rse in eventset:
+                ientry = len( flavorset_rse_dict[flavorset] )+1
+                flavorset_rse_dict[flavorset][rse] = ientry
+
+        # look for largest fileset
+        maxset = None
+        nfiles = 0
+        for fset in flavorsets:
+            n = len(flavorfiles[fset])
+            if n>nfiles:
+                nfiles = n
+                maxset = fset
+        self.sorted_filelist = flavorfiles[maxset]
+        self.rse_dict        = flavorset_rse_dict[maxset]
+
+    def summary(self):
+        if not self.parsed:
+            print "Filelists not yet parsed."
+
+        #print "Number of files: ",len(self.larlitefilelist)
+        #print "Number of file flavors: ",len(self.flavors)
+        #for flavor in self.flavors:
+        #    print "Flavor definition: ",self.flavor_def[flavor]
+        #    print "Flavor entries: ",len(self.flavor_eventset[flavor])
+        #print "Producers: ",self.producers
+        #print "Data types: ",self.datatypes
+        print "Number of files in the processed fileset=",len(self.sorted_filelist)
+                
+                
+            
+

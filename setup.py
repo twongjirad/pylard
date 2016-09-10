@@ -24,6 +24,6 @@ setup(name='pylard',
       author='Taritree Wongjirad',
       author_email='taritree@mit.edu',
       url='https://github.com/twongjirad/pylard',
-      packages=['pylard','pylard/config','pylard/display'],
+      packages=['pylard','pylard/config','pylard/display','pylard/eventprocessor'],
       install_requires=['cython','numpy>=1.9.1','pyqtgraph'],
      )
