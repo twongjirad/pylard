@@ -1,4 +1,4 @@
 import os,sys
-import pylard2 as pylard2
+import pylard as pylard
 
-pylard2.run()
+pylard.run()
