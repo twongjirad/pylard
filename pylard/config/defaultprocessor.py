@@ -19,12 +19,12 @@ def getDefaultProcessorConfig():
 #  StorageVariableName : "event_storage_manager"
 #}
 
-
 # ===================================================================
 # Configure converters of larlite data products to things
 # pylard can draw.
 #
 # ===================================================================
+
 DrawOpHits: {
   # Note. for LArLite this module is a dummpy module
   # However, for PyLArD, the pylard version will fill the RGB and 
