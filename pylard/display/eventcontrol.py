@@ -25,6 +25,10 @@ class EventControl(QtGui.QWidget):
  
         self.setLayout( controlpanel_layout )
 
+        self.themainwindow = None # will be set later
+
+    def setMainWindow( self, window ):
+        self.themainwindow = window
 
     def _makeFileDialogFrame(self):
         """ for control panel """
@@ -129,16 +133,16 @@ class EventControl(QtGui.QWidget):
 
         # event tree widget
         self.eventtree = pg.TreeWidget()
-        self.eventtree.setColumnCount(1)
+        self.eventtree.setColumnCount(3)
 
         # filelist dialog
         label = QtGui.QLabel("Input LArLite File List")
         #label.setFixedWidth(80)
         self.filelist_filepath = QtGui.QLineEdit()
-        self.filelist_filediag_choose = QtGui.QPushButton("Select")
+        self.filelist_filediag_choose = QtGui.QPushButton("Select")  # opens dialog to choose file
         self.filelist_filediag_choose.clicked.connect( self._getFilelistFromFileDialog )
-        self.filelist_filediag_openfile = QtGui.QPushButton("Load File")
-        # TO DO: connect load file with file-manager
+        self.filelist_filediag_openfile = QtGui.QPushButton("Load File") # passes filelist to filemanager
+        self.filelist_filediag_openfile.clicked.connect( self.loadFilelistButton )
         flistlayout = QtGui.QGridLayout()
         flistlayout.addWidget( label, 0, 0, 1, 4 )
         flistlayout.addWidget( self.filelist_filepath,          1, 0, 1, 3 )
@@ -186,4 +190,23 @@ class EventControl(QtGui.QWidget):
         for l in flines:
             self.codeView.appendPlainText( l.strip() )
         fin.close()
+
+
+    def loadFilelistButton(self):
+        """ we take the filelist and pass it onto the mainwindow's filemanager """
+        if self.themainwindow is None:
+            print "[EventControl] the mainwindow has not been set yet."
+            return
+        flist = self.filelist_filepath.text()
+        # we pass the filelist to the file manager
+        print "Loading Filemanager, building event index: this could take a second at first."
+        self.themainwindow.filemanager.setFilelist( flist )
+
+        # now we get the event list and add it to the event tree
+        self.eventlistitems = {}
+        nentries = len(self.themainwindow.filemanager.rse_dict)
+        for rse,ientry in self.themainwindow.filemanager.rse_dict.items():
+            self.eventlistitems[ientry] = QtGui.QTreeWidgetItem(["%d"%rse[0],"%d"%(rse[1]),"%d"%(rse[2]) ])
+        for ientry in range(nentries):
+            self.eventtree.addTopLevelItem( self.eventlistitems[ientry+1] )
 

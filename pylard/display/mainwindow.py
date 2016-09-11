@@ -3,6 +3,8 @@ from pyqtgraph.Qt import QtCore, QtGui
 from pylard.display.opdetwindow import OpDetWindow
 from pylard.display.rgbdisplay import RGBDisplay
 from pylard.display.eventcontrol import EventControl
+from pylard.eventprocessor.filemanager import FileManager
+from pylard.eventprocessor.processmanager import ProcessManager
 
 class PyLArD( QtGui.QMainWindow ):
     def __init__(self, config_yaml="", use_cache=True, cache_dir="./cache"):
@@ -16,15 +18,28 @@ class PyLArD( QtGui.QMainWindow ):
         self.controlpanel = EventControl()
         
         self.centraltab.resize(250,150)
+        self.tabs = {}
 
-        # The control panel features three main items:
-        # 1) the text edit control panel to program process manager
-        # 2) the checkbox panel to control that to display in the diagrams [what ran and what didn't]
-        # 3) file choosing dialog
-        # 4) near future: place to dump errors caught in process loop
-        
-        self.centraltab.addTab(self.controlpanel,"EventLoop Panel")
-        self.centraltab.addTab(self.pmtwindow,"OpDet View")
-        self.centraltab.addTab(self.rgbdisplay,"RGB display")
-        
+        # Built in widgets. User can add their own.
+        self.addPanel( "eventcontrol", "EventLoop Panel", self.controlpanel )
+        self.addPanel( "rgbdisplay", "RGB Display", self.rgbdisplay )
+        self.addPanel( "opdetdisplay", "OpDet Display", self.pmtwindow )
 
+        # filemanager
+        self.filemanager = FileManager()
+
+        # event processor
+
+    def getPanel(self,name):
+        """ get one of the panels """
+        if name in self.tabs.keys():
+            return self.tabs[name]
+        return None
+
+    def addPanel(self,name,title,widget):
+        """ add a widget """
+        self.centraltab.addTab( widget, title )
+        self.tabs[name] = widget
+        widget.setMainWindow(self)
+
+    

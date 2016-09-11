@@ -3,16 +3,11 @@ import ROOT as rt
 import hashlib
 from filemanager import FileManager
 
-try:
-    from larlite import larlite as larlt
-except:
-    print "Could not load LArLite"
-    sys.exit(-1)
-try:
-    from larcv import larcv as larcv
-except:
-    print "Could no load LArCV"
-    sys.exit(-1)
+#try:
+#    from larcv import larcv as larcv
+#except:
+#    print "Could no load LArCV"
+#    sys.exit(-1)
 
 class ProcessManager:
 
@@ -28,6 +23,13 @@ class ProcessManager:
         os.system("mkdir -p .pylardcache")
         
     def initialize(self):
+
+        try:
+            from larlite import larlite as larlt
+        except:
+            print "Could not load LArLite"
+            sys.exit(-1)
+
         for critvar in [self.filelist,self.config]:
             if critvar is None:
                 print "Could not load process manager."

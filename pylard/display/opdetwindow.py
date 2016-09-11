@@ -131,12 +131,16 @@ class OpDetWindow(QtGui.QWidget) :
         self.prev_event.clicked.connect( self.prevEvent )
         self.pmtdiagram.sigClicked.connect( self.pmtDiagramClicked )
         #self.pmtdiagram.scene().sigMouseMoved.connect(self.onMovePMTdiagram)
-        
+
+        # main window
+        self.themainwindow = None
+
+    def setMainWindow( self, window ):
+        self.themainwindow = window
         
     def plotData( self ):
         # setup the graphics
-        self.setGraphicsLayout()
-        
+        self.setGraphicsLayout()        
         
     def nextEvent(self):
         pass

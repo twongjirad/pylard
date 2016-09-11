@@ -305,8 +305,17 @@ class RGBDisplay(QtGui.QWidget):
         print "len(self.event_base_and_images): ",len(self.event_base_and_images)
 
 
+        # --------------
+        # Main window
+        # --------------
+        self.themainwindow = None
+
     # caffe toggles, if/els statement is for opening and closing the pane
-    
+
+
+    def setMainWindow(self,window):
+        self.themainwindow  = window
+
     # -------------------------
     # ~~~~~~~~~~~~~~~~~~~~~~~~~
     # -------------------------

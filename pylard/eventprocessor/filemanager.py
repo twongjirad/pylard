@@ -1,12 +1,14 @@
 import os,sys
-import ROOT as rt
 import hashlib
 import time
 import pickle
 
 class FileManager:
-    def __init__( self, flist, use_cache=True ):
+    def __init__( self ):
         self.parsed = False
+
+    def setFilelist(self,flist, use_cache=True):
+        
         self.filelist = flist
         
         # get the file cache
@@ -52,8 +54,8 @@ class FileManager:
                 pickle.dump( data, fmanpickled )
                 print "Caching FileManager Data to ",".pylardcache/"+str(self.fhash)+"/fmandata.pickle"
 
+        self.parsed = True
 
-        
         
     def _parse_filelist(self):
         """ this has a lot to do. we read in the files. we then build an index."""
@@ -73,6 +75,11 @@ class FileManager:
         we make an list of run,subrun,event (or RSE)
         and provide a map going from RSE to entry
         """
+        try:
+            import ROOT as rt
+        except:
+            print "Could not load ROOT"
+            sys.exit(-1)
         
         # sigh. this is a mess
         self.producers = []  # all producer names found in ROOT files
