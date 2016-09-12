@@ -11,14 +11,18 @@ from filemanager import FileManager
 
 class ProcessManager:
 
-    INDEXSTATUS_NONE = -1
-    INDEXSTATUS_OK = 0
-    INDEXSTATUS_BUILDLING = 1
+    FILEMAN_STATUS_NOTREADY = -1
+    FILEMAN_STATUS_READY    = 0
+    FILEMAN_STATUS_ERROR    = 1
+    
+    ANALYZER_STATUS_NOREADY = -1
+    ANALYZER_STATUS_READY   = 0
+    ANALYZER_STATUS_ERROR   = 1
 
     def __init__(self):
-        self.filelist = None
-        self.config   = None
-        self.ready    = False
+        self.file_manager = None
+        self.config_hash  = None
+        self.ready        = False
         self.index_state = ProcessManager.INDEXSTATUS_NONE
         os.system("mkdir -p .pylardcache")
         
@@ -58,7 +62,46 @@ class ProcessManager:
         for f in self.fileman.sorted_filelist:
             self.ana_processman.add_input_file( f )
             self.ana_processman.set_io_mode(larlt.storage_manager.kREAD)
-                
+    
+    def getNextEvent(self):
+        pass
+
+    def getPrevEvent(self):
+        pass
+
+    def getEntry(self, ientry, run=None, subrun=None, event=None):
+        """ main event loop driver """
+        if self.loaded_larcv == False:
+            try:
+                from larcv import larcv as larcv
+                self.loaded_larcv = True
+            except:
+                print "Could no load LArCV"
+                sys.exit(-1)
+
+        # setup event loop config file
+        hasher = haslib.md5()
+        hasher.update( self.configfile )
+        #if self.config_hash is None or self.
+        #hash 
+
+        # check if storage manager iniatialized
+
+        # check if analyzer chain is setup
+
+        # load entry
+
+        # run larlite analyzers
+
+        # run display makers
+
+
+    def parseAnalyzers(self):
+        """ parse analyzer configuration file. """
+        
+        pass
+        
+    
             
 
     

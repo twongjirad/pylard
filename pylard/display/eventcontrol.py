@@ -15,9 +15,9 @@ class EventControl(QtGui.QWidget):
     
     def __init__(self):
         super(EventControl,self).__init__()
-        
-        codeview = self._makeCodeViewFrame()
-        evtree   = self._makeEventTreeFrame()
+
+        codeview  = self._makeCodeViewFrame()
+        evtree    = self._makeEventTreeFrame()
 
         controlpanel_layout = QtGui.QGridLayout()
         controlpanel_layout.addWidget( codeview, 0, 0, 5, 3 )
@@ -30,7 +30,10 @@ class EventControl(QtGui.QWidget):
     def setMainWindow( self, window ):
         self.themainwindow = window
 
-    def _makeFileDialogFrame(self):
+    ## ========================================================================================
+    ## ========================================================================================
+    ## Processor Configuration file frames
+    def _makeProcessorFileDialogFrame(self):
         """ for control panel """
 
         # components of frame
@@ -100,7 +103,7 @@ class EventControl(QtGui.QWidget):
         self.codeview_frame.setLineWidth(2)
         self.codeview_frame.setFrameShape( QtGui.QFrame.Box )
 
-        processor_fileselect_frame = self._makeFileDialogFrame()
+        processor_fileselect_frame = self._makeProcessorFileDialogFrame()
         
         codeview_layout = QtGui.QGridLayout()
 
@@ -125,6 +128,31 @@ class EventControl(QtGui.QWidget):
 
         return self.codeview_frame
 
+    def _saveProcessorFile(self):
+        out = self.codeView.toPlainText()
+        fpath = self.processor_filepath.text()
+        if fpath=="":
+            return
+        fout = open( fpath, 'w' )
+        print >> fout, out
+        fout.close()
+
+    def saveProcessorFileButton(self):
+        self._saveProcessorFile()
+
+    def loadProcessorFile(self,processorfilepath):
+        fin = open( processorfilepath, 'r' )
+        flines = fin.readlines()
+        self.codeView.clear()
+        for l in flines:
+            self.codeView.appendPlainText( l[:-1] )
+        fin.close()
+
+
+    ## end of larlite processor config 
+    ## ========================================================================================
+    ## ========================================================================================
+    ## Event Tree Frame
     def _makeEventTreeFrame(self):
         """ tree frame """
         self.eventtree_frame = QtGui.QFrame()
@@ -171,27 +199,6 @@ class EventControl(QtGui.QWidget):
             fname = fnames[0]
         self.filelist_filepath.setText(fname)
 
-    def _saveProcessorFile(self):
-        out = self.codeView.toPlainText()
-        fpath = self.processor_filepath.text()
-        if fpath=="":
-            return
-        fout = open( fpath, 'w' )
-        print >> fout, out
-        fout.close()
-
-    def saveProcessorFileButton(self):
-        self._saveProcessorFile()
-
-    def loadProcessorFile(self,processorfilepath):
-        fin = open( processorfilepath, 'r' )
-        flines = fin.readlines()
-        self.codeView.clear()
-        for l in flines:
-            self.codeView.appendPlainText( l.strip() )
-        fin.close()
-
-
     def loadFilelistButton(self):
         """ we take the filelist and pass it onto the mainwindow's filemanager """
         if self.themainwindow is None:
@@ -209,4 +216,7 @@ class EventControl(QtGui.QWidget):
             self.eventlistitems[ientry] = QtGui.QTreeWidgetItem(["%d"%rse[0],"%d"%(rse[1]),"%d"%(rse[2]) ])
         for ientry in range(nentries):
             self.eventtree.addTopLevelItem( self.eventlistitems[ientry+1] )
+
+
+    ## ========================================================================================
 

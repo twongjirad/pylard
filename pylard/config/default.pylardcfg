@@ -1,0 +1,6 @@
+{
+  "larcv_process_cfg": "default_larcv.cfg", 
+  "larlite_process_cfg": "default_larlite.cfg", 
+  "larlite_filelist": "", 
+  "larcv_filelist": ""
+}

@@ -3,6 +3,7 @@ from pyqtgraph.Qt import QtCore, QtGui
 from pylard.display.opdetwindow import OpDetWindow
 from pylard.display.rgbdisplay import RGBDisplay
 from pylard.display.eventcontrol import EventControl
+from pylard.display.masterconfigpanel import MasterConfigPanel
 from pylard.eventprocessor.filemanager import FileManager
 from pylard.eventprocessor.processmanager import ProcessManager
 
@@ -16,11 +17,13 @@ class PyLArD( QtGui.QMainWindow ):
         self.pmtwindow    = OpDetWindow()
         self.rgbdisplay   = RGBDisplay()
         self.controlpanel = EventControl()
+        self.masterconfig = MasterConfigPanel()
         
         self.centraltab.resize(250,150)
         self.tabs = {}
 
         # Built in widgets. User can add their own.
+        self.addPanel( "masterconfig", "PyLArD Config Panel", self.masterconfig )
         self.addPanel( "eventcontrol", "EventLoop Panel", self.controlpanel )
         self.addPanel( "rgbdisplay", "RGB Display", self.rgbdisplay )
         self.addPanel( "opdetdisplay", "OpDet Display", self.pmtwindow )
