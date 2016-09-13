@@ -1,4 +1,5 @@
 import os,sys,time
+from larcv import larcv
 
 PROFILE=False
 
@@ -11,6 +12,7 @@ def dev():
     from pylard.display.mainwindow import PyLArD as mainwindow
     from pylard.eventprocessor.processmanager import ProcessManager
     from pylard.eventprocessor.filemanager import FileManager
+    from pylard.eventprocessor.datacoordinator import DataCoordinator
     print "Loading modules: ",time.time()-sload,"secs"
 
     app = QtGui.QApplication([])
@@ -21,14 +23,24 @@ def dev():
     mw.show()
     print "Loading main window: ",time.time()-smw,"secs"
 
-    man = ProcessManager()
-    man.filelist = "myfiles.txt"
-    man.config   = "myconfig.cfg"
-    man.initialize()
-    man.ana_processman.process_event(0)
 
-    #fman = FileManager( "myfiles.txt" )
-    #fman_missing = FileManager( "myfiles_missing.txt" )
+    # setup file managers
+    fman_larlite = FileManager()
+    fman_larcv   = FileManager()
+    fman_larcv.setFilelist( "ex_databnb_larcv.txt" )
+    fman_larlite.setFilelist( "ex_databnb_larlite.txt" )
+
+    # seutp datacoordinator
+    data = DataCoordinator()
+    data.addManager( "LARLITE", fman_larlite )
+    data.addManager( "LARCV", fman_larcv )
+
+    data.configure( "LARCV", "default_larcv.cfg" )
+
+    data.getEntry( 0, "LARCV" )
+
+    event_imgs = data.processdrivers["LARCV"].io().get_data( larcv.kProductImage2D, "tpc" )
+    print event_imgs
 
     if not PROFILE:
         print "[ENTER TO EXIT]"

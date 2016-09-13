@@ -1,9 +1,18 @@
 import os,sys
+import hashlib
+import time
 
 class DataCoordinator:
+    """ this handles the process drivers for the event loop"""
     def __init__(self):
+        # variables for different filetypes (probably should be a class/struct)
         self.filemans = {}
         self.active = {}
+        self.ioman = {}
+        self.processdrivers = {}
+        self.configs = {}
+        self.confighash = {}
+
         self.currentEntry = None
         self.currentManager = None
 
@@ -15,7 +24,11 @@ class DataCoordinator:
         self.active[name] = isactive
 
     def getManagerEntry(self,entry,name):
-        return self.filemans[name].getEntry(entry)
+        if name=="LARCV":
+            ok = self.processdrivers[name].process_entry(entry)
+        else:
+            ok = True
+        return ok
 
     def getEntry(self,entry,drivingmanager):
         if drivingmanager not in self.filemans:
@@ -45,4 +58,56 @@ class DataCoordinator:
     def prevEntry(self):
         preventry = self.currentEntry-1
         self.getEntry(preventry,self.currentManager)
+
     
+    def configure(self,name,config):
+        if name=="LARLITE":
+            """ for larlite, we will open our own storage manager and manager the process analyzers ourselves """
+            from larlite import larlite
+            from larlite import fcllite
+            # the iomanager
+            io = larlite.storage_manager()
+            for fname in fileman.sorted_filelist:
+                io.add_in_filename( fname )
+            self.ioman[name] = io
+            # the config
+            self.configs[name] = fcllite.ConfigManager( config )
+            
+        elif name=="LARCV":
+            """ needs iomanager configuration from PSET"""
+            s = time.time()
+            from larcv import larcv
+            print "Loading LArCV: ",time.time()-s,"secs"
+            # the config
+            m = hashlib.md5()
+            fin = open(config,'r')
+            cfg = fin.read()
+            m.update(cfg)
+            current = m.hexdigest()
+            if name in self.confighash and self.confighash[name]==current:
+                return # no update to config, dont update processor
+            
+            # parse pset
+            print "New or updated configuration provided."
+            pset = larcv.CreatePSetFromFile(config)
+            if name in self.confighash:
+                # existing processosr already working, reload
+                proc = self.processdrivers[name]
+            else:
+                proc = larcv.ProcessDriver("ProcessDriver")
+                self.processdrivers[name] = proc
+            self.configs[name] = pset.get_pset("ProcessDriver")
+            # reconfigure
+            proc.configure( self.configs[name]  )
+            from ROOT import std
+            if name not in self.confighash:
+                v = std.vector("string")()
+                for f in self.filemans[name].sorted_filelist:
+                    v.push_back(f)
+                proc.override_input_file( v )
+                proc.initialize()
+            self.confighash[name] = current
+
+                
+        
+

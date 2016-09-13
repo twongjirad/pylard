@@ -257,9 +257,6 @@ class FileManager:
         self.rse_dict        = flavorset_rse_dict[maxset]
         self.entry_dict      = flavorset_entry_dict[maxset]
 
-            
-        
-
     def summary(self):
         if not self.parsed:
             print "Filelists not yet parsed."
