@@ -25,6 +25,7 @@ class FileManager:
             fmandata = pickle.load( fmanpickled )
             self.sorted_filelist = fmandata["sorted_filelist"]
             self.rse_dict        = fmandata["rse_dict"]
+            self.entry_dict        = fmandata["entry_dict"]
             self.larlitefilelist = fmandata["larlitefilelist"]
             self.flavors         = fmandata["flavors"]
             self.flavor_def      = fmandata["flavor_def"]
@@ -48,6 +49,7 @@ class FileManager:
                 data = { "sorted_filelist":self.sorted_filelist, 
                          "larlitefilelist":self.larlitefilelist,
                          "rse_dict":self.rse_dict,
+                         "entry_dict":self.entry_dict,
                          "flavors":self.flavors,
                          "flavor_def":self.flavor_def,
                          "producers":self.producers,
@@ -209,6 +211,7 @@ class FileManager:
         flavorsets = []
 
         flavorset_rse_dict  = {}
+        flavorset_entry_dict = {}
         for eventset in eventsets:
             events_to_flavors[eventset].sort() # sort the flavors with this event-set
             flavorset = tuple( events_to_flavors[eventset] )
@@ -216,11 +219,13 @@ class FileManager:
                 flavorfiles[flavorset] = []
                 flavorsets.append(flavorset)
                 flavorset_rse_dict[flavorset] = {}
+                flavorset_entry_dict[flavorset] = {}
             for flavor in flavorset:
                 flavorfiles[flavorset].append( events_to_files[eventset][flavor] )
             for rse in eventset:
-                ientry = len( flavorset_rse_dict[flavorset] )+1
+                ientry = len( flavorset_rse_dict[flavorset] )
                 flavorset_rse_dict[flavorset][rse] = ientry
+                flavorset_entry_dict[flavorset][ientry] = rse
 
         # look for largest fileset
         maxset = None
@@ -233,6 +238,7 @@ class FileManager:
         # these are the final file list and event dictionary we want
         self.sorted_filelist = flavorfiles[maxset]
         self.rse_dict        = flavorset_rse_dict[maxset]
+        self.entry_dict      = flavorset_entry_dict[maxset]
 
             
         

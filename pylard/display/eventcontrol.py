@@ -161,7 +161,7 @@ class EventControl(QtGui.QWidget):
 
         # event tree widget
         self.eventtree = pg.TreeWidget()
-        self.eventtree.setColumnCount(3)
+        self.eventtree.setColumnCount(4)
 
         # filelist dialog
         label = QtGui.QLabel("Input LArLite File List")
@@ -218,8 +218,8 @@ class EventControl(QtGui.QWidget):
         topitems = {"LARLITE":toplarlite,
                     "LARCV":toplarscv}
         nentries = len(self.themainwindow.filemanager.rse_dict)
-        for rse,ientry in self.themainwindow.filemanager.rse_dict.items():
-            self.eventlistitems[self.themainwindow.filemanager.filetype][ientry] = QtGui.QTreeWidgetItem(["%d"%rse[0],"%d"%(rse[1]),"%d"%(rse[2]) ])
+        for ientry,rse in self.themainwindow.filemanager.entry_dict.items():
+            self.eventlistitems[self.themainwindow.filemanager.filetype][ientry] = QtGui.QTreeWidgetItem(["%d"%(ientry),"%d"%rse[0],"%d"%(rse[1]),"%d"%(rse[2]) ])
             topitems[ self.themainwindow.filemanager.filetype ].addChild( self.eventlistitems[self.themainwindow.filemanager.filetype][ientry] )
         
         self.eventtree.addTopLevelItem( toplarlite )
