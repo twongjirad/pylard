@@ -1,6 +1,6 @@
 # pylard 2: The Lardening
 
-Again! But this time, better!
+Again! But this time, better! Well, maybe.
 
 ## python Liquid Argon (Event) Display 2
 
