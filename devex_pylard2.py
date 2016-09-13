@@ -39,15 +39,20 @@ def dev():
     data.configure( "LARCV", "default_larcv.cfg" )
     data.configure( "LARLITE", "default_larlite.cfg" )
 
-    # LARCV DRIVES
-    #data.getEntry( 0, "LARCV" )
+    for n in range(20):
+        s = time.time()
+        # LARCV DRIVES
+        data.getEntry( n, "LARCV" )
 
-    # LARLITE DRIVES
-    data.getEntry(0,"LARLITE")
+        # LARLITE DRIVES
+        #data.getEntry(n,"LARLITE")
+        print "retrival time: ",time.time()-s,"secs"
 
-    # GET LARCV DATA
-    event_imgs = data.ioman["LARCV"].get_data( larcv.kProductImage2D, "tpc" )
-    print event_imgs
+        # GET LARCV DATA
+        event_imgs = data.ioman["LARCV"].get_data( larcv.kProductImage2D, "tpc" )
+        print "Entry ",n
+        print "  LARCV: ",event_imgs.run(),event_imgs.subrun(),event_imgs.event()
+        print "  LARLITE:",data.ioman["LARLITE"].run_id(),data.ioman["LARLITE"].subrun_id(),data.ioman["LARLITE"].event_id()
 
     # GET LARLITE DATA
 

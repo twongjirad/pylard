@@ -46,6 +46,7 @@ class DataCoordinator:
         for name,isactive in self.active.items():
             if isactive and name in self.filemans and rse in self.filemans[name].rse_dict: 
                 e = self.filemans[name].rse_dict[rse]
+                #print "  driving rse=",rse," ",name," entry=",e
                 manok = self.getManagerEntry( e, name )
                 if not ok and manok: # want to know at least one was ok
                     ok = True
