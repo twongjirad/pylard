@@ -105,13 +105,15 @@ class EventControl(QtGui.QWidget):
         self.codeview_frame.setFrameShape( QtGui.QFrame.Box )
 
         processor_fileselect_frame = self._makeProcessorFileDialogFrame()
+        entry_selection_frame      = self._makeEntryFrame()
         
         codeview_layout = QtGui.QGridLayout()
 
         self.codeView = QtGui.QPlainTextEdit()
         
         codeview_layout.addWidget(self.codeView, 0, 0, 10, 1)
-        codeview_layout.addWidget(processor_fileselect_frame, 10, 0, 2, 1 )
+        codeview_layout.addWidget(entry_selection_frame, 10, 0, 1, 1 )
+        codeview_layout.addWidget(processor_fileselect_frame, 11, 0, 2, 1 )
 
         self.codeview_frame.setLayout( codeview_layout )
         
@@ -128,6 +130,45 @@ class EventControl(QtGui.QWidget):
         self.loadProcessorFile(processor_filepath)
 
         return self.codeview_frame
+
+    def _makeEntryFrame(self):
+        # entry frame
+        codeview_entry_frame = QtGui.QFrame()
+        codeview_entry_frame.setLineWidth(1)
+        codeview_entry_frame.setFrameShape( QtGui.QFrame.Box )
+        codeview_entry_label = QtGui.QLabel("Entry:")
+        codeview_entry_label.setFixedWidth(40)
+        self.codeview_entry_input = QtGui.QLineEdit()
+        self.codeview_entry_input.setFixedWidth(60)
+        codeview_run_label = QtGui.QLabel("Run:")
+        codeview_run_label.setFixedWidth(40)
+        self.codeview_run_input = QtGui.QLineEdit()
+        self.codeview_run_input.setFixedWidth(60)
+        codeview_subrun_label = QtGui.QLabel("Subrun:")
+        codeview_subrun_label.setFixedWidth(50)
+        self.codeview_subrun_input = QtGui.QLineEdit()
+        self.codeview_subrun_input.setFixedWidth(60)
+        codeview_event_label = QtGui.QLabel("Event:")
+        codeview_event_label.setFixedWidth(40)
+        self.codeview_event_input = QtGui.QLineEdit()
+        self.codeview_event_input.setFixedWidth(60)
+        codeview_entry_layout = QtGui.QGridLayout()
+        self.codeview_entry_goto = QtGui.QPushButton("Go")
+        self.codeview_entry_prev = QtGui.QPushButton("Previous")
+        self.codeview_entry_next = QtGui.QPushButton("Next")
+        codeview_entry_layout.addWidget( codeview_entry_label, 0, 0)
+        codeview_entry_layout.addWidget( self.codeview_entry_input, 0, 1)
+        codeview_entry_layout.addWidget( codeview_run_label, 0, 2)
+        codeview_entry_layout.addWidget( self.codeview_run_input, 0, 3)
+        codeview_entry_layout.addWidget( codeview_subrun_label, 0, 4)
+        codeview_entry_layout.addWidget( self.codeview_subrun_input, 0, 5)
+        codeview_entry_layout.addWidget( codeview_event_label, 0, 6)
+        codeview_entry_layout.addWidget( self.codeview_event_input, 0, 7)
+        codeview_entry_layout.addWidget( self.codeview_entry_goto, 0, 8 )
+        codeview_entry_layout.addWidget( self.codeview_entry_prev, 0, 9 )
+        codeview_entry_layout.addWidget( self.codeview_entry_next, 0, 10 )
+        codeview_entry_frame.setLayout( codeview_entry_layout )
+        return codeview_entry_frame
 
     def _saveProcessorFile(self):
         out = self.codeView.toPlainText()
@@ -149,6 +190,8 @@ class EventControl(QtGui.QWidget):
             self.codeView.appendPlainText( l[:-1] )
         fin.close()
 
+    def setEntry( self, entry, filetype ):
+        pass
 
     ## end of larlite processor config 
     ## ========================================================================================
@@ -240,6 +283,8 @@ class EventControl(QtGui.QWidget):
                     itemwidget = QtGui.QTreeWidgetItem(["%d"%(ientry),"%d"%rse[0],"%d"%(rse[1]),"%d"%(rse[2]) ])
                     self.eventlistitems[ftype][ientry] = itemwidget
                     topitems[ ftype ].addChild( itemwidget )
+                    
+            
             
     def eventTreeItemDoubleClicked(self, item, column):
         print "event tree clicked: ",item, column
