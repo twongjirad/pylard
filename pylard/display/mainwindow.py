@@ -4,7 +4,6 @@ from pylard.display.opdetwindow import OpDetWindow
 from pylard.display.rgbdisplay import RGBDisplay
 from pylard.display.eventcontrol import EventControl
 from pylard.display.masterconfigpanel import MasterConfigPanel
-from pylard.eventprocessor.filemanager import FileManager
 from pylard.eventprocessor.processmanager import ProcessManager
 
 class PyLArD( QtGui.QMainWindow ):
@@ -36,8 +35,8 @@ class PyLArD( QtGui.QMainWindow ):
 
         self.centraltab.setCurrentWidget( self.eventcontrol )
 
-        # filemanager
-        self.filemanager = FileManager()
+        # filemanagers
+        self.filemanagers = {"LARLITE":None,"LARCV":None,"RAWDIGITS":None}
 
         # event processor
 

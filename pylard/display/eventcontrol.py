@@ -2,6 +2,7 @@ import sys,os
 from pyqtgraph.Qt import QtCore, QtGui
 import pyqtgraph as pg
 from pylard.config.defaultprocessor import getDefaultProcessorConfig
+from pylard.eventprocessor.filemanager import FileManager
 
 class EventControl(QtGui.QWidget):
     """ 
@@ -164,7 +165,7 @@ class EventControl(QtGui.QWidget):
         self.eventtree.setColumnCount(4)
 
         # filelist dialog
-        label = QtGui.QLabel("Input LArLite File List")
+        label = QtGui.QLabel("Input File List")
         #label.setFixedWidth(80)
         self.filelist_filepath = QtGui.QLineEdit()
         self.filelist_filediag_choose = QtGui.QPushButton("Select")  # opens dialog to choose file
@@ -207,24 +208,33 @@ class EventControl(QtGui.QWidget):
         flist = self.filelist_filepath.text()
         # we pass the filelist to the file manager
         print "Loading Filemanager, building event index: this could take a second at first."
-        self.themainwindow.filemanager.setFilelist( flist )
+        fileman = FileManager()
+        fileman.setFilelist( flist )
+        # pass it to the main window
+        self.themainwindow.filemanagers[fileman.filetype] = fileman
 
         # Top level is file type
-        toplarlite = QtGui.QTreeWidgetItem(["LARLITE"])
-        toplarscv  = QtGui.QTreeWidgetItem(["LARCV"])
-        # now we get the event list and add it to the event tree
-        self.eventlistitems = { "LARLITE":{},
-                                "LARCV":{} }
-        topitems = {"LARLITE":toplarlite,
-                    "LARCV":toplarscv}
-        nentries = len(self.themainwindow.filemanager.rse_dict)
-        for ientry,rse in self.themainwindow.filemanager.entry_dict.items():
-            self.eventlistitems[self.themainwindow.filemanager.filetype][ientry] = QtGui.QTreeWidgetItem(["%d"%(ientry),"%d"%rse[0],"%d"%(rse[1]),"%d"%(rse[2]) ])
-            topitems[ self.themainwindow.filemanager.filetype ].addChild( self.eventlistitems[self.themainwindow.filemanager.filetype][ientry] )
-        
-        self.eventtree.addTopLevelItem( toplarlite )
-        self.eventtree.addTopLevelItem( toplarscv )
+        ftypekeys = self.themainwindow.filemanagers.keys()
+        ftypekeys.sort()
+        topitems = {}
+        self.eventlistitems = {}
+        for ftype in ftypekeys:
+            nevents = 0
+            fman = self.themainwindow.filemanagers[ftype]
+            if fman is not None:
+                nevents = len(fman.rse_dict)
 
+            topitem = QtGui.QTreeWidgetItem([ftype,"%d"%(nevents)])
+            self.eventtree.addTopLevelItem( topitem )
+            topitems[ftype] = topitem
+            self.eventlistitems[ftype] = {}
+
+            # now we get the event list and add it to the event tree
+            if fman is not None:
+                for ientry,rse in fman.entry_dict.items():
+                    self.eventlistitems[ftype][ientry] = QtGui.QTreeWidgetItem(["%d"%(ientry),"%d"%rse[0],"%d"%(rse[1]),"%d"%(rse[2]) ])
+                    topitems[ ftype ].addChild( self.eventlistitems[ftype][ientry] )
+        
 
     ## ========================================================================================
 
