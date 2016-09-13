@@ -58,8 +58,12 @@ class PyLArD( QtGui.QMainWindow ):
         if self.masterconfig.config.default_filetype_driver!="":
             if self.masterconfig.config.default_filetype_driver.upper()=="LARLITE":
                 self.eventcontrol.codeview_ftype_combo.setCurrentIndex(0)
+                self.eventcontrol.codeview_type_larlite.setChecked(True)
+                self.eventcontrol.selectProcessorConfig( self.eventcontrol.codeview_type_larlite )
             elif self.masterconfig.config.default_filetype_driver.upper()=="LARCV":
                 self.eventcontrol.codeview_ftype_combo.setCurrentIndex(1)
+                self.eventcontrol.codeview_type_larcv.setChecked(True)
+                self.eventcontrol.selectProcessorConfig( self.eventcontrol.codeview_type_larcv )
             
 
     def getPanel(self,name):
