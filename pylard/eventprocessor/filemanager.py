@@ -6,7 +6,8 @@ import pickle
 class FileManager:
     def __init__( self ):
         self.parsed = False
-
+        self.loaded_larcv = False
+        self.loaded_larlite = False
     def setFilelist(self,flist, use_cache=True):
         
         self.filelist = flist
@@ -33,6 +34,8 @@ class FileManager:
             self.datatypes       = fmandata["datatypes"]
             self.filetype        = fmandata["filetype"]
             self.parsed = True
+            self.loaded_larcv = False
+            self.loaded_larlite = False
             self.summary()
             elapsed = time.time()-start
             print "Loading FileManager Data with the cache: ",elapsed,"secs"
@@ -64,8 +67,9 @@ class FileManager:
         
     def _parse_filelist(self):
         """ this has a lot to do. we read in the files. we then build an index."""
-        if os.path.exists(self.filelist):
+        if not os.path.exists(self.filelist):
             print "couldn't find ",self.filelist
+            return
 
         f = open( self.filelist, 'r' )
         flist = f.readlines()
@@ -154,14 +158,20 @@ class FileManager:
             if self.filetype=="LARLITE":
                 idtreename = "larlite_id_tree"
             elif self.filetype=="LARCV":
+                if self.loaded_larcv == False:
+                    s = time.time()
+                    import larcv as larcv
+                    print "LOADING LARCV: ",time.time()-s,"secs"
+                    self.loaded_larcv = True
                 for treename in trees:
                     if "image2d" in treename:
                         if idtreename is None:
                             idtreename = treename
                         else:
                             pass # we only use this if we have to
-                    elif "partroi" in treename:
+                    if "partroi" in treename:
                         idtreename = treename # we prefer to use this tree for speed
+                        break
 
             if idtreename is None:
                 print "Error: Could not setup a proper ID tree for this file"
@@ -176,15 +186,22 @@ class FileManager:
                 self.flavors.append( flavor )
                 flavor_eventset[flavor] = []
                 self.flavor_def[flavor] = hashstr
-            idtree = r.Get(idtreename)
+            if self.filetype=="LARLITE":
+                idtree = r.Get(idtreename)
+            elif self.filetype=="LARCV":
+                print "LARCV indexing with ",idtreename
+                idtree = r.Get(idtreename)
+                
             eventset = [] # list of events
             for n in range(idtree.GetEntries()):
                 idtree.GetEntry(n)
                 if self.filetype=="LARLITE":
                     rse = ( idtree._run_id, idtree._subrun_id, idtree._event_id )
                 elif self.filetype=="LARCV":
-                    raise ValueError("Need to parse LARCV tree")
-                    pass
+                    idbranchname = idtreename.replace("_tree","_branch")
+                    idbranch = None
+                    exec("idbranch=idtree.%s"%(idbranchname))
+                    rse = ( idbranch.run(), idbranch.subrun(), idbranch.event() )
                 eventset.append(rse)
                 if rse not in flavor_eventset[flavor]:
                     flavor_eventset[flavor].append( rse )

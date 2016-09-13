@@ -163,6 +163,7 @@ class EventControl(QtGui.QWidget):
         # event tree widget
         self.eventtree = pg.TreeWidget()
         self.eventtree.setColumnCount(4)
+        self.eventtree.itemDoubleClicked.connect( self.eventTreeItemDoubleClicked )
 
         # filelist dialog
         label = QtGui.QLabel("Input File List")
@@ -205,15 +206,19 @@ class EventControl(QtGui.QWidget):
         if self.themainwindow is None:
             print "[EventControl] the mainwindow has not been set yet."
             return
-        flist = self.filelist_filepath.text()
-        # we pass the filelist to the file manager
-        print "Loading Filemanager, building event index: this could take a second at first."
-        fileman = FileManager()
-        fileman.setFilelist( flist )
-        # pass it to the main window
-        self.themainwindow.filemanagers[fileman.filetype] = fileman
+        flistraw = self.filelist_filepath.text()
+        flists = flistraw.split(";")
+        for flist in flists:
+            # we pass the filelist to the file manager
+            print "Loading Filemanager with files in ",flist,
+            print " * Building event index: this could take a second at first."
+            fileman = FileManager()
+            fileman.setFilelist( flist )
+            # pass it to the main window
+            self.themainwindow.filemanagers[fileman.filetype] = fileman
 
         # Top level is file type
+        self.eventtree.clear()
         ftypekeys = self.themainwindow.filemanagers.keys()
         ftypekeys.sort()
         topitems = {}
@@ -232,9 +237,12 @@ class EventControl(QtGui.QWidget):
             # now we get the event list and add it to the event tree
             if fman is not None:
                 for ientry,rse in fman.entry_dict.items():
-                    self.eventlistitems[ftype][ientry] = QtGui.QTreeWidgetItem(["%d"%(ientry),"%d"%rse[0],"%d"%(rse[1]),"%d"%(rse[2]) ])
-                    topitems[ ftype ].addChild( self.eventlistitems[ftype][ientry] )
-        
+                    itemwidget = QtGui.QTreeWidgetItem(["%d"%(ientry),"%d"%rse[0],"%d"%(rse[1]),"%d"%(rse[2]) ])
+                    self.eventlistitems[ftype][ientry] = itemwidget
+                    topitems[ ftype ].addChild( itemwidget )
+            
+    def eventTreeItemDoubleClicked(self, item, column):
+        print "event tree clicked: ",item, column
 
     ## ========================================================================================
 

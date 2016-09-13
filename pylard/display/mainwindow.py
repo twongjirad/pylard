@@ -19,8 +19,16 @@ class PyLArD( QtGui.QMainWindow ):
         self.masterconfig = MasterConfigPanel(pylardconfig)
         
         # pass the larlite filelist path to the event control
+        flist = ""
         if self.masterconfig.config.larlite_filelist!="":
-            self.eventcontrol.filelist_filepath.setText( self.masterconfig.config.larlite_filelist.strip() )
+            flist = self.masterconfig.config.larlite_filelist.strip()
+        if self.masterconfig.config.larcv_filelist!="":
+            if flist!="":
+                flist+=";"
+            flist += self.masterconfig.config.larcv_filelist
+        if flist!="":
+            self.eventcontrol.filelist_filepath.setText( flist )
+
         if self.masterconfig.config.larcv_process_cfg!="":
             self.eventcontrol.processor_filepath.setText( self.masterconfig.config.larcv_process_cfg.strip() )
 
