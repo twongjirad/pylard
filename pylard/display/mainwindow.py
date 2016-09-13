@@ -29,8 +29,11 @@ class PyLArD( QtGui.QMainWindow ):
         if flist!="":
             self.eventcontrol.filelist_filepath.setText( flist )
 
+        # pass processor config defaults to event control
+        if self.masterconfig.config.larlite_process_cfg!="":
+            self.eventcontrol.processor_filepath.setText( self.masterconfig.config.larlite_process_cfg.strip() )
         if self.masterconfig.config.larcv_process_cfg!="":
-            self.eventcontrol.processor_filepath.setText( self.masterconfig.config.larcv_process_cfg.strip() )
+            self.eventcontrol.larcv_processor_filepath.setText( self.masterconfig.config.larcv_process_cfg.strip() )
 
         self.centraltab.resize(250,150)
         self.tabs = {}
@@ -51,6 +54,12 @@ class PyLArD( QtGui.QMainWindow ):
         # on start-up, do we open files
         if self.masterconfig.config.larlite_filelist!="" and self.masterconfig.config.load_files_on_start.lower() in ["yes","y"]:
             self.eventcontrol.loadFilelistButton()
+        # set the default file type event driver
+        if self.masterconfig.config.default_filetype_driver!="":
+            if self.masterconfig.config.default_filetype_driver.upper()=="LARLITE":
+                self.eventcontrol.codeview_ftype_combo.setCurrentIndex(0)
+            elif self.masterconfig.config.default_filetype_driver.upper()=="LARCV":
+                self.eventcontrol.codeview_ftype_combo.setCurrentIndex(1)
             
 
     def getPanel(self,name):

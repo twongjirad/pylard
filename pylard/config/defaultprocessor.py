@@ -1,8 +1,10 @@
 import os,sys
 
-def getDefaultProcessorConfig():
+def getDefaultProcessorConfig(filetype):
     """ makes a default processor file to load at beginning. """
-    default_processor_cfg = """
+    print "returning ",filetype
+    if filetype=="LARLITE":
+        default_processor_cfg = """
 # ===================================================================
 # Example PyAnalyzer
 # -------------------
@@ -32,5 +34,34 @@ DrawOpHits: {
   item_set: "opdata"
   producer: "pmtreadout"
 }  
+"""
+    elif filetype=="LARCV":
+        default_processor_cfg = """
+# ===================================================================
+# Example LArCV Processor
+# -----------------------
+ProcessDriver: {
+  Verbosity: 2
+  EnableFilter: false
+  RandomAccess: false
+  ProcessType: []
+  ProcessName: []
+
+  IOManager: {
+    Verbosity: 2
+    Name: "IOManager"
+    IOMode:  0 # 0=read-only, 1=write-only, 2=read&write
+    OutFileName: "" # put output file name if write mode
+    InputFiles:  []
+    InputDirs:   []
+    ReadOnlyType: [0,1] # 0=Image2D, 1=partroi
+    ReadOnlyName: ["tpc","tpc"]
+    StoreOnlyType: []
+    StoreOnlyName: []
+  }
+
+  ProcessList: {
+  }
+}
 """
     return default_processor_cfg

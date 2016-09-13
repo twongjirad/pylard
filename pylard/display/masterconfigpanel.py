@@ -12,17 +12,18 @@ class MasterConfiguration:
         self.larlite_filelist = ""
         self.larcv_filelist = ""
         self.load_files_on_start = "no"
+        self.default_filetype_driver = ""
         self.varnames = ["larlite_process_cfg",
                          "larcv_process_cfg",
                          "larlite_filelist",
                          "larcv_filelist",
-                         "load_files_on_start"]
+                         "load_files_on_start",
+                         "default_filetype_driver"]
     
     def makeJson(self):
-        data = { "larlite_process_cfg":self.larlite_process_cfg,
-                 "larcv_process_cfg":self.larcv_process_cfg,
-                 "larlite_filelist":self.larlite_filelist,
-                 "larcv_filelist":self.larcv_filelist}
+        data = {}
+        for var in self.varnames:
+            exec("data[\"%s\"] = self.%s"%(var,var))
         return json.dumps(data)
 
     def loadJson(self,sdata):

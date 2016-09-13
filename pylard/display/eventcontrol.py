@@ -37,11 +37,12 @@ class EventControl(QtGui.QWidget):
     def _makeProcessorFileDialogFrame(self):
         """ for control panel """
 
+        # LARLITE
         # components of frame
-        label = QtGui.QLabel("Ana Config File:")
+        label = QtGui.QLabel("LArlite Config:")
         label.setFixedWidth(100)
         self.processor_filepath = QtGui.QLineEdit()
-        self.processor_filepath.setText("default.cfg")
+        self.processor_filepath.setText("default_larlite.cfg")
         self.processor_filediag_choose = QtGui.QPushButton("choose file")
         self.processor_filediag_choose.clicked.connect( self._getControlFilenameFromFileDialog )
         self.processor_filediag_openfile = QtGui.QPushButton("Load File")
@@ -54,12 +55,38 @@ class EventControl(QtGui.QWidget):
         self.filediag_frame.setFrameShape( QtGui.QFrame.Box )
         self.filediag_frame.setFixedHeight(80)
 
+        # LARCV
+        # components of frame
+        larcv_label = QtGui.QLabel("LArCV Config:")
+        larcv_label.setFixedWidth(100)
+        self.larcv_processor_filepath = QtGui.QLineEdit()
+        self.larcv_processor_filepath.setText("default_larcv.cfg")
+        self.larcv_processor_filediag_choose = QtGui.QPushButton("choose file")
+        self.larcv_processor_filediag_choose.clicked.connect( self._getControlFilenameFromFileDialog )
+        self.larcv_processor_filediag_openfile = QtGui.QPushButton("Load File")
+        self.larcv_processor_filediag_savefile = QtGui.QPushButton("Save File")
+        self.larcv_processor_filediag_savefile.clicked.connect( self.saveProcessorFileButton )
+
+        # assemble frame and layout
+        self.filediag_frame = QtGui.QFrame()
+        self.filediag_frame.setLineWidth(1)
+        self.filediag_frame.setFrameShape( QtGui.QFrame.Box )
+        self.filediag_frame.setFixedHeight(80)
+
         filediag_layout = QtGui.QGridLayout()
+        # larlite
         filediag_layout.addWidget( label, 0, 0 )
         filediag_layout.addWidget( self.processor_filepath, 0, 1, 1, 3 )
         filediag_layout.addWidget( self.processor_filediag_choose, 0, 4, 1, 1 )
         filediag_layout.addWidget( self.processor_filediag_openfile, 0, 5, 1, 1 )
         filediag_layout.addWidget( self.processor_filediag_savefile, 0, 6, 1, 1 )
+        # larcv
+        filediag_layout.addWidget( larcv_label, 1, 0 )
+        filediag_layout.addWidget( self.larcv_processor_filepath, 1, 1, 1, 3 )
+        filediag_layout.addWidget( self.larcv_processor_filediag_choose, 1, 4, 1, 1 )
+        filediag_layout.addWidget( self.larcv_processor_filediag_openfile, 1, 5, 1, 1 )
+        filediag_layout.addWidget( self.larcv_processor_filediag_savefile, 1, 6, 1, 1 )
+
         self.filediag_frame.setLayout( filediag_layout )
 
         return self.filediag_frame
@@ -70,7 +97,6 @@ class EventControl(QtGui.QWidget):
         filter = "FHICL (*.fcl);;CFG (*.cfg)"
         fnames,ftype = QtGui.QFileDialog.getOpenFileNamesAndFilter(self, 'Open file', '.', filter)
         fname = ""
-        print fnames
         if len(fnames)>1:
             for f in fnames:
                 fname += f
@@ -86,7 +112,6 @@ class EventControl(QtGui.QWidget):
         filter = "ROOT (*.root);;UBdaq (*.ubdaq)"
         fnames,ftype = QtGui.QFileDialog.getOpenFileNamesAndFilter(self, 'Open file', '.', filter)
         fname = ""
-        print fnames
         if len(fnames)>1:
             for f in fnames:
                 fname += f
@@ -110,17 +135,35 @@ class EventControl(QtGui.QWidget):
         codeview_layout = QtGui.QGridLayout()
 
         self.codeView = QtGui.QPlainTextEdit()
-        
-        codeview_layout.addWidget(self.codeView, 0, 0, 10, 1)
-        codeview_layout.addWidget(entry_selection_frame, 10, 0, 1, 1 )
-        codeview_layout.addWidget(processor_fileselect_frame, 11, 0, 2, 1 )
+
+        self.codeview_type_label = QtGui.QLabel("processor type ")
+        self.codeview_type_label.setFixedWidth(100)
+        self.codeview_type_larlite = QtGui.QCheckBox("larlite")
+        self.codeview_type_larlite.setFixedWidth(100)
+        self.codeview_type_larcv   = QtGui.QCheckBox("larcv")
+        self.codeview_type_larcv.setFixedWidth(100)
+        self.codeview_type_group = QtGui.QButtonGroup()
+        self.codeview_type_group.addButton( self.codeview_type_larlite )
+        self.codeview_type_group.addButton( self.codeview_type_larcv )
+        self.codeview_type_larlite.setChecked(True)
+        codeview_type_layout = QtGui.QGridLayout()
+        codeview_type_layout.addWidget( self.codeview_type_label, 0, 0 )
+        codeview_type_layout.addWidget( self.codeview_type_larlite, 0, 1 )
+        codeview_type_layout.addWidget( self.codeview_type_larcv, 0, 2 )
+        self.codeview_type_group.buttonClicked.connect( self.selectProcessorConfig )
+
+        codeview_layout.addLayout(codeview_type_layout, 0, 0, 1, 3)
+        codeview_layout.addWidget(self.codeView, 1, 0, 10, 10)
+        codeview_layout.addWidget(entry_selection_frame, 11, 0, 1, 10 )
+        codeview_layout.addWidget(processor_fileselect_frame, 12, 0, 1, 10 )
 
         self.codeview_frame.setLayout( codeview_layout )
         
-        # default processor
+
+        # default processor (starts with larlite)
         processor_filepath = self.processor_filepath.text()
         if not os.path.exists(processor_filepath):
-            str_defaultprocessor = getDefaultProcessorConfig()
+            str_defaultprocessor = getDefaultProcessorConfig("LARLITE")
             # write to file
             defaultfile = open( processor_filepath, 'w' )
             print >> defaultfile, str_defaultprocessor
@@ -136,6 +179,8 @@ class EventControl(QtGui.QWidget):
         codeview_entry_frame = QtGui.QFrame()
         codeview_entry_frame.setLineWidth(1)
         codeview_entry_frame.setFrameShape( QtGui.QFrame.Box )
+
+        # entry boxes, buttons
         codeview_entry_label = QtGui.QLabel("Entry:")
         codeview_entry_label.setFixedWidth(40)
         self.codeview_entry_input = QtGui.QLineEdit()
@@ -156,6 +201,14 @@ class EventControl(QtGui.QWidget):
         self.codeview_entry_goto = QtGui.QPushButton("Go")
         self.codeview_entry_prev = QtGui.QPushButton("Previous")
         self.codeview_entry_next = QtGui.QPushButton("Next")
+
+        # filetype choice
+        codeview_ftype_label = QtGui.QLabel("Filetype:")
+        codeview_ftype_label.setFixedWidth(60)
+        self.codeview_ftype_combo = QtGui.QComboBox()
+        self.codeview_ftype_combo.insertItem(0,"LARLITE")
+        self.codeview_ftype_combo.insertItem(1,"LARCV")
+
         codeview_entry_layout.addWidget( codeview_entry_label, 0, 0)
         codeview_entry_layout.addWidget( self.codeview_entry_input, 0, 1)
         codeview_entry_layout.addWidget( codeview_run_label, 0, 2)
@@ -167,12 +220,20 @@ class EventControl(QtGui.QWidget):
         codeview_entry_layout.addWidget( self.codeview_entry_goto, 0, 8 )
         codeview_entry_layout.addWidget( self.codeview_entry_prev, 0, 9 )
         codeview_entry_layout.addWidget( self.codeview_entry_next, 0, 10 )
+        codeview_entry_layout.addWidget( codeview_ftype_label, 0, 11 )
+        codeview_entry_layout.addWidget( self.codeview_ftype_combo, 0, 12 )
         codeview_entry_frame.setLayout( codeview_entry_layout )
         return codeview_entry_frame
 
     def _saveProcessorFile(self):
         out = self.codeView.toPlainText()
-        fpath = self.processor_filepath.text()
+        if self.codeview_type_larlite.isChecked():
+            ftype = "LARLITE"
+            fpath = self.processor_filepath.text()
+        else:
+            ftype = "LARCV"
+            fpath = self.larcv_processor_filepath.text()
+
         if fpath=="":
             return
         fout = open( fpath, 'w' )
@@ -190,8 +251,34 @@ class EventControl(QtGui.QWidget):
             self.codeView.appendPlainText( l[:-1] )
         fin.close()
 
-    def setEntry( self, entry, filetype ):
-        pass
+    def setEntryShown( self, entry, filetype ):
+        rse = self.themainwindow.filemanagers[filetype].entry_dict[entry]
+        self.codeview_entry_input.setText("%d"%(entry))
+        self.codeview_run_input.setText("%d"%(rse[0]))
+        self.codeview_subrun_input.setText("%d"%(rse[1]))
+        self.codeview_event_input.setText("%d"%(rse[2]))
+
+    def selectProcessorConfig(self, checkbox):
+        ftype = str(checkbox.text())
+        ftype = ftype.upper()
+
+        if ftype=="LARLITE":
+            fpath = self.processor_filepath.text()
+        elif ftype=="LARCV":
+            fpath = self.larcv_processor_filepath.text()
+
+
+        if os.path.exists(fpath):
+            pass
+        else:
+            str_defaultprocessor = getDefaultProcessorConfig(ftype)
+            # write to file
+            defaultfile = open( fpath, 'w' )
+            print >> defaultfile, str_defaultprocessor
+            defaultfile.close()
+
+        self.loadProcessorFile(fpath)
+        
 
     ## end of larlite processor config 
     ## ========================================================================================
@@ -253,7 +340,7 @@ class EventControl(QtGui.QWidget):
         flists = flistraw.split(";")
         for flist in flists:
             # we pass the filelist to the file manager
-            print "Loading Filemanager with files in ",flist,
+            print "Loading Filemanager with files in ",flist
             print " * Building event index: this could take a second at first."
             fileman = FileManager()
             fileman.setFilelist( flist )
@@ -272,18 +359,21 @@ class EventControl(QtGui.QWidget):
             if fman is not None:
                 nevents = len(fman.rse_dict)
 
+
             topitem = QtGui.QTreeWidgetItem([ftype,"%d"%(nevents)])
             self.eventtree.addTopLevelItem( topitem )
             topitems[ftype] = topitem
             self.eventlistitems[ftype] = {}
 
             # now we get the event list and add it to the event tree
-            if fman is not None:
+            if fman is not None and nevents>0:
                 for ientry,rse in fman.entry_dict.items():
                     itemwidget = QtGui.QTreeWidgetItem(["%d"%(ientry),"%d"%rse[0],"%d"%(rse[1]),"%d"%(rse[2]) ])
                     self.eventlistitems[ftype][ientry] = itemwidget
                     topitems[ ftype ].addChild( itemwidget )
                     
+                # set entry
+                self.setEntryShown( 0, ftype )
             
             
     def eventTreeItemDoubleClicked(self, item, column):
