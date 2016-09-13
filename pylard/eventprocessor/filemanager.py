@@ -30,6 +30,7 @@ class FileManager:
             self.flavor_def      = fmandata["flavor_def"]
             self.producers       = fmandata["producers"]
             self.datatypes       = fmandata["datatypes"]
+            self.filetype        = fmandata["filetype"]
             self.parsed = True
             self.summary()
             elapsed = time.time()-start
@@ -50,7 +51,9 @@ class FileManager:
                          "flavors":self.flavors,
                          "flavor_def":self.flavor_def,
                          "producers":self.producers,
-                         "datatypes":self.datatypes }
+                         "datatypes":self.datatypes,
+                         "filetype":self.filetype,
+                         }
                 pickle.dump( data, fmanpickled )
                 print "Caching FileManager Data to ",".pylardcache/"+str(self.fhash)+"/fmandata.pickle"
 
@@ -96,10 +99,15 @@ class FileManager:
         #  - this hash is used to define the 'flavor' of the file
         #  - we also make a list of events in the tree, labeling each entry with (run,subrun,event) ID
         #  - we keep track of such list of entries and group files (and flavors) with the same event list
+        #  - determine filetype: LArCV or LArLite
+        self.filetype = None
         for f in self.larlitefilelist:
             r = rt.TFile(f)
             nfkeys = r.GetListOfKeys().GetEntries()
-            found_id_tree = False
+
+            # now here we parse the type of objects in the ROOT file
+            # we are looking to determine three file types supported by pylard
+            #  (1) larlite (2) larcv (3) rawdigitreader
             trees = []
             for i in range(nfkeys):
                 keyname = r.GetListOfKeys().At(i).GetName()
@@ -119,8 +127,46 @@ class FileManager:
             for keyname in trees:
                 hashstr += keyname +";"
 
-            if not found_id_tree:
+            # determine filetype from type of keys we see
+            is_supported_rootfile = False
+            idtreename = None
+            if "larlite_id_tree" in trees:
+                thisfiletype = "LARLITE"
+                is_supported_rootfile = True
+            if "image2d" in self.datatypes:
+                thisfiletype = "LARCV"
+                is_supported_rootfile = True
+            if "partroi" in self.datatypes:
+                thisfiletype = "LARCV"
+                is_supported_rootfile = True
+            if not is_supported_rootfile:
                 continue
+
+            if self.filetype is not None and self.filetype!=thisfiletype:
+                print "Error in parsing filelist: Cannot mix filetypes (LArCV/LArLite/RawDigitTree)"
+                return
+            elif self.filetype is None:
+                self.filetype = thisfiletype
+            
+            # now we determine the idtree to use
+            if self.filetype=="LARLITE":
+                idtreename = "larlite_id_tree"
+            elif self.filetype=="LARCV":
+                for treename in trees:
+                    if "image2d" in treename:
+                        if idtreename is None:
+                            idtreename = treename
+                        else:
+                            pass # we only use this if we have to
+                    elif "partroi" in treename:
+                        idtreename = treename # we prefer to use this tree for speed
+
+            if idtreename is None:
+                print "Error: Could not setup a proper ID tree for this file"
+                continue
+
+            # now we parse the tree contents. define a flavor for it based on all the trees
+            # we also get the (run,subrun,event) id for the event
             m = hashlib.md5()
             m.update(hashstr)
             flavor = m.digest()
@@ -128,11 +174,15 @@ class FileManager:
                 self.flavors.append( flavor )
                 flavor_eventset[flavor] = []
                 self.flavor_def[flavor] = hashstr
-            idtree = r.Get("larlite_id_tree")
+            idtree = r.Get(idtreename)
             eventset = [] # list of events
             for n in range(idtree.GetEntries()):
                 idtree.GetEntry(n)
-                rse = ( idtree._run_id, idtree._subrun_id, idtree._event_id )
+                if self.filetype=="LARLITE":
+                    rse = ( idtree._run_id, idtree._subrun_id, idtree._event_id )
+                elif self.filetype=="LARCV":
+                    raise ValueError("Need to parse LARCV tree")
+                    pass
                 eventset.append(rse)
                 if rse not in flavor_eventset[flavor]:
                     flavor_eventset[flavor].append( rse )
@@ -145,6 +195,8 @@ class FileManager:
                 eventsets.append( eventset )
             events_to_files[eventset][flavor] = f
             events_to_flavors[eventset].append( flavor )
+            del idtree
+            r.Close()
         self.parsed = True
 
         # now we take our collection of event lists and
@@ -181,6 +233,9 @@ class FileManager:
         # these are the final file list and event dictionary we want
         self.sorted_filelist = flavorfiles[maxset]
         self.rse_dict        = flavorset_rse_dict[maxset]
+
+            
+        
 
     def summary(self):
         if not self.parsed:

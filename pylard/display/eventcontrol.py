@@ -209,13 +209,21 @@ class EventControl(QtGui.QWidget):
         print "Loading Filemanager, building event index: this could take a second at first."
         self.themainwindow.filemanager.setFilelist( flist )
 
+        # Top level is file type
+        toplarlite = QtGui.QTreeWidgetItem(["LARLITE"])
+        toplarscv  = QtGui.QTreeWidgetItem(["LARCV"])
         # now we get the event list and add it to the event tree
-        self.eventlistitems = {}
+        self.eventlistitems = { "LARLITE":{},
+                                "LARCV":{} }
+        topitems = {"LARLITE":toplarlite,
+                    "LARCV":toplarscv}
         nentries = len(self.themainwindow.filemanager.rse_dict)
         for rse,ientry in self.themainwindow.filemanager.rse_dict.items():
-            self.eventlistitems[ientry] = QtGui.QTreeWidgetItem(["%d"%rse[0],"%d"%(rse[1]),"%d"%(rse[2]) ])
-        for ientry in range(nentries):
-            self.eventtree.addTopLevelItem( self.eventlistitems[ientry+1] )
+            self.eventlistitems[self.themainwindow.filemanager.filetype][ientry] = QtGui.QTreeWidgetItem(["%d"%rse[0],"%d"%(rse[1]),"%d"%(rse[2]) ])
+            topitems[ self.themainwindow.filemanager.filetype ].addChild( self.eventlistitems[self.themainwindow.filemanager.filetype][ientry] )
+        
+        self.eventtree.addTopLevelItem( toplarlite )
+        self.eventtree.addTopLevelItem( toplarscv )
 
 
     ## ========================================================================================

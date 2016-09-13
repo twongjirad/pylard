@@ -11,10 +11,12 @@ class MasterConfiguration:
         self.larcv_process_cfg = "default_larcv.cfg"
         self.larlite_filelist = ""
         self.larcv_filelist = ""
+        self.load_files_on_start = "no"
         self.varnames = ["larlite_process_cfg",
                          "larcv_process_cfg",
                          "larlite_filelist",
-                         "larcv_filelist"]
+                         "larcv_filelist",
+                         "load_files_on_start"]
     
     def makeJson(self):
         data = { "larlite_process_cfg":self.larlite_process_cfg,
@@ -39,7 +41,7 @@ class MasterConfiguration:
 
 class MasterConfigPanel(QtGui.QWidget):
     """ this panel can load or define the master configuration file."""
-    def __init__(self):
+    def __init__(self,pylardconfig=None):
         super(MasterConfigPanel,self).__init__()
         self.config = MasterConfiguration()
         configpanel = self._makeConfigPanelFrame()
@@ -47,6 +49,14 @@ class MasterConfigPanel(QtGui.QWidget):
         configpanel_layout.addWidget( configpanel, 0, 0)
         self.setLayout(configpanel_layout)
         self.themainwindow = None
+
+        # load config
+        if pylardconfig is None:
+            config_filepath = self.config_filepath.text()
+        else:
+            config_filepath = pylardconfig
+        self.loadConfigFile(config_filepath)
+
 
     def setMainWindow(self,window):
         """ mainwindow provides access to all the other components of pylard 
@@ -79,9 +89,6 @@ class MasterConfigPanel(QtGui.QWidget):
         if not os.path.exists(config_filepath):
             os.system( "cp "+os.path.dirname(__file__)+"/../config/default.pylardcfg ." )
             config_filepath = "default.pylardcfg"
-
-        # write to codeview
-        self.loadConfigFile(config_filepath)
 
         return self.codeview_frame
 
