@@ -18,7 +18,7 @@ class DataCoordinator:
 
     def addManager(self,name,fileman):
         self.filemans[name] = fileman
-        self.active[name] = True
+        self.active[name] = False
 
     def setManagerActivity(self,name,isactive):
         self.active[name] = isactive
@@ -26,6 +26,8 @@ class DataCoordinator:
     def getManagerEntry(self,entry,name):
         if name=="LARCV":
             ok = self.processdrivers[name].process_entry(entry)
+        elif name=="LARLITE":
+            ok = self.ioman[name].go_to(entry)
         else:
             ok = True
         return ok
@@ -61,31 +63,37 @@ class DataCoordinator:
 
     
     def configure(self,name,config):
+        
+        # the config hash: check if we've already configured the processor with the same exact file
+        m = hashlib.md5()
+        fin = open(config,'r')
+        cfg = fin.read()
+        m.update(cfg)
+        current = m.hexdigest()
+        if name in self.confighash and self.confighash[name]==current:
+            return # no update to config, dont update processor
+
         if name=="LARLITE":
             """ for larlite, we will open our own storage manager and manager the process analyzers ourselves """
             from larlite import larlite
-            from larlite import fcllite
+            from ROOT import fcllite
             # the iomanager
-            io = larlite.storage_manager()
-            for fname in fileman.sorted_filelist:
-                io.add_in_filename( fname )
-            self.ioman[name] = io
-            # the config
+            if name not in self.confighash:
+                # open new file
+                io = larlite.storage_manager( larlite.storage_manager.kREAD )
+                for fname in self.filemans[name].sorted_filelist:
+                    io.add_in_filename( fname )
+                io.open()
+                self.ioman[name] = io
+                self.setManagerActivity(name,True)
+            # set the config
             self.configs[name] = fcllite.ConfigManager( config )
-            
+
         elif name=="LARCV":
             """ needs iomanager configuration from PSET"""
             s = time.time()
             from larcv import larcv
             print "Loading LArCV: ",time.time()-s,"secs"
-            # the config
-            m = hashlib.md5()
-            fin = open(config,'r')
-            cfg = fin.read()
-            m.update(cfg)
-            current = m.hexdigest()
-            if name in self.confighash and self.confighash[name]==current:
-                return # no update to config, dont update processor
             
             # parse pset
             print "New or updated configuration provided."
@@ -96,6 +104,7 @@ class DataCoordinator:
             else:
                 proc = larcv.ProcessDriver("ProcessDriver")
                 self.processdrivers[name] = proc
+                self.ioman[name] = proc.io()
             self.configs[name] = pset.get_pset("ProcessDriver")
             # reconfigure
             proc.configure( self.configs[name]  )
@@ -107,6 +116,7 @@ class DataCoordinator:
                 proc.override_input_file( v )
                 proc.initialize()
             self.confighash[name] = current
+            self.setManagerActivity(name,True)
 
                 
         

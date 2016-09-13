@@ -28,19 +28,30 @@ def dev():
     fman_larlite = FileManager()
     fman_larcv   = FileManager()
     fman_larcv.setFilelist( "ex_databnb_larcv.txt" )
-    fman_larlite.setFilelist( "ex_databnb_larlite.txt" )
+    fman_larlite.setFilelist("ex_databnb_larlite.txt")
 
     # seutp datacoordinator
     data = DataCoordinator()
     data.addManager( "LARLITE", fman_larlite )
     data.addManager( "LARCV", fman_larcv )
 
+    # Setup IOManagers/ProcessDrivers
     data.configure( "LARCV", "default_larcv.cfg" )
+    data.configure( "LARLITE", "default_larlite.cfg" )
 
-    data.getEntry( 0, "LARCV" )
+    # LARCV DRIVES
+    #data.getEntry( 0, "LARCV" )
 
-    event_imgs = data.processdrivers["LARCV"].io().get_data( larcv.kProductImage2D, "tpc" )
+    # LARLITE DRIVES
+    data.getEntry(0,"LARLITE")
+
+    # GET LARCV DATA
+    event_imgs = data.ioman["LARCV"].get_data( larcv.kProductImage2D, "tpc" )
     print event_imgs
+
+    # GET LARLITE DATA
+
+    
 
     if not PROFILE:
         print "[ENTER TO EXIT]"
