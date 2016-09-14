@@ -5,6 +5,7 @@ from pylard.display.rgbdisplay import RGBDisplay
 from pylard.display.eventcontrol import EventControl
 from pylard.display.masterconfigpanel import MasterConfigPanel
 from pylard.eventprocessor.processmanager import ProcessManager
+from pylard.eventprocessor.datacoordinator import DataCoordinator
 
 class PyLArD( QtGui.QMainWindow ):
     def __init__(self, config_yaml="", use_cache=True, cache_dir="./cache", pylardconfig=None):
@@ -17,6 +18,7 @@ class PyLArD( QtGui.QMainWindow ):
         self.rgbdisplay   = RGBDisplay()
         self.eventcontrol = EventControl()
         self.masterconfig = MasterConfigPanel(pylardconfig)
+        self.mergeddata = None
         
         # pass the larlite filelist path to the event control
         flist = ""
@@ -79,3 +81,41 @@ class PyLArD( QtGui.QMainWindow ):
         widget.setMainWindow(self)
 
     
+    # ================================================================
+    # global event control
+
+    def configureDataManagers(self):
+        # setup mergeddata
+        if self.mergeddata is None:
+            self.mergeddata = DataCoordinator()
+            for ftype,fman in self.filemanagers.items():
+                if fman is not None:
+                    self.mergeddata.addManager( ftype, fman )
+
+        # save processor configuration files
+        self.eventcontrol.saveProcessorFileButton() # save current file
+        cfg = { "LARLITE":self.eventcontrol.processor_filepath.text(),
+                "LARCV":self.eventcontrol.larcv_processor_filepath.text() }
+        # pass file managers and configureations to data coordinator
+        for ftype,fman in self.filemanagers.items():
+            if fman is not None:
+                self.mergeddata.configure( ftype, str(cfg[ftype]) )
+
+    def getEntry(self,entry, driver=None):
+        self.configureDataManagers()
+        if driver is None:
+            # need to pick a filetype that is driving the event loop
+            # for now, we go with the one whose processor window is open
+            if self.eventcontrol.codeview_type_larlite.isChecked():
+                driver = "LARLITE"
+            elif self.eventcontrol.codeview_type_larcv.isChecked():
+                driver = "LARCV"
+            else:
+                raise ValueError("Cannot determine which filetype to drive event loop")
+        status = self.mergeddata.getEntry( entry, driver )
+        print "tried to get entry ",entry,": ",status
+        if status:
+            entry = self.mergeddata.getCurrentEntry()
+            ftype = self.mergeddata.getCurrentDrivingManager()
+            self.eventcontrol.setEntryShown( entry, ftype )
+        return status

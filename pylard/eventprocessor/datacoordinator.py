@@ -30,23 +30,26 @@ class DataCoordinator:
             ok = self.ioman[name].go_to(entry)
         else:
             ok = True
+        print "getmanagerentry: ",ok
         return ok
 
     def getEntry(self,entry,drivingmanager):
         if drivingmanager not in self.filemans:
-            return
+            return False
         self.currentManager = drivingmanager
 
         if entry not in self.filemans[drivingmanager].entry_dict:
-            return
-
+            print "entry not in ",drivingmanager," event list"
+            return False
         rse = self.filemans[drivingmanager].entry_dict[entry]
+        print "requesting entry=",entry,"rse=",rse
 
         ok = False
         for name,isactive in self.active.items():
+            print " name=",name," active=",isactive
             if isactive and name in self.filemans and rse in self.filemans[name].rse_dict: 
                 e = self.filemans[name].rse_dict[rse]
-                #print "  driving rse=",rse," ",name," entry=",e
+                print "  driving rse=",rse," ",name," entry=",e
                 manok = self.getManagerEntry( e, name )
                 if not ok and manok: # want to know at least one was ok
                     ok = True
@@ -56,12 +59,18 @@ class DataCoordinator:
 
     def nextEntry(self):
         nextentry = self.currentEntry+1
-        self.getEntry(nextentry,self.currentManager)
+        return self.getEntry(nextentry,self.currentManager)
 
     def prevEntry(self):
         preventry = self.currentEntry-1
-        self.getEntry(preventry,self.currentManager)
+        return self.getEntry(preventry,self.currentManager)
+        
 
+    def getCurrentEntry(self):
+        return self.currentEntry
+
+    def getCurrentDrivingManager(self):
+        return self.currentManager
     
     def configure(self,name,config):
         
@@ -87,6 +96,7 @@ class DataCoordinator:
                 io.open()
                 self.ioman[name] = io
                 self.setManagerActivity(name,True)
+                self.confighash[name] = current
             # set the config
             self.configs[name] = fcllite.ConfigManager( config )
 

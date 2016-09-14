@@ -199,8 +199,11 @@ class EventControl(QtGui.QWidget):
         self.codeview_event_input.setFixedWidth(60)
         codeview_entry_layout = QtGui.QGridLayout()
         self.codeview_entry_goto = QtGui.QPushButton("Go")
+        self.codeview_entry_goto.clicked.connect( self.goButton )
         self.codeview_entry_prev = QtGui.QPushButton("Previous")
+        self.codeview_entry_prev.clicked.connect( self.prevButton )
         self.codeview_entry_next = QtGui.QPushButton("Next")
+        self.codeview_entry_next.clicked.connect( self.nextButton )
 
         # filetype choice
         codeview_ftype_label = QtGui.QLabel("Filetype:")
@@ -234,7 +237,7 @@ class EventControl(QtGui.QWidget):
             ftype = "LARCV"
             fpath = self.larcv_processor_filepath.text()
 
-        if fpath=="":
+        if fpath=="" or not os.path.exists(fpath):
             return
         fout = open( fpath, 'w' )
         print >> fout, out
@@ -261,7 +264,7 @@ class EventControl(QtGui.QWidget):
     def selectProcessorConfig(self, checkbox):
         ftype = str(checkbox.text())
         ftype = ftype.upper()
-
+        self.saveProcessorFileButton()
         if ftype=="LARLITE":
             fpath = self.processor_filepath.text()
         elif ftype=="LARCV":
@@ -381,3 +384,40 @@ class EventControl(QtGui.QWidget):
 
     ## ========================================================================================
 
+    # Event control buttons
+    def goButton(self):
+        """ responds to button presses """
+        """ we pass the command to the main window which will take care of everything..."""
+        ftype = str(self.codeview_ftype_combo.currentText())
+        try:
+            entry = int(self.codeview_entry_input.text())
+        except:
+            print "Entry not a number."
+            return
+        if entry in self.themainwindow.filemanagers[ftype].entry_dict:
+            return self.themainwindow.getEntry(entry,ftype)
+        else:
+            print "Entry for ",ftype," data not available."
+            return False
+
+
+    def nextButton(self):
+        ftype = str(self.codeview_ftype_combo.currentText())
+        entry = int(self.codeview_entry_input.text()) + 1
+        if entry in self.themainwindow.filemanagers[ftype].entry_dict:
+            return self.themainwindow.getEntry(entry,ftype)
+        else:
+            print "Entry for ",ftype," data not available."
+            return False        
+
+    def prevButton(self):
+        ftype = str(self.codeview_ftype_combo.currentText())
+        entry = int(str(self.codeview_entry_input.text())) - 1
+        if entry in self.themainwindow.filemanagers[ftype].entry_dict:
+            return self.themainwindow.getEntry(entry,ftype)
+        else:
+            print "Entry for ",ftype," data not available."
+            return False
+        
+
+            
