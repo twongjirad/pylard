@@ -102,6 +102,7 @@ class PyLArD( QtGui.QMainWindow ):
         for ftype,fman in self.filemanagers.items():
             if fman is not None:
                 self.mergeddata.configure( ftype, str(cfg[ftype]) )
+                self.configureVisProcessor( str(cfg[ftype]) )
 
     def configureVisProcessor(self,cfg):
         """ configure the visualizer """
@@ -114,6 +115,7 @@ class PyLArD( QtGui.QMainWindow ):
             # for now, we go with the one whose processor window is open
             driver = self.mergeddata.getCurrentDrivingManager()
 
+        # get event data
         status = self.mergeddata.getEntry( entry, driver )
         print "tried to get entry ",entry,": ",status
         if status:
@@ -121,6 +123,21 @@ class PyLArD( QtGui.QMainWindow ):
             rse   = self.mergeddata.getCurrentRSE()
             self.eventcontrol.setEntryShown( entry, driver )
             self.pmtwindow.setEntryNumbers( entry, rse[0], rse[1], rse[2] )
+        
+        # pass to visualization processor
+        self.visprocessor.execute( self.mergeddata )
+
+        # pass vis products to panels
+        self.pmtwindow.clearVisItems()
+        for key,visproduct in self.visprocessor.products.items():
+            destination = self.visprocessor.destination[key]
+            print "vis product=",key," dest=",destination
+            if destination in self.tabs:
+                self.tabs[destination].addVisItem( "opdata", self.visprocessor.products[key] )
+
+        self.tabs["opdetdisplay"].plotData()
+        #self.tabs["rgbdisplay"].plotData()
+            
         return status
     
     def nextEntry(self,driver=None):

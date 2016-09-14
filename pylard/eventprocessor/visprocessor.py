@@ -6,6 +6,7 @@ class VisProcessor:
     def __init__(self):
         self.psets = []
         self.modules = {}
+        self.destination = {}
         self.products = {}
         self.searchpaths = ["pylard",""]
 
@@ -15,6 +16,8 @@ class VisProcessor:
         
     def _buildVisList(self):
         for pset in self.psets:
+            if not pset.contains_pset("VisProcessor"):
+                continue
             vispset = pset.get_pset("VisProcessor")
             keys = vispset.pset_keys()
             for k in keys:
@@ -22,6 +25,7 @@ class VisProcessor:
                 # get module type
                 modtype = modpset.get("module_type")
                 modfile = modpset.get("module_file")
+                dest    = modpset.get("destination")
                 modname = modfile.replace("/",".")
                 module = None
                 for d in self.searchpaths:
@@ -34,6 +38,7 @@ class VisProcessor:
                     if foundmod: break
                 module.configure( modpset )
                 self.modules[k] = module
+                self.destination[k] = dest
                 print "configured: ",modtype,modfile,module
 
     def loadModules(self):
@@ -41,4 +46,5 @@ class VisProcessor:
 
     def execute(self, data):
         for modkey,module in self.modules.items():
+            print "make vis products key=",modkey," mod=",module
             self.products[modkey] = module.visualize( data.ioman["LARLITE"], data.ioman["LARCV"] )

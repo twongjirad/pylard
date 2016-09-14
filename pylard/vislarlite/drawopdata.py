@@ -27,9 +27,12 @@ class PyLArLiteDrawOpdata:
         # get trigger information
         self.triggerdata = larlite_io.get_data(larlite.data.kTrigger,self.trigger_producer)
         self.trigger_time = self.triggerdata.TriggerTime()
+        print "trigger time=",self.trigger_time
+        valid_trig = True
         if self.trigger_time>1e300:
             #print "larby's"
             self.trigger_time = 3200.0
+            valid_trig = False
 
         # fill waveforms
         nloops = 0
@@ -64,20 +67,23 @@ class PyLArLiteDrawOpdata:
 
             # set relative time
             time = wf.TimeStamp() # in usec
+            if not valid_trig:
+                self.trigger_time = time
+                valid_trig = True
             if (self.trigger_time == None):
                 time -= 3200. #?
             else:
                 time -= self.trigger_time
             
             if len(adcs)>=500: # is there another way to tag beam windows?
-                print "beam window: ch=",pmt," slot=",slot," len=",len(adcs)," timestamp=",time,"(rel) ",time+self.trigger_time," (raw)"," ticks=",time/0.015625
+                #print "beam window: ch=",pmt," slot=",slot," len=",len(adcs)," timestamp=",time,"(rel) ",time+self.trigger_time," (raw)"," ticks=",time/0.015625
                 pyopdata.beamwindows.makeWindow( adcs, time*1000.0, slot, pmt, timepertick=PyLArLiteDrawOpdata.NSPERTICK )
             else:
                 #print "cosmic window: ch=",pmt," slot=",slot," len=",len(adcs)," timestamp=",time," ticks=",time/0.015625
                 pyopdata.cosmicwindows.makeWindow( adcs, time*1000.0, slot, pmt, timepertick=PyLArLiteDrawOpdata.NSPERTICK )
 
 
-
+        return pyopdata
         
         
 

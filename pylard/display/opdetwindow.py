@@ -8,6 +8,7 @@ from pylard.config.pmt_chmap import getPMTID, getChannel, getPMTIDList, getPaddl
 from pylard.config.pmtpos import getPosFromID 
 from pylard.display.pmtposscatterplot import PMTScatterPlot
 from pylard.display.cosmicwindow import CosmicWindow
+import pylard.pylardata.pedestal as pedestal
 
 # The opdet window is composed of three subwindows.
 # The first is a displah of the waveforms, controlled by this class
@@ -147,6 +148,9 @@ class OpDetWindow(QtGui.QWidget) :
         self.channellist = [] # when not None, only draw channels in this list
         self.pedfunction = self.getpedestal
 
+        # vis products
+        self.vis_items = {}
+
         # user analyses
         self.user_analysis_products = []
         self.user_analyses = []
@@ -165,24 +169,78 @@ class OpDetWindow(QtGui.QWidget) :
 
     def setMainWindow( self, window ):
         self.themainwindow = window
+
+    def clearVisItems(self):
+        self.vis_items = {}
         
     def plotData( self ):
+
+        # prep window
+        print self.vis_items
+
         # setup the graphics
-        self.setGraphicsLayout()        
+        self.setGraphicsLayout()
+        scaledown = float( self.adc_scaledown.text() )
+        
+        # clear
+        self.wfplot.clear()
+
+        # get plotting options
+        offset = 1.0
+        if self.collapse.isChecked():
+            offset = 0.0
+            scaledown = 1.0
+
+        # get discr window time range
+        nsrange = self.time_window.getTimeRangeNS()
+
+        # draw waveforms
+        self.drawWaveforms(offset,scaledown,nsrange)
+
+        # draw user waveforms
+        if self.draw_user_items.isChecked():
+            self.drawUserWaveforms(offset,scaledown,nsrange)
+
+        # refresh range object
+        self.wfplot.addItem( self.wf_time_range )
+
+        # axis
+        ax = self.wfplot.getAxis('bottom')
+        ax.setHeight(30)
+        xStyle = {'color':'#FFFFFF','font-size':'14pt'}
+        ax.setLabel('ns from readout start',**xStyle)
+        ay = self.wfplot.getAxis('left')
+        yStyle = {'color':'#FFFFFF','font-size':'14pt'}
+        if self.collapse.isChecked():
+            ay.setLabel('ADC counts - Pedestal',**yStyle)
+        else:
+            ay.setLabel('PMT Channel Number',**yStyle)
+
+        # cosmic window
+        opdata = self.vis_items["opdata"]
+        self.time_window.plotCosmicWindows( opdata.cosmicwindows )
         
     def nextEntry(self):
-        return self.themainwindow.nextEntry()
+        ok = self.themainwindow.nextEntry()
+        if not ok:
+            return ok
 
     def prevEntry(self):
-        return self.themainwindow.prevEntry()
+        ok = self.themainwindow.prevEntry()
+        if not ok:
+            return ok
 
     def getEntry( self ):
         entry = int( self.entry.text() )
-        return self.themainwindow.getEntry( entry )
+        ok = self.themainwindow.getEntry( entry )
+        if not ok:
+            return ok
 
     def getRSE( self ):
         rse = ( int(self.run.text()), int(self.subrun.text()), int(self.event.text()) )
-        return self.themainwindow.getRSE( rse[0], rse[1], rse[2] )
+        ok = self.themainwindow.getRSE( rse[0], rse[1], rse[2] )
+        if not ok:
+            return ok
             
     def getWaveformPlot(self):
         return self.wfplot
@@ -302,3 +360,67 @@ class OpDetWindow(QtGui.QWidget) :
         self.run.setText("%d"%(run))
         self.subrun.setText("%d"%(subrun))
         self.event.setText("%d"%(event))
+
+    def drawWaveforms(self,offset,scaledown,nsrange):
+        if "opdata" in self.vis_items:
+            opdata = self.vis_items["opdata"]
+        else:
+            print "Need VisItem with name \"opdata\""
+            return
+
+        print "Draw waveforms beween: ",nsrange," ticks"
+
+        # get the windows to draw
+        wfmdata = opdata.getWaveformPlotData( nsrange[0], nsrange[1] )
+        slot = int(self.slot.text())
+        for window in wfmdata:
+            ipmt  = window.ch
+            islot = window.slot
+            # skip (or not) the logic channels
+            if self.draw_only_PMTs.isChecked():
+                if ipmt%100>=32:
+                    continue
+            # check if we draw this channel
+            if islot!=slot:
+                continue
+
+            if len(self.channellist)>0 and ipmt not in self.channellist:
+                continue
+
+            pencolor = self.getChanColor(ipmt)
+            if self.last_clicked_channel is not None and ipmt==self.last_clicked_channel:
+                pencolor = (0, 255, 255 )
+
+            ped = self.pedfunction(window.wfm,ipmt)
+            y = (window.wfm-ped)/scaledown+ipmt*offset
+            x = window.genTimeArray()
+            #print "draw wfm islot=",islot," ipmt=",ipmt
+            self.wfplot.plot(x=x,y=y,pen=pencolor)
+
+    def drawUserWaveforms(self,offset,scaledown,nsrange):
+
+        for name,vis in self.vis_items.items():
+            if name=="opdata":
+                continue
+            if not issubclass(vis,opdataplottable):
+                continue
+
+            userwfms = self.vis_items[name].getWaveformPlotData( nsrange[0], nsrange[1] )
+            for wfm in userwfms:
+                ipmt = wfm.ch
+                if ipmt is not None and (len(self.channellist)>0 and ipmt not in self.channellist):
+                    continue
+                pencolor = wfm.default_color
+                if self.last_clicked_channel is not None and ipmt==self.last_clicked_channel:
+                    pencolor = wfm.highlighted_color
+
+                if ipmt is not None:
+                    y = np.asarray(wfm.wfm)/scaledown + ipmt*offset
+                else:
+                    y = wfm.wfm
+                
+                x = wfm.genTimeArray()
+                self.wfplot.plot( x=x, y=y, pen=pencolor )
+
+    def addVisItem( self, name, product ):
+        self.vis_items[name] = product
