@@ -5,6 +5,7 @@ from pylard.display.rgbdisplay import RGBDisplay
 from pylard.display.eventcontrol import EventControl
 from pylard.display.masterconfigpanel import MasterConfigPanel
 from pylard.eventprocessor.processmanager import ProcessManager
+from pylard.eventprocessor.visprocessor import VisProcessor
 from pylard.eventprocessor.datacoordinator import DataCoordinator
 
 class PyLArD( QtGui.QMainWindow ):
@@ -51,7 +52,8 @@ class PyLArD( QtGui.QMainWindow ):
         # filemanagers
         self.filemanagers = {"LARLITE":None,"LARCV":None,"RAWDIGITS":None}
 
-        # event processor
+        # vis processors
+        self.visprocessor = VisProcessor()
 
         # on start-up, do we open files
         if self.masterconfig.config.larlite_filelist!="" and self.masterconfig.config.load_files_on_start.lower() in ["yes","y"]:
@@ -100,6 +102,10 @@ class PyLArD( QtGui.QMainWindow ):
         for ftype,fman in self.filemanagers.items():
             if fman is not None:
                 self.mergeddata.configure( ftype, str(cfg[ftype]) )
+
+    def configureVisProcessor(self,cfg):
+        """ configure the visualizer """
+        self.visprocessor.configure( cfg )
 
     def getEntry(self,entry, driver=None):
         self.configureDataManagers()

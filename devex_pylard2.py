@@ -54,7 +54,7 @@ def dev():
         print "  LARCV: ",event_imgs.run(),event_imgs.subrun(),event_imgs.event()
         print "  LARLITE:",data.ioman["LARLITE"].run_id(),data.ioman["LARLITE"].subrun_id(),data.ioman["LARLITE"].event_id()
 
-    # GET LARLITE DATA
+
 
     
 
