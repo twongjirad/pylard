@@ -264,10 +264,12 @@ class EventControl(QtGui.QWidget):
     def selectProcessorConfig(self, checkbox):
         ftype = str(checkbox.text())
         ftype = ftype.upper()
-        self.saveProcessorFileButton()
+        #self.saveProcessorFileButton()
         if ftype=="LARLITE":
+            # previous was larcv
             fpath = self.processor_filepath.text()
         elif ftype=="LARCV":
+            # previous was larlite
             fpath = self.larcv_processor_filepath.text()
 
 
