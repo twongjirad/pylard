@@ -39,7 +39,7 @@ class DataCoordinator:
         self.currentManager = drivingmanager
 
         if entry not in self.filemans[drivingmanager].entry_dict:
-            print "entry not in ",drivingmanager," event list"
+            print "entry ",entry," not in ",drivingmanager," event list"
             return False
         rse = self.filemans[drivingmanager].entry_dict[entry]
         print "requesting entry=",entry,"rse=",rse
@@ -71,6 +71,12 @@ class DataCoordinator:
 
     def getCurrentDrivingManager(self):
         return self.currentManager
+
+    def getCurrentRSE(self):
+        entry_dict = self.filemans[self.currentManager].entry_dict
+        if self.currentEntry in entry_dict:
+            return entry_dict[self.currentEntry]
+        return (-1,-1,-1)
     
     def configure(self,name,config):
         

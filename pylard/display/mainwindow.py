@@ -106,16 +106,37 @@ class PyLArD( QtGui.QMainWindow ):
         if driver is None:
             # need to pick a filetype that is driving the event loop
             # for now, we go with the one whose processor window is open
-            if self.eventcontrol.codeview_type_larlite.isChecked():
-                driver = "LARLITE"
-            elif self.eventcontrol.codeview_type_larcv.isChecked():
-                driver = "LARCV"
-            else:
-                raise ValueError("Cannot determine which filetype to drive event loop")
+            driver = self.mergeddata.getCurrentDrivingManager()
+
         status = self.mergeddata.getEntry( entry, driver )
         print "tried to get entry ",entry,": ",status
         if status:
             entry = self.mergeddata.getCurrentEntry()
-            ftype = self.mergeddata.getCurrentDrivingManager()
-            self.eventcontrol.setEntryShown( entry, ftype )
+            rse   = self.mergeddata.getCurrentRSE()
+            self.eventcontrol.setEntryShown( entry, driver )
+            self.pmtwindow.setEntryNumbers( entry, rse[0], rse[1], rse[2] )
         return status
+    
+    def nextEntry(self,driver=None):
+        if self.mergeddata is None:
+            return False
+        entry = self.mergeddata.getCurrentEntry()+1
+        return self.getEntry( entry, driver )
+
+    def prevEntry(self,driver=None):
+        if self.mergeddata is None:
+            return False
+        entry = self.mergeddata.getCurrentEntry()-1
+        return self.getEntry( entry, driver )
+        
+    def getRSE( self, run, subrun, event, driver=None ):
+        if driver is None:
+            # need to pick a filetype that is driving the event loop
+            # for now, we go with the one whose processor window is open
+            driver = self.mergeddata.getCurrentDrivingManager()
+            rse = (run,subrun,event)
+            if driver in self.mergeddata.filemans and rse in self.mergeddata.filemans[driver].rse_dict:
+                entry = self.mergeddata.filemans[driver].rse_dict[rse]
+                return self.getEntry( entry, driver )
+        return False
+            

@@ -49,7 +49,7 @@ class OpDetWindow(QtGui.QWidget) :
 
         # Main Layout
         self.layout = QtGui.QGridLayout()
-        self.layout.addWidget( self.graphics, 0, 0, 1, 10 )
+        self.layout.addWidget( self.graphics, 0, 0, 1, 9 )
         self.graphics.addItem( self.pmt_map, 0, 0, rowspan=2 )
         self.graphics.addItem( self.pmtscale, 2, 0, rowspan=1 )
         self.graphics.addItem( self.wfplot, 3, 0, rowspan=3 )
@@ -66,13 +66,15 @@ class OpDetWindow(QtGui.QWidget) :
         
         # Navigation
         opdata = None # Temp hack
-        if opdata is not None:
-            self.event = QtGui.QLineEdit("%d"%(opdata.first_event))     # event number
-        else:
-            self.event = QtGui.QLineEdit("0") # event number
-        self.slot  = QtGui.QLineEdit("5")     # slot number
+        self.entry  = QtGui.QLineEdit("") # entry number
+        self.run    = QtGui.QLineEdit("") # run number
+        self.subrun = QtGui.QLineEdit("") # run number
+        self.event  = QtGui.QLineEdit("") # run number
+        self.slot   = QtGui.QLineEdit("5")     # slot number
         self.prev_event = QtGui.QPushButton("Previous")
         self.next_event = QtGui.QPushButton("Next")
+        self.get_event  = QtGui.QPushButton("Get Entry")
+        self.get_rse  = QtGui.QPushButton("Get RSE")
 
         # control the waveform viewer
         self.collapse = QtGui.QCheckBox("Overlay Mode")  # collapse onto one another
@@ -85,17 +87,40 @@ class OpDetWindow(QtGui.QWidget) :
         self.draw_cosmics.setChecked(True)
 
         # add to layout
-        self.lay_inputs.addWidget( QtGui.QLabel("Event"), 0, 0 )
-        self.lay_inputs.addWidget( self.event, 0, 1 )
-        self.lay_inputs.addWidget( QtGui.QLabel("FEM Slot"), 0, 2 )
-        self.lay_inputs.addWidget( self.slot, 0, 3 )
-        self.lay_inputs.addWidget( QtGui.QLabel("ADC scale-down"), 0, 4 )
-        self.lay_inputs.addWidget( self.adc_scaledown, 0, 5 )
-        self.lay_inputs.addWidget( self.collapse, 0, 8 )
-        self.lay_inputs.addWidget( self.draw_diag, 0, 9 )
-        self.lay_inputs.addWidget( self.draw_cosmics, 0, 10 )
-        self.lay_inputs.addWidget( self.prev_event, 0, 11 )
-        self.lay_inputs.addWidget( self.next_event, 0, 12 )
+        rse_panel_layout = QtGui.QGridLayout()
+        entrylabel  = QtGui.QLabel("Entry")
+        runlabel    = QtGui.QLabel("Run")
+        subrunlabel = QtGui.QLabel("Subrun")
+        eventlabel  = QtGui.QLabel("Event")
+        femlabel    = QtGui.QLabel("FEM")
+        adc_scale_label = QtGui.QLabel("ADC scale-down")
+
+        entrylabel.setFixedWidth(30)
+        runlabel.setFixedWidth(25)
+        subrunlabel.setFixedWidth(45)
+        eventlabel.setFixedWidth(35)
+        adc_scale_label.setFixedWidth(100)
+
+        rse_panel_layout.addWidget( entrylabel,  0, 0 )
+        rse_panel_layout.addWidget( self.entry,  0, 1 )
+        rse_panel_layout.addWidget( runlabel,    0, 2 )
+        rse_panel_layout.addWidget( self.run,    0, 3 )
+        rse_panel_layout.addWidget( subrunlabel, 0, 4 )
+        rse_panel_layout.addWidget( self.subrun, 0, 5 )
+        rse_panel_layout.addWidget( eventlabel,  0, 6 )
+        rse_panel_layout.addWidget( self.event,  0, 7 )
+        rse_panel_layout.addWidget( femlabel,    0, 8 )
+        rse_panel_layout.addWidget( self.slot,   0, 9 )
+        rse_panel_layout.addWidget( adc_scale_label, 0, 10 )
+        rse_panel_layout.addWidget( self.adc_scaledown, 0, 11 )
+
+        self.lay_inputs.addLayout( rse_panel_layout, 0, 0, 1, 10 )
+        self.lay_inputs.addWidget( self.collapse, 0, 10 )
+        self.lay_inputs.addWidget( self.draw_diag, 0, 11 )
+        self.lay_inputs.addWidget( self.draw_cosmics, 0, 12 )
+        self.lay_inputs.addWidget( self.prev_event, 0, 13 )
+        self.lay_inputs.addWidget( self.next_event, 0, 14 )
+        self.lay_inputs.addWidget( self.get_event,  0, 15 )
         self.last_clicked_channel = None
         self.user_plot_item = {} # storage for user plot items
 
@@ -111,11 +136,12 @@ class OpDetWindow(QtGui.QWidget) :
         self.run_user_analysis = QtGui.QCheckBox("run user funcs.")  # draw user products
         self.run_user_analysis.setChecked(True)
 
-        self.lay_inputs.addWidget( self.draw_only_PMTs, 1, 8 )
-        self.lay_inputs.addWidget( self.draw_chlabels, 1, 9 )
-        self.lay_inputs.addWidget( self.draw_user_items, 1, 10 )
-        self.lay_inputs.addWidget( self.run_user_analysis, 1, 11 )
-        self.lay_inputs.addWidget( self.replot, 1, 12 )
+        self.lay_inputs.addWidget( self.draw_only_PMTs, 1, 10 )
+        self.lay_inputs.addWidget( self.draw_chlabels, 1, 11 )
+        self.lay_inputs.addWidget( self.draw_user_items, 1, 12 )
+        self.lay_inputs.addWidget( self.run_user_analysis, 1, 13 )
+        self.lay_inputs.addWidget( self.replot, 1, 14 )
+        self.lay_inputs.addWidget( self.get_rse, 1, 15 )
 
         # other options
         self.channellist = [] # when not None, only draw channels in this list
@@ -127,8 +153,10 @@ class OpDetWindow(QtGui.QWidget) :
 
         # connect
         self.replot.clicked.connect( self.plotData )
-        self.next_event.clicked.connect( self.nextEvent )
-        self.prev_event.clicked.connect( self.prevEvent )
+        self.next_event.clicked.connect( self.nextEntry )
+        self.prev_event.clicked.connect( self.prevEntry )
+        self.get_event.clicked.connect( self.getEntry )
+        self.get_rse.clicked.connect( self.getRSE )
         self.pmtdiagram.sigClicked.connect( self.pmtDiagramClicked )
         #self.pmtdiagram.scene().sigMouseMoved.connect(self.onMovePMTdiagram)
 
@@ -142,20 +170,25 @@ class OpDetWindow(QtGui.QWidget) :
         # setup the graphics
         self.setGraphicsLayout()        
         
-    def nextEvent(self):
-        pass
+    def nextEntry(self):
+        return self.themainwindow.nextEntry()
 
-    def prevEvent(self):
-        pass
+    def prevEntry(self):
+        return self.themainwindow.prevEntry()
+
+    def getEntry( self ):
+        entry = int( self.entry.text() )
+        return self.themainwindow.getEntry( entry )
+
+    def getRSE( self ):
+        rse = ( int(self.run.text()), int(self.subrun.text()), int(self.event.text()) )
+        return self.themainwindow.getRSE( rse[0], rse[1], rse[2] )
             
     def getWaveformPlot(self):
         return self.wfplot
     
     def getPMTdiagram(self):
-        return self.pmtdiagram
-            
-    def gotoEvent( self, event, slot=None ):
-        pass
+        return self.pmtdiagram            
             
     def setOverlayMode( self, mode=True ):
         if mode==True:
@@ -244,8 +277,7 @@ class OpDetWindow(QtGui.QWidget) :
     def clearUserAnalyses( self ):
         self.user_analyses = []
         self.user_analysis_chproducts = {}
-                              
-                                        
+                                                                      
     def setGraphicsLayout(self):
         self.graphics.clear()
         self.time_window.setRange()
@@ -265,4 +297,8 @@ class OpDetWindow(QtGui.QWidget) :
         if self.draw_cosmics.isChecked():
             self.graphics.addItem( self.time_window, nextrow, 0, rowspan=1 )
 
-
+    def setEntryNumbers( self, entry, run, subrun, event ):
+        self.entry.setText("%d"%(entry))
+        self.run.setText("%d"%(run))
+        self.subrun.setText("%d"%(subrun))
+        self.event.setText("%d"%(event))
