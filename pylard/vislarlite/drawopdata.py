@@ -84,7 +84,7 @@ class PyLArLiteDrawOpdata:
 
 
         return pyopdata
-        
+
         
 
         

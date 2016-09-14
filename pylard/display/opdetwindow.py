@@ -219,6 +219,9 @@ class OpDetWindow(QtGui.QWidget) :
         # cosmic window
         opdata = self.vis_items["opdata"]
         self.time_window.plotCosmicWindows( opdata.cosmicwindows )
+
+        # pmt diagram
+        self.drawDiagramData()
         
     def nextEntry(self):
         ok = self.themainwindow.nextEntry()
@@ -424,3 +427,69 @@ class OpDetWindow(QtGui.QWidget) :
 
     def addVisItem( self, name, product ):
         self.vis_items[name] = product
+
+    def drawDiagramData(self,):
+        slot = int(self.slot.text())
+        bnds = self.wf_time_range.getRegion()
+        if "opdata" not in self.vis_items:
+            return
+        wfms = self.vis_items["opdata"].getWaveformPlotData( bnds[0], bnds[1] ) # this won't work for beam windows...
+        
+        # we get the max within range
+        chmaxes = {}
+        for wfm in wfms:
+            if slot!=wfm.slot:
+                continue
+            tstart = wfm.getTimestamp()
+            tend   = wfm.getEndstamp()
+            ch     = wfm.ch
+            if ch not in chmaxes:
+                chmaxes[ch] = 0.0
+
+            tstart_tick = int( np.maximum( 0, (bnds[0]-tstart)/wfm.timepertick ) )
+            tend_tick   = int( np.minimum( len(wfm.wfm), (bnds[1]-tstart)/wfm.timepertick ) )
+            ped = self.pedfunction(wfm.wfm,ch)
+            chmax = np.max( wfm.wfm[tstart_tick:tend_tick]-ped )
+            if chmax>chmaxes[ch]:
+                chmaxes[ch] = chmax
+
+        # better interface here is needed
+        self.pmt_map.clear()
+        self.pmtspot = []
+        self.pmtlabels = []
+
+        for ich in range(0,36):
+            if ich>=36:
+                continue
+            if ich not in chmaxes:
+                maxamp = 0.0
+            else:
+                maxamp = chmaxes[ich]
+            ipmt = getPMTID( ich )-1
+            col = self.pmtscale.colorMap().map( (maxamp)/2048.0 )
+            alpha = 255
+            if len(self.channellist)>0 and ipmt not in self.channellist:
+                alpha = 50
+            bordercol = self.getChanColor( ipmt, alpha=alpha )
+            if self.last_clicked_channel is not None and ipmt==self.last_clicked_channel:
+                bordercol = ( 0, 255, 255, alpha )
+
+            # beam goes right to left!
+            # note that pmt pos are in larsoft coordinates with origin moved such that drawing is in center of detector
+            # we have to invert the z!
+            if ipmt in getPMTIDList():
+                pos = getPosFromID(ipmt, origin_at_detcenter=True )
+                self.pmtspot.append( {"pos":(-pos[2],pos[1]), "size":30, 'pen':{'color':bordercol,'width':2}, 'brush':col, 'symbol':'o', 'data':{"id":ipmt,"highlight":False}} )
+            elif ipmt in getPaddleIDList():
+                pos = getPosFromID( ipmt, origin_at_detcenter=True )
+                self.pmtspot.append( {"pos":(-pos[2],pos[1]), "size":25, 'pen':{'color':bordercol,'width':2}, 'brush':col, 'symbol':'s', 'data':{"id":ipmt,"highlight":False}} )
+            # add label
+            if self.draw_chlabels.isChecked():
+                pmtlabel = pg.TextItem( "CH%d" %(ipmt), color=bordercol, anchor=(0.5,0.5) )
+                pmtlabel.setFont( QtGui.QFont("Helvetica [Cronyx]",10) )
+                pmtlabel.setPos( -pos[2], pos[1]+26 )
+                self.pmtlabels.append( pmtlabel )
+                self.pmt_map.addItem( pmtlabel )
+
+        self.pmtdiagram.setData( self.pmtspot  )
+        self.pmt_map.addItem( self.pmtdiagram )
