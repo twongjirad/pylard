@@ -4,6 +4,7 @@ import time
 import pickle
 
 class FileManager:
+    """ this needs to get broken up for the different file types..."""
     def __init__( self ):
         self.parsed = False
         self.loaded_larcv = False
@@ -33,6 +34,8 @@ class FileManager:
             self.producers       = fmandata["producers"]
             self.datatypes       = fmandata["datatypes"]
             self.filetype        = fmandata["filetype"]
+            if self.filetype=="RAWDIGITS":
+                self.rawdigits_entrymap = fmandata["rawdigits_entrymap"]
             self.parsed = True
             self.loaded_larcv = False
             self.loaded_larlite = False
@@ -59,6 +62,9 @@ class FileManager:
                          "datatypes":self.datatypes,
                          "filetype":self.filetype,
                          }
+                if self.filetype=="RAWDIGITS":
+                    data["rawdigits_entrymap"] = self.rawdigits_entrymap
+
                 pickle.dump( data, fmanpickled )
                 print "Caching FileManager Data to ",".pylardcache/"+str(self.fhash)+"/fmandata.pickle"
 
@@ -95,6 +101,7 @@ class FileManager:
         self.datatypes = []  # all data types
         self.flavors = []    # flavor = hash of string listing set of trees found in a given file
         self.flavor_def = {} # map from flavor to list of tree names
+        self.rawdigits_entrymap = {} # only used if file type is raw digits. maps rse to (position,wfms) in data tree
         flavor_eventset = {}
         eventsets = []
         events_to_files = {}
@@ -126,6 +133,11 @@ class FileManager:
                         self.producers.append( producer )
                     if dtype not in self.datatypes:
                         self.datatypes.append( dtype )
+                elif "rawdigitwriter" in keyname:
+                    trees.append( "rawdigitwriter/RawDigits" )
+                    trees.append( "rawdigitwriter/OpDetWaveforms" )
+                    trees.append( "rawdigitwriter/IndexRawDigits" )
+                    trees.append( "rawdigitwriter/IndexOpDetWfms" )
                 if keyname not in trees:
                     trees.append(keyname)
             hashstr = ""
@@ -144,6 +156,9 @@ class FileManager:
                 is_supported_rootfile = True
             if "partroi" in self.datatypes:
                 thisfiletype = "LARCV"
+                is_supported_rootfile = True
+            if "rawdigitwriter/OpDetWaveforms" in trees:
+                thisfiletype = "RAWDIGITS"
                 is_supported_rootfile = True
             if not is_supported_rootfile:
                 continue
@@ -172,6 +187,8 @@ class FileManager:
                     if "partroi" in treename:
                         idtreename = treename # we prefer to use this tree for speed
                         break
+            elif self.filetype=="RAWDIGITS":
+                idtreename = "rawdigitwriter/IndexOpDetWfms"
 
             if idtreename is None:
                 print "Error: Could not setup a proper ID tree for this file"
@@ -189,7 +206,8 @@ class FileManager:
             if self.filetype=="LARLITE":
                 idtree = r.Get(idtreename)
             elif self.filetype=="LARCV":
-                print "LARCV indexing with ",idtreename
+                idtree = r.Get(idtreename)
+            elif self.filetype=="RAWDIGITS":
                 idtree = r.Get(idtreename)
                 
             eventset = [] # list of events
@@ -202,6 +220,9 @@ class FileManager:
                     idbranch = None
                     exec("idbranch=idtree.%s"%(idbranchname))
                     rse = ( idbranch.run(), idbranch.subrun(), idbranch.event() )
+                elif self.filetype=="RAWDIGITS":
+                    rse = ( idtree.idx_run, idtree.idx_subrun, idtree.idx_event )
+                    self.rawdigits_entrymap[rse] = (idtree.entrystart, idtree.nentries )
                 eventset.append(rse)
                 if rse not in flavor_eventset[flavor]:
                     flavor_eventset[flavor].append( rse )
@@ -256,6 +277,15 @@ class FileManager:
         self.sorted_filelist = flavorfiles[maxset]
         self.rse_dict        = flavorset_rse_dict[maxset]
         self.entry_dict      = flavorset_entry_dict[maxset]
+
+        # for rawdigits, we also build the entry to data map
+        treepos = 0
+        for entry in range(len(self.entry_dict)):
+            rse = self.entry_dict[entry]
+            pos_entries = self.rawdigits_entrymap[rse] # pos is from start of file, nentries is for the event block
+            merged_pos_entries = ( treepos, pos_entries[1] )
+            treepos += pos_entries[1]
+            self.rawdigits_entrymap[rse] = merged_pos_entries # update
 
     def summary(self):
         if not self.parsed:

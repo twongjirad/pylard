@@ -11,12 +11,14 @@ class MasterConfiguration:
         self.larcv_process_cfg = "default_larcv.cfg"
         self.larlite_filelist = ""
         self.larcv_filelist = ""
+        self.rawdigits_filelist = ""
         self.load_files_on_start = "no"
         self.default_filetype_driver = ""
         self.varnames = ["larlite_process_cfg",
                          "larcv_process_cfg",
                          "larlite_filelist",
                          "larcv_filelist",
+                         "rawdigits_filelist",
                          "load_files_on_start",
                          "default_filetype_driver"]
     

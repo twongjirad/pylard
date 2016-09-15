@@ -49,12 +49,6 @@ class EventControl(QtGui.QWidget):
         self.processor_filediag_savefile = QtGui.QPushButton("Save File")
         self.processor_filediag_savefile.clicked.connect( self.saveProcessorFileButton )
 
-        # assemble frame and layout
-        self.filediag_frame = QtGui.QFrame()
-        self.filediag_frame.setLineWidth(1)
-        self.filediag_frame.setFrameShape( QtGui.QFrame.Box )
-        self.filediag_frame.setFixedHeight(80)
-
         # LARCV
         # components of frame
         larcv_label = QtGui.QLabel("LArCV Config:")
@@ -67,25 +61,57 @@ class EventControl(QtGui.QWidget):
         self.larcv_processor_filediag_savefile = QtGui.QPushButton("Save File")
         self.larcv_processor_filediag_savefile.clicked.connect( self.saveProcessorFileButton )
 
+        # RAWDIGITS
+        # components of frame
+        rawdigits_label = QtGui.QLabel("Rawdigits Config:")
+        rawdigits_label.setFixedWidth(100)
+        self.rawdigits_processor_filepath = QtGui.QLineEdit()
+        self.rawdigits_processor_filepath.setText("default_rawdigits.cfg")
+        self.rawdigits_processor_filediag_choose = QtGui.QPushButton("choose file")
+        self.rawdigits_processor_filediag_choose.clicked.connect( self._getControlFilenameFromFileDialog )
+        self.rawdigits_processor_filediag_openfile = QtGui.QPushButton("Load File")
+        self.rawdigits_processor_filediag_savefile = QtGui.QPushButton("Save File")
+        self.rawdigits_processor_filediag_savefile.clicked.connect( self.saveProcessorFileButton )
+
         # assemble frame and layout
         self.filediag_frame = QtGui.QFrame()
         self.filediag_frame.setLineWidth(1)
         self.filediag_frame.setFrameShape( QtGui.QFrame.Box )
-        self.filediag_frame.setFixedHeight(80)
-
+        self.filediag_frame.setFixedHeight(100)
         filediag_layout = QtGui.QGridLayout()
+        self.filediag_tabs = QtGui.QTabWidget()
+        filediag_layout.addWidget( self.filediag_tabs, 0, 0 )
+
         # larlite
-        filediag_layout.addWidget( label, 0, 0 )
-        filediag_layout.addWidget( self.processor_filepath, 0, 1, 1, 3 )
-        filediag_layout.addWidget( self.processor_filediag_choose, 0, 4, 1, 1 )
-        filediag_layout.addWidget( self.processor_filediag_openfile, 0, 5, 1, 1 )
-        filediag_layout.addWidget( self.processor_filediag_savefile, 0, 6, 1, 1 )
+        filediag_larlite = QtGui.QWidget()
+        filediag_larlite_layout = QtGui.QGridLayout()
+        filediag_larlite_layout.addWidget( label, 0, 0 )
+        filediag_larlite_layout.addWidget( self.processor_filepath, 0, 1, 1, 3 )
+        filediag_larlite_layout.addWidget( self.processor_filediag_choose, 0, 4, 1, 1 )
+        filediag_larlite_layout.addWidget( self.processor_filediag_openfile, 0, 5, 1, 1 )
+        filediag_larlite_layout.addWidget( self.processor_filediag_savefile, 0, 6, 1, 1 )
+        filediag_larlite.setLayout(filediag_larlite_layout)
         # larcv
-        filediag_layout.addWidget( larcv_label, 1, 0 )
-        filediag_layout.addWidget( self.larcv_processor_filepath, 1, 1, 1, 3 )
-        filediag_layout.addWidget( self.larcv_processor_filediag_choose, 1, 4, 1, 1 )
-        filediag_layout.addWidget( self.larcv_processor_filediag_openfile, 1, 5, 1, 1 )
-        filediag_layout.addWidget( self.larcv_processor_filediag_savefile, 1, 6, 1, 1 )
+        filediag_larcv = QtGui.QWidget()
+        filediag_larcv_layout= QtGui.QGridLayout()
+        filediag_larcv_layout.addWidget( larcv_label, 1, 0 )
+        filediag_larcv_layout.addWidget( self.larcv_processor_filepath, 1, 1, 1, 3 )
+        filediag_larcv_layout.addWidget( self.larcv_processor_filediag_choose, 1, 4, 1, 1 )
+        filediag_larcv_layout.addWidget( self.larcv_processor_filediag_openfile, 1, 5, 1, 1 )
+        filediag_larcv_layout.addWidget( self.larcv_processor_filediag_savefile, 1, 6, 1, 1 )
+        filediag_larcv.setLayout(filediag_larcv_layout)
+        # rawdigits
+        filediag_rawdigits = QtGui.QWidget()
+        filediag_rawdigits_layout = QtGui.QGridLayout()
+        filediag_rawdigits_layout.addWidget( rawdigits_label, 2, 0 )
+        filediag_rawdigits_layout.addWidget( self.rawdigits_processor_filepath, 2, 1, 1, 3 )
+        filediag_rawdigits_layout.addWidget( self.rawdigits_processor_filediag_choose, 2, 4, 1, 1 )
+        filediag_rawdigits_layout.addWidget( self.rawdigits_processor_filediag_openfile, 2, 5, 1, 1 )
+        filediag_rawdigits_layout.addWidget( self.rawdigits_processor_filediag_savefile, 2, 6, 1, 1 )
+        filediag_rawdigits.setLayout(filediag_rawdigits_layout)
+        self.filediag_tabs.addTab( filediag_larlite, "larlite" )
+        self.filediag_tabs.addTab( filediag_larcv, "larcv" )
+        self.filediag_tabs.addTab( filediag_rawdigits, "rawdigits" )
 
         self.filediag_frame.setLayout( filediag_layout )
 
@@ -142,14 +168,18 @@ class EventControl(QtGui.QWidget):
         self.codeview_type_larlite.setFixedWidth(100)
         self.codeview_type_larcv   = QtGui.QCheckBox("larcv")
         self.codeview_type_larcv.setFixedWidth(100)
+        self.codeview_type_rawdigits   = QtGui.QCheckBox("rawdigits")
+        self.codeview_type_rawdigits.setFixedWidth(100)
         self.codeview_type_group = QtGui.QButtonGroup()
         self.codeview_type_group.addButton( self.codeview_type_larlite )
         self.codeview_type_group.addButton( self.codeview_type_larcv )
+        self.codeview_type_group.addButton( self.codeview_type_rawdigits )
         self.codeview_type_larlite.setChecked(True)
         codeview_type_layout = QtGui.QGridLayout()
         codeview_type_layout.addWidget( self.codeview_type_label, 0, 0 )
         codeview_type_layout.addWidget( self.codeview_type_larlite, 0, 1 )
         codeview_type_layout.addWidget( self.codeview_type_larcv, 0, 2 )
+        codeview_type_layout.addWidget( self.codeview_type_rawdigits, 0, 3 )
         self.codeview_type_group.buttonClicked.connect( self.selectProcessorConfig )
 
         codeview_layout.addLayout(codeview_type_layout, 0, 0, 1, 3)
@@ -211,6 +241,7 @@ class EventControl(QtGui.QWidget):
         self.codeview_ftype_combo = QtGui.QComboBox()
         self.codeview_ftype_combo.insertItem(0,"LARLITE")
         self.codeview_ftype_combo.insertItem(1,"LARCV")
+        self.codeview_ftype_combo.insertItem(2,"RAWDIGITS")
 
         codeview_entry_layout.addWidget( codeview_entry_label, 0, 0)
         codeview_entry_layout.addWidget( self.codeview_entry_input, 0, 1)
@@ -260,18 +291,23 @@ class EventControl(QtGui.QWidget):
         self.codeview_run_input.setText("%d"%(rse[0]))
         self.codeview_subrun_input.setText("%d"%(rse[1]))
         self.codeview_event_input.setText("%d"%(rse[2]))
+        if filetype=="LARLITE":
+            self.codeview_ftype_combo.setCurrentIndex(0)
+        elif filetype=="LARCV":
+            self.codeview_ftype_combo.setCurrentIndex(1)
+        else:
+            self.codeview_ftype_combo.setCurrentIndex(2)
 
     def selectProcessorConfig(self, checkbox):
         ftype = str(checkbox.text())
         ftype = ftype.upper()
         #self.saveProcessorFileButton()
         if ftype=="LARLITE":
-            # previous was larcv
             fpath = self.processor_filepath.text()
         elif ftype=="LARCV":
-            # previous was larlite
             fpath = self.larcv_processor_filepath.text()
-
+        elif ftype=="RAWDIGITS":
+            fpath = self.rawdigits_processor_filepath.text()
 
         if os.path.exists(fpath):
             pass

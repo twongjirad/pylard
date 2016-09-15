@@ -30,9 +30,11 @@ def getDefaultProcessorConfig(filetype):
 DrawOpHits: {
   # Note. for LArLite this module is a dummpy module
   # However, for PyLArD, the pylard version will fill the RGB and 
-  module_type: "PyLarliteDrawOpHits"
-  item_set: "opdata"
-  producer: "pmtreadout"
+  module_file: "vislarlite/drawopdata"
+  module_type: "PyLArLiteDrawOpdata"
+  destination: "opdetdisplay"
+  opdata_producer: "pmtreadout"
+  trigger_producer: "triggersim"
 }  
 """
     elif filetype=="LARCV":
@@ -63,5 +65,45 @@ ProcessDriver: {
   ProcessList: {
   }
 }
+"""
+    elif filetype=="RAWDIGITS":
+        default_processor_cfg = """
+# ===================================================================
+# Example RawDigits Processor
+# -----------------------------
+# we can choose to convert into larlite product
+# ===================================================================
+#LArLiteData: {
+#  # Note. for LArLite this module is a dummy module
+#  # It will pass through.
+#  # However, for PyLArD, the pylard version will fill the RGB and 
+#  module_type: "PyAnalyzer"
+#  PyFilePath: "pylard/eventprocessor/example.py"
+#  StorageVariableName : "event_storage_manager"
+#}
+
+# ===================================================================
+# Configure converters of larlite data products to things
+# pylard can draw.
+#
+# ===================================================================
+
+# if we converted to larlite
+#DrawOpHits: {
+#  Note. for LArLite this module is a dummy module
+#  However, for PyLArD, the pylard version will fill the RGB and 
+#  module_file: "vislarlite/drawopdata"
+#  module_type: "PyLArLiteDrawOpdata"
+#  destination: "opdetdisplay"
+#  opdata_producer: "pmtreadout"
+#  trigger_producer: "triggersim"
+#} 
+
+# use native format
+DrawOpHits: {
+  module_file: "visrawdigits/drawopdata"
+  module_type: "RawDigitsDrawOpdata"
+  destination: "opdetdisplay"
+} 
 """
     return default_processor_cfg
