@@ -41,7 +41,7 @@ For ROOT, LArCV installation is fairly straight forward.
 
 For LArLite, one should clone the larlite repository.  Then go into UserDev and clone [this](https://github.com/twongjirad/PLI) repository into the folder.
 
-    git clone https://github.com/twongjirad/PLI
+    git clone https://github.com/twongjirad/PLI pylard
 
 This repository contains some python-larlite interfaces pylard can use.
 
