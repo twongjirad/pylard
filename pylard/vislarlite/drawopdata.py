@@ -80,7 +80,7 @@ class PyLArLiteDrawOpdata:
                 #print "beam window: ch=",pmt," slot=",slot," len=",len(adcs)," timestamp=",time,"(rel) ",time+self.trigger_time," (raw)"," ticks=",time/0.015625
                 pyopdata.beamwindows.makeWindow( adcs, time*1000.0, slot, pmt, timepertick=PyLArLiteDrawOpdata.NSPERTICK )
             else:
-                print "cosmic window: ch=",pmt," slot=",slot," len=",len(adcs)," timestamp=",time," ticks=",time/0.015625
+                #print "cosmic window: ch=",pmt," slot=",slot," len=",len(adcs)," timestamp=",time," ticks=",time/0.015625
                 pyopdata.cosmicwindows.makeWindow( adcs, time*1000.0, slot, pmt, timepertick=PyLArLiteDrawOpdata.NSPERTICK )
 
 

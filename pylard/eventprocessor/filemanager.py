@@ -279,13 +279,14 @@ class FileManager:
         self.entry_dict      = flavorset_entry_dict[maxset]
 
         # for rawdigits, we also build the entry to data map
-        treepos = 0
-        for entry in range(len(self.entry_dict)):
-            rse = self.entry_dict[entry]
-            pos_entries = self.rawdigits_entrymap[rse] # pos is from start of file, nentries is for the event block
-            merged_pos_entries = ( treepos, pos_entries[1] )
-            treepos += pos_entries[1]
-            self.rawdigits_entrymap[rse] = merged_pos_entries # update
+        if self.filetype=="RAWDIGITS":
+            treepos = 0
+            for entry in range(len(self.entry_dict)):
+                rse = self.entry_dict[entry]
+                pos_entries = self.rawdigits_entrymap[rse] # pos is from start of file, nentries is for the event block
+                merged_pos_entries = ( treepos, pos_entries[1] )
+                treepos += pos_entries[1]
+                self.rawdigits_entrymap[rse] = merged_pos_entries # update
 
     def summary(self):
         if not self.parsed:
