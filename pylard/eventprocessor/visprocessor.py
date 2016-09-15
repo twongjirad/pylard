@@ -1,21 +1,33 @@
 import os,sys
 from larcv import larcv
-
+import hashlib
 
 class VisProcessor:
     def __init__(self):
-        self.psets = []
+        self.psets = {}
         self.modules = {}
         self.destination = {}
         self.products = {}
         self.searchpaths = ["pylard",""]
+        self.confighash = {}
 
     def configure(self,config):
-        self.psets.append( larcv.CreatePSetFromFile(config) )
-        self._buildVisList()
-        
+        m = hashlib.md5()
+        m.update(config)
+        h = m.hexdigest()
+        doconfig = False
+        if config not in self.confighash:
+            self.confighash[config] = h
+            doconfig = True
+        else:
+            if self.confighash[config] != h:
+                doconfig = True
+        if doconfig:
+            self.psets[config] = larcv.CreatePSetFromFile(config)
+            self._buildVisList()
+
     def _buildVisList(self):
-        for pset in self.psets:
+        for cfg,pset in self.psets.items():
             if not pset.contains_pset("VisProcessor"):
                 continue
             vispset = pset.get_pset("VisProcessor")
