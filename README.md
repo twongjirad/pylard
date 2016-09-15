@@ -99,3 +99,30 @@ Make sure your environment is setup. This requires LArCV and larlite environment
 
 You can find such a script in example_setup.sh.
 
+Then you can start up pylard using
+
+    python run_pylard2.py
+
+The way you load files is somewhat different depending on the file format.
+
+### RawDigitsWrirter
+
+Basically this format is a dump of uboone data into simple vectors stored in a TTree.  
+Note that one needs to use an updated copy of RawDigitWriter for pylard2 to work.  
+One can get a copy from 'origin/feature/tmw_rawdigitswriter_update' feature branch. 
+It is based on tagged uboonecode version v06_04_00.
+
+Input files go into pylard through a textfile with a list of files.  For example, if you have my_rawdigits.root, make a file doing:
+
+    find my_rawdigits.root > myfiles.txt
+
+In the 'EventLoop' panel (navigate it using the tabs above), enter 'myfile.txt' into 'Input File List' box and hit 'Load File'. You may also use the 'Select' button to choose the file.
+
+You should see the above table get filled in.  Under RAWDIGITS, you'll see the number of events (in the second column). There is also a grey arrow that if you click on it will expand into the list of run, subrun, and event IDs in the filelist you provided.
+
+Now in the same panel, click on the 'rawdigits' checkbox.  This shows you the configuration file for the RawDigits event loop processor. You don't need to change anything for now.  
+
+Below the configuration file panel, you'll see places to enter an entry number, run, subrun, or event ID.  Leave that as is, which should be showing info for the first entry.  However, change the filetype to 'RAWDIGITS' and hit 'Go'.
+
+If everything worked, you should be able to navigate to the 'OpDet Display' panel and see the event data plotted.  You can use the nvaigation tools on this panel to look through the rest of the events.
+
