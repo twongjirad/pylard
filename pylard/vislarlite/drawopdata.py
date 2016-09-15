@@ -16,11 +16,12 @@ class PyLArLiteDrawOpdata:
         self.trigger_producer = pset.get("trigger_producer")
         
         
-    def visualize( self, larlite_io, larcv_io ):
+    def visualize( self, larlite_io, larcv_io, rawdigit_io ):
         """ fill larliteopdata object. its a concrete instance of opdataplottable """
         print "Visualize PyLArLiteDrawOpdata"
         print " larlite_io: ",larlite_io
         print " larcv_io: ",larcv_io
+        print " rawdigit_io: ",rawdigit_io
 
         pyopdata = LArLiteOpticalData()
         
@@ -79,7 +80,7 @@ class PyLArLiteDrawOpdata:
                 #print "beam window: ch=",pmt," slot=",slot," len=",len(adcs)," timestamp=",time,"(rel) ",time+self.trigger_time," (raw)"," ticks=",time/0.015625
                 pyopdata.beamwindows.makeWindow( adcs, time*1000.0, slot, pmt, timepertick=PyLArLiteDrawOpdata.NSPERTICK )
             else:
-                #print "cosmic window: ch=",pmt," slot=",slot," len=",len(adcs)," timestamp=",time," ticks=",time/0.015625
+                print "cosmic window: ch=",pmt," slot=",slot," len=",len(adcs)," timestamp=",time," ticks=",time/0.015625
                 pyopdata.cosmicwindows.makeWindow( adcs, time*1000.0, slot, pmt, timepertick=PyLArLiteDrawOpdata.NSPERTICK )
 
 

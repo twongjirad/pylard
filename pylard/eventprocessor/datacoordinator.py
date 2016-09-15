@@ -7,8 +7,8 @@ class DataCoordinator:
     def __init__(self):
         # variables for different filetypes (probably should be a class/struct)
         self.filemans = {}
-        self.active = {}
-        self.ioman = {}
+        self.active = {"LARLITE":False,"LARCV":None,"RAWDIGITS":None}
+        self.ioman = {"LARLITE":None,"LARCV":None,"RAWDIGITS":None}
         self.processdrivers = {}
         self.configs = {}
         self.confighash = {}
@@ -28,6 +28,8 @@ class DataCoordinator:
             ok = self.processdrivers[name].process_entry(entry)
         elif name=="LARLITE":
             ok = self.ioman[name].go_to(entry)
+        elif name=="RAWDIGITS":
+            ok = self.ioman[name].get_entry(entry)
         else:
             ok = True
         print "getmanagerentry: ",ok
@@ -79,7 +81,10 @@ class DataCoordinator:
         return (-1,-1,-1)
     
     def configure(self,name,config):
-        
+        """ this module will configure the storage/event processors for the various file types"""
+        if name not in ["LARLITE","LARCV","RAWDIGITS"]:
+            raise ValueError("Unsupported filetype=%s"%(name))
+
         # the config hash: check if we've already configured the processor with the same exact file
         m = hashlib.md5()
         fin = open(config,'r')
@@ -134,7 +139,20 @@ class DataCoordinator:
                 proc.initialize()
             self.confighash[name] = current
             self.setManagerActivity(name,True)
-
-                
-        
-
+        elif name=="RAWDIGITS":
+            s = time.time()
+            # get process manager
+            if name in self.confighash:
+                proc = self.processdrivers[name]
+            else:
+                from pylard.visrawdigits.rawdigitsprocessor import rawdigits_processor
+                from ROOT import fcllite
+                proc = rawdigits_processor(self.filemans[name])
+                self.processdrivers[name] = proc
+                self.ioman[name] = proc
+                self.configs[name] = fcllite.ConfigManager( config )
+            proc.configure(self.configs[name])
+            self.confighash[name] = current
+            self.setManagerActivity(name,True)
+            
+            

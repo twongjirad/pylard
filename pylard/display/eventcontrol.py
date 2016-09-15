@@ -432,6 +432,7 @@ class EventControl(QtGui.QWidget):
         except:
             print "Entry not a number."
             return
+        print "getting entry=",entry,", fman=",ftype
         if entry in self.themainwindow.filemanagers[ftype].entry_dict:
             return self.themainwindow.getEntry(entry,ftype)
         else:

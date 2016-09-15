@@ -47,4 +47,4 @@ class VisProcessor:
     def execute(self, data):
         for modkey,module in self.modules.items():
             print "make vis products key=",modkey," mod=",module
-            self.products[modkey] = module.visualize( data.ioman["LARLITE"], data.ioman["LARCV"] )
+            self.products[modkey] = module.visualize( data.ioman["LARLITE"], data.ioman["LARCV"], data.ioman["RAWDIGITS"] )

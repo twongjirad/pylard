@@ -29,6 +29,10 @@ class PyLArD( QtGui.QMainWindow ):
             if flist!="":
                 flist+=";"
             flist += self.masterconfig.config.larcv_filelist
+        if self.masterconfig.config.rawdigits_filelist!="":
+            if flist!="":
+                flist+=";"
+            flist += self.masterconfig.config.rawdigits_filelist
         if flist!="":
             self.eventcontrol.filelist_filepath.setText( flist )
 
@@ -56,7 +60,7 @@ class PyLArD( QtGui.QMainWindow ):
         self.visprocessor = VisProcessor()
 
         # on start-up, do we open files
-        if self.masterconfig.config.larlite_filelist!="" and self.masterconfig.config.load_files_on_start.lower() in ["yes","y"]:
+        if flist!="" and self.masterconfig.config.load_files_on_start.lower() in ["yes","y"]:
             self.eventcontrol.loadFilelistButton()
         # set the default file type event driver
         if self.masterconfig.config.default_filetype_driver!="":
@@ -68,6 +72,10 @@ class PyLArD( QtGui.QMainWindow ):
                 self.eventcontrol.codeview_ftype_combo.setCurrentIndex(1)
                 self.eventcontrol.codeview_type_larcv.setChecked(True)
                 self.eventcontrol.selectProcessorConfig( self.eventcontrol.codeview_type_larcv )
+            elif self.masterconfig.config.default_filetype_driver.upper()=="RAWDIGITS":
+                self.eventcontrol.codeview_ftype_combo.setCurrentIndex(2)
+                self.eventcontrol.codeview_type_rawdigits.setChecked(True)
+                self.eventcontrol.selectProcessorConfig( self.eventcontrol.codeview_type_rawdigits )
             
 
     def getPanel(self,name):
@@ -97,7 +105,8 @@ class PyLArD( QtGui.QMainWindow ):
         # save processor configuration files
         self.eventcontrol.saveProcessorFileButton() # save current file
         cfg = { "LARLITE":self.eventcontrol.processor_filepath.text(),
-                "LARCV":self.eventcontrol.larcv_processor_filepath.text() }
+                "LARCV":self.eventcontrol.larcv_processor_filepath.text(),
+                "RAWDIGITS":self.eventcontrol.rawdigits_processor_filepath.text()}
         # pass file managers and configureations to data coordinator
         for ftype,fman in self.filemanagers.items():
             if fman is not None:
