@@ -264,9 +264,12 @@ class EventControl(QtGui.QWidget):
         if self.codeview_type_larlite.isChecked():
             ftype = "LARLITE"
             fpath = self.processor_filepath.text()
-        else:
+        elif self.codeview_type_larcv.isChecked():
             ftype = "LARCV"
             fpath = self.larcv_processor_filepath.text()
+        elif self.codeview_type_rawdigits.isChecked():
+            ftype = "RAWDIGITS"
+            fpath = self.rawdigits_processor_filepath.text()
 
         if fpath=="" or not os.path.exists(fpath):
             return
