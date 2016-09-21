@@ -69,26 +69,26 @@ For larlite, we need to setup a special version that provides additional python-
 
 Go into the repo and then switch to the special branch
 
-   cd larlite
-   git checkout feature/tmw_pylard_interface
+    cd larlite
+    git checkout feature/tmw_pylard_interface
 
 Go into the UserDev folder and clone in a submodule
 
-   cd UserDev
-   git clone https://github.com/twongjirad/PLI pylard
+    cd UserDev
+    git clone https://github.com/twongjirad/PLI pylard
 
 Go back to the base larlite directory, then configure larlite
 
-   cd ..
-   source config/setup.sh
+    cd ..
+    source config/setup.sh
 
 Make the core, UserDev/BasicTool, and UserDev/pylard/PyAnalyzer
 
-   make -j4
-   cd UserDev/BasicTool
-   make -j4
-   cd ../pylard/PyAnalzyer
-   make -j4
+    make -j4
+    cd UserDev/BasicTool
+    make -j4
+    cd ../pylard/PyAnalzyer
+    make -j4
 
 OK. To check if this got built correctly. Check to see if you see 'libpylard_PyAnalyzer.so' in the library folder (lib).
 
@@ -96,29 +96,29 @@ OK. To check if this got built correctly. Check to see if you see 'libpylard_PyA
 
 Make a new directory somewhere that LArCV will go into
 
-   git clone https://github.com/larbys/LArCV LArCV
+    git clone https://github.com/larbys/LArCV LArCV
 
 Go into the repo and configure the build:
 
-   source configure.sh
+    source configure.sh
 
 Make sure you see that the larlite package was found (and in the right place):
 
-   Found larlite set up @ $LARLITE_BASEDIR=/Users/twongjirad/working/uboone/larlite
+    Found larlite set up @ $LARLITE_BASEDIR=/Users/twongjirad/working/uboone/larlite
 
 Make
  
-   make -j4
+    make -j4
 
 ### pylard itself
 
 Find a good place for your copy of pylard and clone the repository:
 
-   git clone https://github.com/twongjirad/pylard
+    git clone https://github.com/twongjirad/pylard
 
 Right now, PyLArD version 2 is in a special branch
 
-   git checkout tmw_pylard2
+    git checkout tmw_pylard2
 
 I recommend installing everything inside a python virtual environment.  pylard brings in a lot of python pacakges. At the end of the day, you might not want all of this. Using a virtualenv sandbox allows you to keep all of this crap separate from your main python installation.
 
