@@ -132,6 +132,7 @@ class PyLArD( QtGui.QMainWindow ):
             rse   = self.mergeddata.getCurrentRSE()
             self.eventcontrol.setEntryShown( entry, driver )
             self.pmtwindow.setEntryNumbers( entry, rse[0], rse[1], rse[2] )
+            self.rgbdisplay.setEntryNumbers( entry, rse[0], rse[1], rse[2] )
         
         # pass to visualization processor
         self.visprocessor.execute( self.mergeddata )

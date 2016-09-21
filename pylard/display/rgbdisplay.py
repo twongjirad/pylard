@@ -223,6 +223,9 @@ class RGBDisplay(QtGui.QWidget):
                 return self.kTypes[button][1]
         return None
 
+    # =================================================================
+    # Event Navigation
+
     # go to the previous event
     def previousEvent(self):
 
@@ -241,6 +244,15 @@ class RGBDisplay(QtGui.QWidget):
         self.event.setText(str(event + 1))
 
         self.plotData()
+
+    def setEntryNumbers( self, entry, run, subrun, event ):
+        self.run.setText("%d"%(run))
+        self.subrun.setText("%d"%(subrun))
+        self.event_num.setText("%d"%(event))
+        self.event.setText("%d"%(entry))
+        self.setRunInfo( run, subrun, event )
+
+    # =================================================================
 
     def plotData(self):
 
