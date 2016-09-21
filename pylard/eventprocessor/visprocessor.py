@@ -8,6 +8,7 @@ class VisProcessor:
         self.modules = {}
         self.destination = {}
         self.products = {}
+        self.active = {}
         self.searchpaths = ["pylard",""]
         self.confighash = {}
 
@@ -38,6 +39,7 @@ class VisProcessor:
                 modtype = modpset.get("module_type")
                 modfile = modpset.get("module_file")
                 dest    = modpset.get("destination")
+                active  = modpset.get("isactive",True)
                 modname = modfile.replace("/",".")
                 module = None
                 for d in self.searchpaths:
@@ -52,14 +54,19 @@ class VisProcessor:
                     module.configure( modpset )
                     self.modules[k] = module
                     self.destination[k] = dest
+                    self.active[k] = active
                     print "configured: ",modtype,modfile,module
                 else:
                     print "could not load module: from %s.%s import %s"%(d,modname,modtype),". from ",modfile
+                    self.active[k] = False
 
     def loadModules(self):
         pass
 
     def execute(self, data):
         for modkey,module in self.modules.items():
-            print "make vis products key=",modkey," mod=",module
-            self.products[modkey] = module.visualize( data.ioman["LARLITE"], data.ioman["LARCV"], data.ioman["RAWDIGITS"] )
+            if self.active[modkey]:
+                print "make vis products key=",modkey," mod=",module
+                self.products[modkey] = module.visualize( data.ioman["LARLITE"], data.ioman["LARCV"], data.ioman["RAWDIGITS"] )
+            else:
+                print "skipping inactive vis module, key=",modkey," mod=",module

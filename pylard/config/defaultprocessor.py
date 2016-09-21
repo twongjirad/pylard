@@ -27,16 +27,30 @@ def getDefaultProcessorConfig(filetype):
 #
 # ===================================================================
 
-opdata: {
-  # Note. for LArLite this module is a dummpy module
-  # However, for PyLArD, the pylard version will fill the RGB
-  # FIXME: opdetdisplay expects product with name opdata
-  module_file: "vislarlite/drawopdata"
-  module_type: "PyLArLiteDrawOpdata"
-  destination: "opdetdisplay"
-  opdata_producer: "pmtreadout"
-  trigger_producer: "triggersim"
-}  
+VisProcessor: {
+  opdata: {
+    # Note. for LArLite this module is a dummpy module
+    # However, for PyLArD, the pylard version will fill the RGB
+    # FIXME: opdetdisplay expects product with name opdata
+    isactive: true
+    module_file: "vislarlite/drawopdata"
+    module_type: "PyLArLiteDrawOpdata"
+    destination: "opdetdisplay"
+    opdata_producer: "pmtreadout"
+    trigger_producer: "triggersim"
+  }
+  caldata: {
+    isactive: true    
+    module_file: "vislarlite/drawimage2d"
+    module_type: "PyLArLiteDrawImage2D"
+    destination: "rgbdisplay"
+    wire_producer: "caldata"
+    wire_downsampling: 1
+    time_downsampling: 6
+    start_tick:  2400
+    tick_offset: 2400
+  }
+}
 """
     elif filetype=="LARCV":
         default_processor_cfg = """
@@ -66,6 +80,20 @@ ProcessDriver: {
   ProcessList: {
   }
 }
+
+VisProcessor: {
+  DrawImage2D: {
+    isactive: false
+    module_file: "vislarcv/drawimage2d"
+    module_type: "DrawImage2D"
+    destination: "rgbdisplay"
+    image2d_producer: "tpc"
+    roi_producer: "tpc"
+    TimeDownsamplingFactor: 1.0
+    WireDownsamplingFactor: 1.0
+  }
+}
+
 """
     elif filetype=="RAWDIGITS":
         default_processor_cfg = """
