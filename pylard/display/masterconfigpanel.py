@@ -34,7 +34,7 @@ class MasterConfiguration:
             if var in data:
                 exec("self.%s=\"%s\""%(var,data[var]))
             else:
-                exec("self.%s=\"\"")
+                exec("self.%s=\"\""%(var))
     def dump(self):
         print "[MasterConfiguration]"
         for var in self.varnames:
