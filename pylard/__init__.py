@@ -1,3 +1,4 @@
+from pyqtgraph.Qt import QtGui, QtCore 
 import os,sys
 import display.mainwindow
 

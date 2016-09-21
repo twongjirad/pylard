@@ -27,9 +27,10 @@ def getDefaultProcessorConfig(filetype):
 #
 # ===================================================================
 
-DrawOpHits: {
+opdata: {
   # Note. for LArLite this module is a dummpy module
-  # However, for PyLArD, the pylard version will fill the RGB and 
+  # However, for PyLArD, the pylard version will fill the RGB
+  # FIXME: opdetdisplay expects product with name opdata
   module_file: "vislarlite/drawopdata"
   module_type: "PyLArLiteDrawOpdata"
   destination: "opdetdisplay"

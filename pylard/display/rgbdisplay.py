@@ -10,6 +10,7 @@ import pyqtgraph as pg
 
 import numpy as np
 import time
+from pylard.pylardata.tpcdataplottable import TPCdataPlottable
 
 #from ..lib.datamanager import DataManager
 #from ..lib import storage as store
@@ -37,11 +38,11 @@ class RGBDisplay(QtGui.QWidget):
     def __init__(self):
         super(RGBDisplay, self).__init__()
 
-        # DataManager for loading the plot image
-        #self.dm = DataManager(argv)
-
         # Size the canvas
         self.resize(1200, 700)
+
+        # FIXME: get rid of dependence of this variable
+        self.planes = 3 # this is really the number of RGB channels, always 3
 
         # Graphics window which will hold the image
         self.win = pg.GraphicsWindow()
@@ -66,37 +67,44 @@ class RGBDisplay(QtGui.QWidget):
         # Input Widgets
         # Layouts
         self.lay_inputs = QtGui.QGridLayout()
-        self.layout.addLayout(self.lay_inputs, 2, 0)
+        self.layout.addLayout(self.lay_inputs, 2, 0, 1, 10)
         
         # -------------------------------------------------------
         # Navigation box
+        self.navheight = 4
+        self.navwidth  = 2
+        navstart = 0
         self._makeNavFrame()
-        self.lay_inputs.addWidget( self._navframe, 0, 0, self.navheight-1, self.navwidth  )
+        self.lay_inputs.addWidget( self._navframe, 0, navstart, self.navheight, self.navwidth  )
         
         # -------------------------------------------------------
         # Thresholding
-        threshstart = self.navwidth+1
-        ### imin -- threshold
-        self.imin = QtGui.QLineEdit("%d" % (5))
-        iminlabel = QtGui.QLabel("imin")
-        iminlabel.setFixedWidth(30)
-        self.lay_inputs.addWidget(iminlabel, 0, threshstart)
-        self.lay_inputs.addWidget(self.imin, 0, threshstart+1)
+        threshstart = navstart+self.navwidth
+        self.contrast_frame = self._makeContrastFrame()
+        self.lay_inputs.addWidget(self.contrast_frame, 0, threshstart, self.navheight, self.navwidth )
+        
+        # --------------------------------------------------------
+        # Image 2D selection
+        imagepanelstart = threshstart+self.navwidth
+        self.image_panel = self._makeImage2Dcontrol()
+        self.lay_inputs.addWidget(self.image_panel, 0, imagepanelstart, self.navheight, self.navwidth )
+        self.src_rgbchannels = [self.image_src_rch,self.image_src_gch,self.image_src_bch]
+        self.src_views = []
+        self.ovr_rgbchannels = [self.image_ovr_rch,self.image_ovr_gch,self.image_ovr_bch]
+        self.ovr_views = []
+        #self.high_res = False # cruft?
+        
+        # --------------------------------------------------------
+        # ROI panel
+        roipanelstart = imagepanelstart+self.navwidth
+        self.roi_panel = self._makeROIpanel()
+        self.lay_inputs.addWidget(self.roi_panel, 0, roipanelstart, self.navheight, self.navwidth)
 
-        ### imax -- threshold
-        self.imax = QtGui.QLineEdit("%d" % (400))
-        imaxlabel = QtGui.QLabel("imax")
-        imaxlabel.setFixedWidth(30)
-        self.lay_inputs.addWidget(imaxlabel, 1, threshstart)
-        self.lay_inputs.addWidget(self.imax, 1, threshstart+1)
-
-        ### use user constrast -- threshold
-        #Lock imin/imax between events
-        self.user_contrast = QtGui.QCheckBox("User Contrast")
-        self.lay_inputs.addWidget(self.user_contrast, 2, threshstart, 1, 2)
-        self.user_contrast.setChecked(False)
-        self.enableContrast()
-        self.user_contrast.clicked.connect(self.enableContrast)
+        # --------------------------------------------------------
+        # user item tree widget
+        useritemstart = roipanelstart + self.navwidth
+        self.user_item_frame = self._makeUserItemTreeFrame()
+        self.lay_inputs.addWidget(self.user_item_frame, 0, useritemstart, self.navheight, self.navwidth)
         
         # --------------------------------------------------------
 
@@ -114,284 +122,34 @@ class RGBDisplay(QtGui.QWidget):
         self.false_color_widget.hide()
 
         # --------------------------------------------------------
-        # tmw -- changing it so that one can select the channel to show in the
-        # RGB channels
-        rgbstart = threshstart+2
-        rgblabelwidth = 10
-        self.p0label = QtGui.QLabel("R:")
-        self.p0label.setFixedWidth(rgblabelwidth)
-        self.lay_inputs.addWidget(self.p0label, 0, rgbstart)
-        self.p0 = QtGui.QComboBox()
-        self.p0.currentIndexChanged.connect( self.changeChannelViewed )
-        self.lay_inputs.addWidget(self.p0, 0, rgbstart+1)
-
-        self.p1label = QtGui.QLabel("G:")
-        self.p1label.setFixedWidth(rgblabelwidth)
-        self.lay_inputs.addWidget(self.p1label, 1, rgbstart)
-        self.p1 = QtGui.QComboBox()
-        self.p1.currentIndexChanged.connect( self.changeChannelViewed )
-        self.lay_inputs.addWidget(self.p1, 1, rgbstart+1)
-
-        self.p2label = QtGui.QLabel("B:")
-        self.p2label.setFixedWidth(rgblabelwidth)
-        self.lay_inputs.addWidget(self.p2label, 2, rgbstart)
-        self.p2 = QtGui.QComboBox()
-        self.p2.currentIndexChanged.connect( self.changeChannelViewed )
-        self.lay_inputs.addWidget(self.p2, 2, rgbstart+1)
-
-        self.planes = [self.p0, self.p1, self.p2]
-        self.views = []
-
-        # ------------------------------------------------
-        # Producers
-
-        # Combo box to select the image producer
-        combostart = rgbstart+2
-        self.lay_inputs.addWidget(QtGui.QLabel("Image2D & ROI Prod."), 0, combostart)
-        self.comboBoxImage = QtGui.QComboBox()
-        self.image_producer = None
-        self.high_res = False
-        #for prod in self.dm.keys['image2d']:
-        #    self.comboBoxImage.addItem(prod)
-
-        self.lay_inputs.addWidget(self.comboBoxImage, 1, combostart)
-
-        # and another combo box to select ROI
-        # self.lay_inputs.addWidget(QtGui.QLabel(
-        # "<center>ROI Prod</center>"), 2, 2)
-
-
-        self.comboBoxROI = QtGui.QComboBox()
-        self.roi_producer = None
-        self.roi_exists = False
-
-        #if len(self.dm.keys['partroi']) > 0:
-        #    self.roi_exists = True
-        #    for prod in self.dm.keys['partroi']:
-        #        self.comboBoxROI.addItem(prod)
-        #else:
-        #    self.roi_exists = False
-        #    self.comboBoxROI.addItem("None")
-
-        self.lay_inputs.addWidget(self.comboBoxROI, 2, combostart)
-
-        # --------------------------------------------------
-        # particle types
-        parstart = combostart+1
-        # BNB
-        self.kBNB = QtGui.QRadioButton("BNB")
-        self.lay_inputs.addWidget(self.kBNB, 0, parstart)
-        self.kBNB.setChecked(True)
-
-        # Particle
-        self.kOTHER = QtGui.QRadioButton("Particle")
-        self.lay_inputs.addWidget(self.kOTHER, 1, parstart)
-
-        # Both
-        self.kBOTH = QtGui.QRadioButton("Both")
-        self.lay_inputs.addWidget(self.kBOTH, 2, parstart)
-
-        # --------------------------------------------------------
-        # Options
-        optstart = parstart + 1
-        # Auto range function
-        self.auto_range = QtGui.QPushButton("AutoRange")
-        self.lay_inputs.addWidget(self.auto_range, 0, optstart)
         
-        # Save image
-        self.savecounter = int(0)
-        self.saveimage = QtGui.QPushButton("Save Image")
-        self.saveimage.clicked.connect(self.saveImage)
-        self.lay_inputs.addWidget(self.saveimage,1,optstart)
+        self.clearImage2Ddata()
 
-        # Yes or no to draw ROI (must hit replot)
-        self.draw_bbox = QtGui.QCheckBox("Draw ROI")
-        self.draw_bbox.setChecked(True)
-        self.lay_inputs.addWidget(self.draw_bbox, 2, optstart)
-
-        # -------------------------------------------------------
-        # Utilities
-        utilstart = optstart + 1
-        # RGBCaffe will open and close bottom of the window
-        #utillabel     = QtGui.QLabel("Utilities")
-        #self.rgbcaffe = QtGui.QPushButton("Enable RGBCaffe")
-        #self.rgbcv2 = QtGui.QPushButton("Enable OpenCV")
-        #self.rgbroi = QtGui.QPushButton("Enable ROITool")
+#         # --------------------------------------------------------
+#         # Options
+#         optstart = parstart + 1
+#         # Auto range function
+#         self.auto_range = QtGui.QPushButton("AutoRange")
+#         self.lay_inputs.addWidget(self.auto_range, 0, optstart)
         
-        #try:
-        #    import cv2
-        #except:
-        #    print "No OpenCV. Disabling."
-        #    self.rgbcv2.setEnabled(False)
-
-        #self.rgbcaffe.setFixedWidth(130)
-        #self.rgbcv2.setFixedWidth(130)
-        #self.rgbroi.setFixedWidth(130)
-
-        #self.lay_inputs.addWidget(utillabel, 0, utilstart)
-        #self.lay_inputs.addWidget(self.rgbcaffe, 0, utilstart)
-        #self.lay_inputs.addWidget(self.rgbcv2, 1, utilstart)
-        #self.lay_inputs.addWidget(self.rgbroi, 2, utilstart)
-        
-        # Particle types
-        self.kTypes = {'kBNB':   (self.kBNB, [2]),
-                       'kOTHER': (self.kOTHER, [i for i in xrange(10) if i != 2]),
-                       'kBOTH':  (self.kBOTH, [i for i in xrange(10)])}
-
-        # The current image array, useful for getting meta
-        self.image = None
-
-        # Radio buttons for choosing type of ROI
-        self.kBNB.clicked.connect(
-            lambda: self.drawBBOX(self.kTypes['kBNB'][1]))
-        self.kOTHER.clicked.connect(
-            lambda: self.drawBBOX(self.kTypes['kOTHER'][1]))
-        self.kBOTH.clicked.connect(
-            lambda: self.drawBBOX(self.kTypes['kBOTH'][1]))
-
-        self.auto_range.clicked.connect(self.autoRange)
-
-        # Set of ROI's on the current view -- just "boxes"
-        self.boxes = []
-
-        self.comboBoxImage.activated[str].connect(self.chosenImageProducer)
-        self.comboBoxROI.activated[str].connect(self.chosenROIProducer)
-
-        self.chosenImageProducer()
-        self.chosenROIProducer()
-
-        self.pimg = None
-        self.modimg = None
-
-        #self.rgbcaffe.clicked.connect(self.openCaffe)
-        #self.rgbcv2.clicked.connect(self.openCVEditor)
-        #self.rgbroi.clicked.connect(self.openROITool)
-
-        # Caffe Widgets
-        # wrapper for FORWARD function
-        #try:
-        #    self.caffe_test = TestWrapper()
-        #    self.caffe_layout = CaffeLayout(self.caffe_test,self)
-        #    self.caffe_enabled = True
-        #except:
-        #    print "Caffe Disabled"
-        #    self.caffe_enabled = False
-        #    self.rgbcaffe.setEnabled(False)
-
-        # OpenCV Widgets
-        # wrapper for the opencv specific window
-        #try:
-        #    self.cv2_layout = CV2Layout()
-        #except:
-        #    print "no CV2"
-        #    self.cv2_layout = None
-        #    pass
-        #self.cv2_enabled = False
-
-        # ROITool
-        #self.roitool_layout = ROIToolLayout(self.plt,self.image,self.event,self.run,self.subrun,self.event_num,dm=self.dm)
-        #self.roitool_layout.setImageAndPlotWidgets( self.plt, self.imi )
-        #self.roitool_enabled = False
-        
-        # ROI box
-        #self.swindow = ROISlider([0, 0], [20, 20])
-        #self.swindow.sigRegionChanged.connect(self.regionChanged)
-
-        # -----------------------------------------------------------------------------
-        # Erez, July-21, 2016 - get an image using R/S/E navigation
-        # -----------------------------------------------------------------------------
-        self.event_base_and_images = {}
-        self.rse_map = {}
-        print "len(self.event_base_and_images): ",len(self.event_base_and_images)
-
+#         # Save image
+#         self.savecounter = int(0)
+#         self.saveimage = QtGui.QPushButton("Save Image")
+#         self.saveimage.clicked.connect(self.saveImage)
+#         self.lay_inputs.addWidget(self.saveimage,1,optstart)
 
         # --------------
         # Main window
         # --------------
         self.themainwindow = None
 
-    # caffe toggles, if/els statement is for opening and closing the pane
-
-
     def setMainWindow(self,window):
         self.themainwindow  = window
-
-    # -------------------------
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~
-    # -------------------------
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~
-    
-    # erez
-    def prepare_rse_navigation(self):
-        if len(self.rse_map)==0:
-            print "preparing R/S/E navigation...."
-            self.dm.get_all_images(self.image_producer,self.event_base_and_images,self.rse_map)
-            rselist = self.rse_map.keys()
-            rselist.sort()
-            print rselist
-            if self.run.text()=="-1" and self.subrun.text()=="-1" and self.event_num.text()=="-1" and len(rselist)>0:
-                self.run.setText("%d"%(rselist[0][0]))
-                self.subrun.setText("%d"%(rselist[0][1]))
-                self.event_num.setText("%d"%(rselist[0][2]))
-                self.event.setText("%d"%(self.rse_map[rselist[0]]))
-    
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~
-    # -------------------------
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~
-    # -------------------------
-    
-    
-#     def openCaffe(self):
-#         if re.search("Disable", self.rgbcaffe.text()) is None:
-#             self.rgbcaffe.setText("Disable RGBCaffe")
-#             self.resize(1200, 900)
-#             self.layout.addLayout(self.caffe_layout.grid(True), 5, 0)
-#         else:
-#             self.rgbcaffe.setText("Enable RGBCaffe")
-#             self.layout.removeItem(self.caffe_layout.grid(False))
-#             self.resize(1200, 700)
-
-#     def openROITool(self):
-#         if re.search("Disable", self.rgbroi.text()) is None:
-#             self.rgbroi.setText("Disable ROITool")
-#             self.resize(1200, 1000)
-#             self.layout.addLayout(self.roitool_layout.grid(True), 5, 0)
-#         else:
-#             self.rgbroi.setText("Enable ROITool")
-#             self.layout.removeItem(self.roitool_layout.grid(False))
-#             self.resize(1200, 700)
-
-#     # opencv editor, if/els statement is for opening and closing the pane
-#     def openCVEditor(self):
-#         if self.cv2_layout is None:
-#             return
-
-#         if re.search("Disable", self.rgbcv2.text()) is None:
-#             self.rgbcv2.setText("Disable OpenCV")
-#             self.resize(1200, 900)
-#             self.layout.addLayout(self.cv2_layout.grid(True), 5, 0)
-#             self.plt.addItem(self.swindow)
-#             self.cv2_enabled = True
-#         else:
-#             self.rgbcv2.setText("Enable OpenCV")
-#             self.layout.removeItem(self.cv2_layout.grid(False))
-#             self.resize(1200, 700)
-#             self.plt.removeItem(self.swindow)
-#             self.cv2_enabled = False
 
     # put the runinfo right above the graphics window
     def setRunInfo(self, run, subrun, event):
         self.runinfo.setText(
             "<b>Run:</b> {} <b>Subrun:</b> {} <b>Event:</b> {}".format(run, subrun, event))
-
-    # which image producer
-    def chosenImageProducer(self):
-        self.image_producer = str(self.comboBoxImage.currentText())
-
-    # which ROI producer
-    def chosenROIProducer(self):
-        if self.roi_exists == True:
-            self.roi_producer = str(self.comboBoxROI.currentText())
 
     # set the ticks axis to be absolute coordinates
     def get_ticks(self):
@@ -452,19 +210,10 @@ class RGBDisplay(QtGui.QWidget):
         self.plt_x.setTicks(xticks)
 
         self.plt.autoRange()
-        self.setRunInfo(self.dm.run,
-                        self.dm.subrun,
-                        self.dm.event)
 
-        self.run.setText( "%d"%(self.dm.run) )
-        self.subrun.setText( "%d"%(self.dm.subrun) )
-        self.event_num.setText( "%d"%(self.dm.event) )
-
-        if self.cv2_enabled == True:
-            self.plt.addItem(self.swindow)
-            self.swindow.setZValue(10)
-            
-        self.modimage = None
+        #if self.cv2_enabled == True:
+        #    self.plt.addItem(self.swindow)
+        #    self.swindow.setZValue(10)
 
     #which type of ROI do you want, BNB/particle/both?
     def which_type(self):
@@ -493,29 +242,13 @@ class RGBDisplay(QtGui.QWidget):
 
         self.plotData()
 
-    def setViewPlanes(self):
-        # the list of chosen views 
-        self.views = []
-        for ix, p in enumerate(self.planes):
-            if p.currentIndex() != 0:
-                idx = p.currentText()
-                if idx == '': idx = -1 # when first loading the image it's empty, catch it
-                self.views.append(int(idx))
-            else:
-                self.views.append(-1)  # sentinal for don't fill this channel
-
     def plotData(self):
-        if True:
-            return
 
-        # if there are presets clear them out
-        if hasattr(self.image,"preset_layout"):
-            self.image.reset_presets()
-            self.image.preset_layout.setParent(None)
-            self.layout.removeItem(self.image.preset_layout)
-
-        # Clear the image pointer
-        self.image = None
+        # get the images, both src and overlay (ovr)
+        src = self.getSrcProducer()
+        ovr = self.getOvrProducer()
+        self.image     = self.images[ src ]
+        self.image_ovr = self.images[ ovr ]
 
         # Clear out plot
         self.plt.clear()
@@ -523,106 +256,54 @@ class RGBDisplay(QtGui.QWidget):
         # Add image
         self.imi = pg.ImageItem()
         self.plt.addItem(self.imi)
-        self.roitool_layout.setImageAndPlotWidgets( self.plt, self.imi )
-
-        # From QT, the threshold
-        event = int(self.event.text())
-        
-        # -----------------------------------------------------------------------------
-        # Erez, July-21, 2016
-        # -----------------------------------------------------------------------------
-        if self.rse_navigation.isChecked() : # my way
-            #self.wanted_rse = [int(self.run.text()), int(self.subrun.text()), int(self.event_num.text())]
-            self.wanted_rse = ( int(self.run.text()), int(self.subrun.text()), int(self.event_num.text()) )
-            self.image, hasroi = self.dm.get_rse_image(self.event_base_and_images,
-                                                       self.rse_map,
-                                                       self.wanted_rse,
-                                                       self.image_producer,
-                                                       self.roi_producer,
-                                                       self.views)
-        
-       
-        else: # original way
-            # get the image from the datamanager
-            self.image, hasroi = self.dm.get_event_image(event,
-                                                         self.image_producer,
-                                                         self.roi_producer,
-                                                         self.views)
-        # -----------------------------------------------------------------------------
-
-
 
         # whoops no image, return
         if self.image == None: return
         
-        self.image.planes = self.planes
-        if hasattr(self.image,"preset_layout"):
-            self.layout.addLayout(self.image.preset_layout,4,0)
-
-        # update channel combo boxes
-        nchs = self.dm.get_nchannels(event, self.image_producer)
-        if self.p0.count() != (nchs + 1):
-            self.p0.clear()
-            self.p1.clear()
-            self.p2.clear()
-            # the none channel must be zero. else we have to know the number of
-            # channels
-            self.p0.insertItem(0, "(none)")
-            self.p1.insertItem(0, "(none)")
-            self.p2.insertItem(0, "(none)")
-            for ch in range(0, nchs):
-                self.p0.insertItem(ch + 1, "%d" % (ch))
-                self.p1.insertItem(ch + 1, "%d" % (ch))
-                self.p2.insertItem(ch + 1, "%d" % (ch))
-            if nchs > 0:
-                self.p0.setCurrentIndex(1)
-            if nchs > 1:
-                self.p1.setCurrentIndex(nchs / 3 + 1)
-            if nchs > 2:
-                self.p2.setCurrentIndex(nchs / 3 * 2 + 1)
-
-        self.setViewPlanes()
-
         self.setContrast()
 
         # threshold for contrast, this image goes to the screen
         self.pimg = self.image.set_plot_mat(self.iimin,self.iimax)
+        self.pimg_ovr = self.image_ovr.set_plot_mat(self.iimin,self.iimax)
 
-        if hasroi:
-            self.rois = self.image.parse_rois()
+        # now we make the final image, combining the src and overlay
+        print "pimg shape: ",self.pimg.shape
+        print "pimg_ovr shape: ",self.pimg_ovr.shape
+        drawnimg = np.zeros( self.pimg.shape )
+        if self.pimg.shape==self.pimg_ovr.shape:
+            slider_val = self.image_slider.value()
+            slider_max = self.image_slider.maximum()
+            slider_min = self.image_slider.minimum()
+            mixfactor = float(slider_val-slider_min)/float( slider_max-slider_min )
+            drawnimg = self.pimg*(1.0-mixfactor) + self.pimg_ovr*mixfactor
+        else:
+            drawnimg += self.pimg
 
         # Emplace the image on the canvas
         #self.imi.setImage(self.pimg)
-        self.setImage(self.pimg)
-        self.modimage = None
+        self.setImage(drawnimg)
 
-        #this is extremely hacky, we need a central layout manager that can alert the layouts that
-        #the event is changed. For now lets directly tell ROILayout
+        # draw ROIs
 
-        #start vichack
-        self.roitool_layout.setImages( int(self.event.text()), self.image )
-        self.roitool_layout.reloadROI()
-        #end vichack
-        
-        # no ROI's -- finish early
-        if hasroi == False:
-            self.autoRange()
-            return
+#         # no ROI's -- finish early
+#         if hasroi == False:
+#             self.autoRange()
+#             return
 
-        xmin, xmax, ymin, ymax = (1e9, 0, 1e9, 0)
-        for roi in self.rois:
-            for bb in roi['bbox']:
-                if xmin > bb.min_x():
-                    xmin = bb.min_x()
-                if xmax < bb.max_x():
-                    xmax = bb.max_x()
-                if ymin > bb.min_y():
-                    ymin = bb.min_y()
-                if ymax < bb.max_y():
-                    ymax = bb.max_y()
+#         xmin, xmax, ymin, ymax = (1e9, 0, 1e9, 0)
+#         for roi in self.rois:
+#             for bb in roi['bbox']:
+#                 if xmin > bb.min_x():
+#                     xmin = bb.min_x()
+#                 if xmax < bb.max_x():
+#                     xmax = bb.max_x()
+#                 if ymin > bb.min_y():
+#                     ymin = bb.min_y()
+#                 if ymax < bb.max_y():
+#                     ymax = bb.max_y()
 
-        if self.roi_exists == True:
-            self.drawBBOX(self.which_type())
+#         if self.roi_exists == True:
+#             self.drawBBOX(self.which_type())
 
         self.autoRange()
 
@@ -794,6 +475,7 @@ class RGBDisplay(QtGui.QWidget):
     def setImage( self, img ):
         """Wrapper for hacking. """
         if img is None:
+            print "No image?"
             # sometimes no image to set yet
             return
 
@@ -848,6 +530,8 @@ class RGBDisplay(QtGui.QWidget):
 
     def _makeNavFrame(self):
         self._navframe = QtGui.QFrame()
+        self._navframe.setLineWidth(1)
+        self._navframe.setFrameShape( QtGui.QFrame.Box )
         self._navlayout = QtGui.QGridLayout()
 
         labelwidth = 40
@@ -887,7 +571,6 @@ class RGBDisplay(QtGui.QWidget):
         # Yes or no to navigate using R/S/E
         self.rse_navigation = QtGui.QCheckBox("R/S/E navigation")
         self.rse_navigation.setChecked(False)#True)
-        self.rse_navigation.stateChanged.connect( self.prepare_rse_navigation )
         self._navlayout.addWidget( self.rse_navigation, 0, 2, 1, 2 )
 
         # select choice options
@@ -904,9 +587,6 @@ class RGBDisplay(QtGui.QWidget):
         #self.go_rse_plot = QtGui.QPushButton("Go R/S/E")
         #self.lay_inputs.addWidget(self.go_rse_plot, 1, 2)
 
-        self.navheight = 4
-        self.navwidth  = 4
-
         # [ signal connect ]
 
         # (Re)Plot button
@@ -920,3 +600,218 @@ class RGBDisplay(QtGui.QWidget):
         # set frame
         self._navframe.setLayout( self._navlayout )
 
+    def _makeContrastFrame(self):
+        contrast_frame = QtGui.QFrame()
+        contrast_frame.setLineWidth(1)
+        contrast_frame.setFrameShape( QtGui.QFrame.Box )
+        contrast_layout = QtGui.QGridLayout()
+
+        ### use user constrast -- threshold
+        #Lock imin/imax between events
+        self.user_contrast = QtGui.QCheckBox("User Contrast")
+        self.user_contrast.setChecked(False)
+        self.user_contrast.clicked.connect(self.enableContrast)
+        contrast_layout.addWidget( self.user_contrast, 0, 0, 1, 2 )
+
+        ### imin -- threshold
+        self.imin = QtGui.QLineEdit("%d" % (5))
+        iminlabel = QtGui.QLabel("imin")
+        iminlabel.setFixedWidth(30)
+        contrast_layout.addWidget( iminlabel, 1, 0, 1, 1 )
+        contrast_layout.addWidget( self.imin, 1, 1, 1, 1 )
+
+        ### imax -- threshold
+        self.imax = QtGui.QLineEdit("%d" % (400))
+        imaxlabel = QtGui.QLabel("imax")
+        imaxlabel.setFixedWidth(30)
+        contrast_layout.addWidget( imaxlabel, 2, 0, 1, 1 )
+        contrast_layout.addWidget( self.imax, 2, 1, 1, 1 )
+        contrast_frame.setLayout( contrast_layout )
+
+        self.enableContrast()
+        return contrast_frame
+
+    def _makeImage2Dcontrol(self):
+        image_frame = QtGui.QFrame()
+        image_frame.setLineWidth(1)
+        image_frame.setFrameShape( QtGui.QFrame.Box )
+        image_layout = QtGui.QGridLayout()
+        
+        image_label = QtGui.QLabel( "Image2D panel" )
+        image_layout.addWidget(image_label, 0, 0, 1, 4)
+        
+        # SRC: source image
+        image_src_label  = QtGui.QLabel( "SRC" )
+        image_src_rlabel = QtGui.QLabel( "R" )
+        image_src_glabel = QtGui.QLabel( "G" )
+        image_src_blabel = QtGui.QLabel( "B" )
+        for l in [ image_src_label,image_src_rlabel,image_src_glabel,image_src_blabel]:
+            l.setFixedWidth(30)
+        self.image_src_producer = QtGui.QComboBox()
+        self.image_src_producer.currentIndexChanged.connect( self.setSrcProducerChannels )
+        self.image_src_rch = QtGui.QComboBox()
+        self.image_src_gch = QtGui.QComboBox()
+        self.image_src_bch = QtGui.QComboBox()
+        image_layout.addWidget(image_src_label,   1,0,1,1)
+        image_layout.addWidget(self.image_src_producer,1,1,1,1)
+        image_layout.addWidget(image_src_rlabel,  2,0,1,1)
+        image_layout.addWidget(self.image_src_rch,     2,1,1,1)
+        image_layout.addWidget(image_src_glabel,  3,0,1,1)
+        image_layout.addWidget(self.image_src_gch,     3,1,1,1)
+        image_layout.addWidget(image_src_blabel,  4,0,1,1)
+        image_layout.addWidget(self.image_src_bch,     4,1,1,1)
+
+        # OVRL: source image
+        image_ovr_label  = QtGui.QLabel( "OVR" )
+        image_ovr_rlabel = QtGui.QLabel( "R" )
+        image_ovr_glabel = QtGui.QLabel( "G" )
+        image_ovr_blabel = QtGui.QLabel( "B" )
+        for l in [ image_ovr_label,image_ovr_rlabel,image_ovr_glabel,image_ovr_blabel]:
+            l.setFixedWidth(30)
+        self.image_ovr_producer = QtGui.QComboBox()
+        self.image_ovr_producer.currentIndexChanged.connect( self.setOvrProducerChannels )
+        self.image_ovr_rch = QtGui.QComboBox()
+        self.image_ovr_gch = QtGui.QComboBox()
+        self.image_ovr_bch = QtGui.QComboBox()
+        image_layout.addWidget(image_ovr_label,   1,2,1,1)
+        image_layout.addWidget(self.image_ovr_producer,1,3,1,1)
+        image_layout.addWidget(image_ovr_rlabel,  2,2,1,1)
+        image_layout.addWidget(self.image_ovr_rch,     2,3,1,1)
+        image_layout.addWidget(image_ovr_glabel,  3,2,1,1)
+        image_layout.addWidget(self.image_ovr_gch,     3,3,1,1)
+        image_layout.addWidget(image_ovr_blabel,  4,2,1,1)
+        image_layout.addWidget(self.image_ovr_bch,     4,3,1,1)
+        
+        # Mixture Slider
+        self.image_slider = QtGui.QSlider( QtCore.Qt.Horizontal )
+        image_layout.addWidget(self.image_slider,5,0,1,4)
+
+        image_frame.setLayout(image_layout)
+        
+        return image_frame
+
+    def _makeROIpanel(self):
+
+        roipanel = QtGui.QFrame()
+        roipanel.setLineWidth(1)
+        roipanel.setFrameShape( QtGui.QFrame.Box )
+
+        roipanel_label = QtGui.QLabel("ROI panel")
+
+        self.comboBoxROI = QtGui.QComboBox()
+        self.roi_producer = None
+        self.roi_exists = False
+
+        # BNB
+        self.kBNB = QtGui.QRadioButton("BNB")
+        self.kBNB.setChecked(True)
+
+        # Particle
+        self.kOTHER = QtGui.QRadioButton("Particle")
+        
+        # Yes or no to draw ROI (must hit replot)
+        self.draw_bbox = QtGui.QCheckBox("Draw ROI")
+        self.draw_bbox.setChecked(True)
+
+        roipanel_layout = QtGui.QGridLayout()
+        roipanel_layout.addWidget( roipanel_label,   0, 0, 1, 1 )
+        roipanel_layout.addWidget( self.comboBoxROI, 1, 0, 1, 1 )
+        roipanel_layout.addWidget( self.kBNB,        2, 0, 1, 1 )
+        roipanel_layout.addWidget( self.kOTHER,      3, 0, 1, 1 )
+        roipanel_layout.addWidget( self.draw_bbox,   4, 0, 1, 1 )
+        
+        roipanel.setLayout( roipanel_layout )
+
+        return roipanel
+
+    def _makeUserItemTreeFrame(self):
+        user_frame = QtGui.QFrame()
+        user_frame.setLineWidth(1)
+        user_frame.setFrameShape( QtGui.QFrame.Box )
+        user_layout = QtGui.QGridLayout()
+
+        self.user_items = pg.TreeWidget()
+        user_layout.addWidget( QtGui.QLabel("user items"), 0, 0 )
+        user_layout.addWidget( self.user_items, 1, 0 )
+        user_frame.setLayout( user_layout )
+        return user_frame
+
+    # -----------------------------------------------------------------
+    # -----------------------------------------------------------------
+    # image2d options
+    
+    def addImage2Ddata(self,image2d):
+        """ add image set to display """
+        # once received we must
+        # 1) update list of producer options in src and overlay
+        # 2) (implicit) once src and overlay set, then default RGB channel options must be set
+        # 3) make viewing copies of images and put it into the screen
+        if not issubclass(image2d,TPCdataPlottable) and type(image2d) is not TPCdataPlottable:
+            print "Error, image2d data given to rgbdisplay must be inherited from TPCdataPlottable"
+            return
+        # put into store
+        self.images[image2d.producer] = image2d
+        # update list of producers
+        self.updateProducerList()
+        self.setSrcProducerChannels()
+        self.setOvrProducerChannels()
+        
+    def clearImage2Ddata(self):
+        self.images = {}
+
+    def updateProducerList(self):
+        self.image_src_producer.clear()
+        producers = self.images.keys()
+        producers.sort()
+        print producers
+        for i,producer in enumerate(producers):
+            self.image_src_producer.insertItem(i,producer)
+
+        self.image_ovr_producer.clear()
+        for i,producer in enumerate(producers):
+            self.image_ovr_producer.insertItem(i,producer)
+
+    def setSrcProducerChannels(self):
+        producer = str(self.image_src_producer.currentText())
+        image2d = self.images[producer]
+        nimgchs = len(image2d.imgs)
+        # set the default RGB channels
+        for ich,rgbch in enumerate(self.src_rgbchannels):
+            rgbch.clear()
+            for idx,ch in enumerate(image2d.imgs):
+                rgbch.insertItem( idx, str(idx) )
+            rgbch.insertItem(len(image2d.imgs),"(none)")
+            rgbch.setCurrentIndex(ich)
+
+
+    def setOvrProducerChannels(self):
+        producer = str(self.image_ovr_producer.currentText())
+        image2d = self.images[producer]
+        nimgchs = len(image2d.imgs)
+        # set the default RGB channels
+        for ich,rgbch in enumerate(self.ovr_rgbchannels):
+            rgbch.clear()
+            for idx,ch in enumerate(image2d.imgs):
+                rgbch.insertItem( idx, str(idx) )
+            rgbch.insertItem(len(image2d.imgs),"(none)")
+            rgbch.setCurrentIndex(ich)
+
+    def getSrcProducer(self):
+        return str(self.image_src_producer.currentText())
+
+    def getOvrProducer(self):
+        return str(self.image_ovr_producer.currentText())
+
+    # -----------------------------------------------------------------
+    # -----------------------------------------------------------------
+    # MainWindow Interface
+
+    def addVisItem( self, name, visitem ):
+        if type(visitem) is TPCdataPlottable or issubclass(visitem,TPCdataPlottable):
+            print "RGBdisplay received Image2D item"
+            self.addImage2Ddata(visitem)
+        else:
+            print "RGBdisplay recieved ",type(visitem)
+        return True
+        
+    

@@ -9,6 +9,7 @@ from pylard.config.pmtpos import getPosFromID
 from pylard.display.pmtposscatterplot import PMTScatterPlot
 from pylard.display.cosmicwindow import CosmicWindow
 import pylard.pylardata.pedestal as pedestal
+from pylard.pylardata.opdataplottable import OpDataPlottable
 
 # The opdet window is composed of three subwindows.
 # The first is a displah of the waveforms, controlled by this class
@@ -405,7 +406,7 @@ class OpDetWindow(QtGui.QWidget) :
         for name,vis in self.vis_items.items():
             if name=="opdata":
                 continue
-            if not issubclass(vis,opdataplottable):
+            if not issubclass(vis,OpDataPlottable):
                 continue
 
             userwfms = self.vis_items[name].getWaveformPlotData( nsrange[0], nsrange[1] )

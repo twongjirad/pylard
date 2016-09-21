@@ -48,10 +48,13 @@ class VisProcessor:
                     except:
                         foundmod = False
                     if foundmod: break
-                module.configure( modpset )
-                self.modules[k] = module
-                self.destination[k] = dest
-                print "configured: ",modtype,modfile,module
+                if module is not None:
+                    module.configure( modpset )
+                    self.modules[k] = module
+                    self.destination[k] = dest
+                    print "configured: ",modtype,modfile,module
+                else:
+                    print "could not load module: from %s.%s import %s"%(d,modname,modtype),". from ",modfile
 
     def loadModules(self):
         pass

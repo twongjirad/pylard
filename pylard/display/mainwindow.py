@@ -142,10 +142,10 @@ class PyLArD( QtGui.QMainWindow ):
             destination = self.visprocessor.destination[key]
             print "vis product=",key," dest=",destination
             if destination in self.tabs:
-                self.tabs[destination].addVisItem( "opdata", self.visprocessor.products[key] )
+                self.tabs[destination].addVisItem( key, self.visprocessor.products[key] )
 
         self.tabs["opdetdisplay"].plotData()
-        #self.tabs["rgbdisplay"].plotData()
+        self.tabs["rgbdisplay"].plotData()
             
         return status
     
