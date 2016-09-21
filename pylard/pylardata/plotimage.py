@@ -17,16 +17,20 @@ class PlotImage(object):
     def __init__(self, img_v, roi_v, planes):
         print "PlotImage class being made. Nchannels= ",img_v.size()
 
+        # list of image2d objects
         self.imgs = [img_v[i] for i in xrange(img_v.size())]
 
         if roi_v is not None:
             self.roi_v = [roi_v[i] for i in xrange(roi_v.size())]
 
-        # list of QWidgets which user can choose the channel to go into RGB
-        self.planes = None
-
-        # actual numbers of the planes
-        self.views  = planes
+        # list of channels to go into views. default to 0,1,2 (or less)
+        if img_v.size()>=3:
+            self.views  = [0,1,2]
+        else:
+            self.views = [ x for x in xrange(img_v.size()) ]
+            for i in xrange(img_v.size(),3):
+                self.views.append(-1)
+        print "init views: ",self.views
 
         # pyqtgraph sucks I have to make a union of all the images
         ometa = None
@@ -49,10 +53,11 @@ class PlotImage(object):
             img.overlay(self.imgs[i])
             tmp_img_v.append(img)
 
+        # img_v should never change
         self.imgs = tmp_img_v
         self.img_v = [larcv.as_ndarray(img) for img in tmp_img_v]
 
-        # self.orig_mat is always 3 planes
+        # self.orig_mat is always 3 in ch dim: RGB
         self.orig_mat = np.zeros(list(self.img_v[0].shape) + [3])
 
         # self.work_mat is N images in a matrix, we store our manipulations of
@@ -61,7 +66,7 @@ class PlotImage(object):
 
         # min and max of orig_mat
         self.iimin = 0.0
-        self.iimax = 0.0
+        self.iimax = 256.0
         
         # create orig_mat and work_mat for the first time i put 2 underlines
         # before to make sure I only call this method internally. __XX__ style is for
@@ -73,9 +78,6 @@ class PlotImage(object):
 
         # deprecated I think
         self.reverted = False
-
-        # the N-D images we will send to caffe
-        self.caffe_image = None
 
     def __create_mat(self):
 
@@ -91,9 +93,10 @@ class PlotImage(object):
                 self.orig_mat[:, :, p] = np.zeros((self.orig_mat.shape[0], self.orig_mat.shape[1]))
 
         # pyqtgraph quirk -- flip the middle axis so it's displayed upright for now
-        # we have to keep thi standard betweek all Image2D i'm sorry!
+        # we have to keep this standard between all Image2D i'm sorry!
         self.work_mat = self.work_mat[:,::-1,:]
         self.orig_mat = self.orig_mat[:,::-1,:]
+
 
     def set_imin_imax(self):
         self.iimin = np.min(self.orig_mat)
@@ -110,9 +113,17 @@ class PlotImage(object):
 
 
     # apply thresholding for contrast and make sure RGB pixels do not overlap
-    def set_plot_mat(self,imin,imax):
+    def set_plot_mat(self,imin,imax,views=None):
+        if len(views)!=3:
+            raise ValueError("Number of views/channels is not 3. should be list of 3.")
 
-        self.plot_mat = self.orig_mat.copy()
+        if views is not None:
+            self.views = views
+
+        self.plot_mat = np.zeros( self.orig_mat.shape )
+        for i,ch in enumerate(self.views):
+            if ch>=0 and ch<len(self.img_v):
+                self.plot_mat[:,:,i] = self.work_mat[:,:,ch]
 
         # do contrast thresholding
         self.plot_mat[self.plot_mat < imin] = 0

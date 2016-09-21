@@ -262,9 +262,15 @@ class RGBDisplay(QtGui.QWidget):
         
         self.setContrast()
 
+        # get list of views
+        src_view = self.getSrcChannels()
+        ovr_view = self.getOvrChannels()
+
+        print src_view,ovr_view
+
         # threshold for contrast, this image goes to the screen
-        self.pimg = self.image.set_plot_mat(self.iimin,self.iimax)
-        self.pimg_ovr = self.image_ovr.set_plot_mat(self.iimin,self.iimax)
+        self.pimg = self.image.set_plot_mat(self.iimin,self.iimax,src_view)
+        self.pimg_ovr = self.image_ovr.set_plot_mat(self.iimin,self.iimax,ovr_view)
 
         # now we make the final image, combining the src and overlay
         print "pimg shape: ",self.pimg.shape
@@ -446,11 +452,7 @@ class RGBDisplay(QtGui.QWidget):
         return self.image.caffe_image
 
     def setContrast(self):
-        
-        assert self.image is not None
 
-        self.image.set_imin_imax()
-        
         if self.user_contrast.isChecked() == True:
             self.iimin = float(self.imin.text())
             self.iimax = float(self.imax.text())
@@ -660,6 +662,7 @@ class RGBDisplay(QtGui.QWidget):
         image_layout.addWidget(self.image_src_gch,     3,1,1,1)
         image_layout.addWidget(image_src_blabel,  4,0,1,1)
         image_layout.addWidget(self.image_src_bch,     4,1,1,1)
+        self.src_rgbchs = [self.image_src_rch, self.image_src_gch, self.image_src_bch ]
 
         # OVRL: source image
         image_ovr_label  = QtGui.QLabel( "OVR" )
@@ -681,12 +684,22 @@ class RGBDisplay(QtGui.QWidget):
         image_layout.addWidget(self.image_ovr_gch,     3,3,1,1)
         image_layout.addWidget(image_ovr_blabel,  4,2,1,1)
         image_layout.addWidget(self.image_ovr_bch,     4,3,1,1)
+        self.ovr_rgbchs = [self.image_ovr_rch, self.image_ovr_gch, self.image_ovr_bch ]
         
         # Mixture Slider
         self.image_slider = QtGui.QSlider( QtCore.Qt.Horizontal )
         image_layout.addWidget(self.image_slider,5,0,1,4)
 
         image_frame.setLayout(image_layout)
+
+        # connect buttons to replot
+        self.image_src_producer.currentIndexChanged.connect( self.plotData )
+        self.image_ovr_producer.currentIndexChanged.connect( self.plotData )
+        for ch in self.src_rgbchs:
+            ch.currentIndexChanged.connect( self.plotData )
+        for ch in self.ovr_rgbchs:
+            ch.currentIndexChanged.connect( self.plotData )        
+        self.image_slider.sliderReleased.connect( self.plotData )
         
         return image_frame
 
@@ -760,6 +773,10 @@ class RGBDisplay(QtGui.QWidget):
         self.images = {}
 
     def updateProducerList(self):
+        # we silence the redraws until updated
+        self.image_src_producer.blockSignals(True)
+        self.image_ovr_producer.blockSignals(True)
+
         self.image_src_producer.clear()
         producers = self.images.keys()
         producers.sort()
@@ -771,7 +788,16 @@ class RGBDisplay(QtGui.QWidget):
         for i,producer in enumerate(producers):
             self.image_ovr_producer.insertItem(i,producer)
 
+        # reactivate
+        self.image_src_producer.blockSignals(False)
+        self.image_ovr_producer.blockSignals(False)
+
+
     def setSrcProducerChannels(self):
+        # we silence the redraws until updated
+        self.image_src_producer.blockSignals(True)
+        for ch in self.src_rgbchs:
+            ch.blockSignals(True)
         producer = str(self.image_src_producer.currentText())
         image2d = self.images[producer]
         nimgchs = len(image2d.imgs)
@@ -782,9 +808,18 @@ class RGBDisplay(QtGui.QWidget):
                 rgbch.insertItem( idx, str(idx) )
             rgbch.insertItem(len(image2d.imgs),"(none)")
             rgbch.setCurrentIndex(ich)
+        # reactivate
+        self.image_src_producer.blockSignals(False)
+        for ch in self.src_rgbchs:
+            ch.blockSignals(False)
 
 
     def setOvrProducerChannels(self):
+        # we silence the redraws until updated
+        self.image_ovr_producer.blockSignals(True)
+        for ch in self.ovr_rgbchs:
+            ch.blockSignals(True)
+        
         producer = str(self.image_ovr_producer.currentText())
         image2d = self.images[producer]
         nimgchs = len(image2d.imgs)
@@ -795,12 +830,34 @@ class RGBDisplay(QtGui.QWidget):
                 rgbch.insertItem( idx, str(idx) )
             rgbch.insertItem(len(image2d.imgs),"(none)")
             rgbch.setCurrentIndex(ich)
+        # reactivate
+        self.image_ovr_producer.blockSignals(False)
+        for ch in self.ovr_rgbchs:
+            ch.blockSignals(False)
 
     def getSrcProducer(self):
         return str(self.image_src_producer.currentText())
 
     def getOvrProducer(self):
         return str(self.image_ovr_producer.currentText())
+
+    def getSrcChannels(self):
+        views = []
+        for rgbch in self.src_rgbchs:
+            if rgbch.currentText()!="(none)":
+                views.append( int(rgbch.currentText()) )
+            else:
+                views.append(-1)
+        return views
+
+    def getOvrChannels(self):
+        views = []
+        for rgbch in self.ovr_rgbchs:
+            if rgbch.currentText()!="(none)":
+                views.append( int(rgbch.currentText()) )
+            else:
+                views.append(-1)
+        return views
 
     # -----------------------------------------------------------------
     # -----------------------------------------------------------------
