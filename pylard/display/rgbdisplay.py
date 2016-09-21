@@ -288,12 +288,24 @@ class RGBDisplay(QtGui.QWidget):
         print "pimg shape: ",self.pimg.shape
         print "pimg_ovr shape: ",self.pimg_ovr.shape
         drawnimg = np.zeros( self.pimg.shape )
-        if self.pimg.shape==self.pimg_ovr.shape:
-            slider_val = self.image_slider.value()
-            slider_max = self.image_slider.maximum()
-            slider_min = self.image_slider.minimum()
-            mixfactor = float(slider_val-slider_min)/float( slider_max-slider_min )
-            drawnimg = self.pimg*(1.0-mixfactor) + self.pimg_ovr*mixfactor
+        
+        # get mix factor from slider bar
+        slider_val = self.image_slider.value()
+        slider_max = self.image_slider.maximum()
+        slider_min = self.image_slider.minimum()
+        mixfactor = float(slider_val-slider_min)/float( slider_max-slider_min )
+
+        ovr_rgbfactors = {0:[self.ovr_rcolor.red(),self.ovr_rcolor.green(), self.ovr_rcolor.blue()],
+                          1:[self.ovr_gcolor.red(),self.ovr_gcolor.green(), self.ovr_gcolor.blue()],
+                          2:[self.ovr_bcolor.red(),self.ovr_bcolor.green(), self.ovr_bcolor.blue()]}
+
+        print ovr_rgbfactors
+        if self.pimg.shape==self.pimg_ovr.shape and slider_val>slider_min:
+            ovrmix = np.zeros( self.pimg_ovr.shape )
+            for rgb in range(0,3):
+                for chovr in range(0,3):
+                    ovrmix[:,:,rgb] += float(ovr_rgbfactors[chovr][rgb])/255.0*self.pimg_ovr[:,:,chovr]
+            drawnimg = self.pimg*(1.0-mixfactor) + ovrmix*mixfactor
         else:
             drawnimg += self.pimg
 
@@ -657,9 +669,11 @@ class RGBDisplay(QtGui.QWidget):
         # SRC: source image
         image_src_label  = QtGui.QLabel( "SRC" )
         image_src_rlabel = QtGui.QLabel( "R" )
+        
         image_src_glabel = QtGui.QLabel( "G" )
         image_src_blabel = QtGui.QLabel( "B" )
-        for l in [ image_src_label,image_src_rlabel,image_src_glabel,image_src_blabel]:
+        image_src_label.setFixedWidth(30)
+        for l in [ image_src_rlabel,image_src_glabel,image_src_blabel]:
             l.setFixedWidth(30)
         self.image_src_producer = QtGui.QComboBox()
         self.image_src_producer.currentIndexChanged.connect( self.setSrcProducerChannels )
@@ -678,25 +692,38 @@ class RGBDisplay(QtGui.QWidget):
 
         # OVRL: source image
         image_ovr_label  = QtGui.QLabel( "OVR" )
-        image_ovr_rlabel = QtGui.QLabel( "R" )
-        image_ovr_glabel = QtGui.QLabel( "G" )
-        image_ovr_blabel = QtGui.QLabel( "B" )
-        for l in [ image_ovr_label,image_ovr_rlabel,image_ovr_glabel,image_ovr_blabel]:
-            l.setFixedWidth(30)
+        self.image_ovr_rlabel = QtGui.QPushButton( "1" )
+        self.image_ovr_rlabel.setStyleSheet( "QPushButton {background-color: #FF0000;}" )
+        self.image_ovr_glabel = QtGui.QPushButton( "2" )
+        self.image_ovr_glabel.setStyleSheet( "QPushButton {background-color: #00FF00;}" )
+        self.image_ovr_blabel = QtGui.QPushButton( "3" )
+        self.image_ovr_blabel.setStyleSheet( "QPushButton {background-color: #0000FF;}" )
+        image_ovr_label.setFixedWidth(30)
+        for l in [ self.image_ovr_rlabel,self.image_ovr_glabel,self.image_ovr_blabel]:
+            l.setFixedWidth(20)
+            l.setFixedHeight(20)
         self.image_ovr_producer = QtGui.QComboBox()
         self.image_ovr_producer.currentIndexChanged.connect( self.setOvrProducerChannels )
         self.image_ovr_rch = QtGui.QComboBox()
         self.image_ovr_gch = QtGui.QComboBox()
         self.image_ovr_bch = QtGui.QComboBox()
-        image_layout.addWidget(image_ovr_label,   1,2,1,1)
-        image_layout.addWidget(self.image_ovr_producer,1,3,1,1)
-        image_layout.addWidget(image_ovr_rlabel,  2,2,1,1)
-        image_layout.addWidget(self.image_ovr_rch,     2,3,1,1)
-        image_layout.addWidget(image_ovr_glabel,  3,2,1,1)
-        image_layout.addWidget(self.image_ovr_gch,     3,3,1,1)
-        image_layout.addWidget(image_ovr_blabel,  4,2,1,1)
-        image_layout.addWidget(self.image_ovr_bch,     4,3,1,1)
+        image_layout.addWidget(image_ovr_label,        1,3,1,1)
+        image_layout.addWidget(self.image_ovr_producer,1,2,1,1)
+        image_layout.addWidget(self.image_ovr_rlabel,  2,3,1,1)
+        image_layout.addWidget(self.image_ovr_rch,     2,2,1,1)
+        image_layout.addWidget(self.image_ovr_glabel,       3,3,1,1)
+        image_layout.addWidget(self.image_ovr_gch,     3,2,1,1)
+        image_layout.addWidget(self.image_ovr_blabel,       4,3,1,1)
+        image_layout.addWidget(self.image_ovr_bch,     4,2,1,1)
+        # setup color buttons/colors
+        self.image_ovr_rlabel.clicked.connect( self.setOvrRcolor )
+        self.image_ovr_glabel.clicked.connect( self.setOvrGcolor )
+        self.image_ovr_blabel.clicked.connect( self.setOvrBcolor )
+        self.ovr_rcolor = QtGui.QColor("#FF0000")
+        self.ovr_gcolor = QtGui.QColor("#00FF00")
+        self.ovr_bcolor = QtGui.QColor("#0000FF")
         self.ovr_rgbchs = [self.image_ovr_rch, self.image_ovr_gch, self.image_ovr_bch ]
+        self.ovr_colors = [self.ovr_rcolor, self.ovr_gcolor, self.ovr_bcolor ]
         
         # Mixture Slider
         self.image_slider = QtGui.QSlider( QtCore.Qt.Horizontal )
@@ -760,6 +787,20 @@ class RGBDisplay(QtGui.QWidget):
         user_layout.addWidget( self.user_items, 1, 0 )
         user_frame.setLayout( user_layout )
         return user_frame
+
+    # -----------------------------------------------------------------
+    # -----------------------------------------------------------------
+    # Color buttons
+    
+    def setOvrRcolor(self):
+        self.ovr_rcolor = QtGui.QColorDialog.getColor()
+        self.image_ovr_rlabel.setStyleSheet("QPushButton { background-color: %s; };"%(self.ovr_rcolor.name()))
+    def setOvrGcolor(self):
+        self.ovr_gcolor = QtGui.QColorDialog.getColor()
+        self.image_ovr_glabel.setStyleSheet("QPushButton { background-color: %s; };"%(self.ovr_gcolor.name()))
+    def setOvrBcolor(self):
+        self.ovr_bcolor = QtGui.QColorDialog.getColor()
+        self.image_ovr_blabel.setStyleSheet("QPushButton { background-color: %s; };"%(self.ovr_bcolor.name()))
 
     # -----------------------------------------------------------------
     # -----------------------------------------------------------------
