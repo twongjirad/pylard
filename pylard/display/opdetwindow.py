@@ -51,99 +51,34 @@ class OpDetWindow(QtGui.QWidget) :
 
         # Main Layout
         self.layout = QtGui.QGridLayout()
-        self.layout.addWidget( self.graphics, 0, 0, 1, 9 )
+        # graphics window
         self.graphics.addItem( self.pmt_map, 0, 0, rowspan=2 )
         self.graphics.addItem( self.pmtscale, 2, 0, rowspan=1 )
         self.graphics.addItem( self.wfplot, 3, 0, rowspan=3 )
         self.graphics.addItem( self.time_window, 6, 0, rowspan=1 )
+        self.layout.addWidget( self.graphics, 0, 0, 8, 1 )
         self.setLayout(self.layout)
 
         # -------------
         # Input Widgets
         # -------------
-        
-        # Layouts
-        self.lay_inputs = QtGui.QGridLayout()
-        self.layout.addLayout( self.lay_inputs, 7, 0 )
-        
-        # Navigation
+                
         opdata = None # Temp hack
-        self.entry  = QtGui.QLineEdit("") # entry number
-        self.run    = QtGui.QLineEdit("") # run number
-        self.subrun = QtGui.QLineEdit("") # run number
-        self.event  = QtGui.QLineEdit("") # run number
-        self.slot   = QtGui.QLineEdit("5")     # slot number
-        self.prev_event = QtGui.QPushButton("Previous")
-        self.next_event = QtGui.QPushButton("Next")
-        self.get_event  = QtGui.QPushButton("Get Entry")
-        self.get_rse  = QtGui.QPushButton("Get RSE")
 
-        # control the waveform viewer
-        self.collapse = QtGui.QCheckBox("Overlay Mode")  # collapse onto one another
-        self.collapse.setChecked(False)
-        self.adc_scaledown = QtGui.QLineEdit("100.0")
-        # options
-        self.draw_diag = QtGui.QCheckBox("draw diagram")  # collapse onto one another
-        self.draw_diag.setChecked(True)
-        self.draw_cosmics = QtGui.QCheckBox("draw disc. windows")
-        self.draw_cosmics.setChecked(True)
-
-        # add to layout
-        rse_panel_layout = QtGui.QGridLayout()
-        entrylabel  = QtGui.QLabel("Entry")
-        runlabel    = QtGui.QLabel("Run")
-        subrunlabel = QtGui.QLabel("Subrun")
-        eventlabel  = QtGui.QLabel("Event")
-        femlabel    = QtGui.QLabel("FEM")
-        adc_scale_label = QtGui.QLabel("ADC scale-down")
-
-        entrylabel.setFixedWidth(30)
-        runlabel.setFixedWidth(25)
-        subrunlabel.setFixedWidth(45)
-        eventlabel.setFixedWidth(35)
-        adc_scale_label.setFixedWidth(100)
-
-        rse_panel_layout.addWidget( entrylabel,  0, 0 )
-        rse_panel_layout.addWidget( self.entry,  0, 1 )
-        rse_panel_layout.addWidget( runlabel,    0, 2 )
-        rse_panel_layout.addWidget( self.run,    0, 3 )
-        rse_panel_layout.addWidget( subrunlabel, 0, 4 )
-        rse_panel_layout.addWidget( self.subrun, 0, 5 )
-        rse_panel_layout.addWidget( eventlabel,  0, 6 )
-        rse_panel_layout.addWidget( self.event,  0, 7 )
-        rse_panel_layout.addWidget( femlabel,    0, 8 )
-        rse_panel_layout.addWidget( self.slot,   0, 9 )
-        rse_panel_layout.addWidget( adc_scale_label, 0, 10 )
-        rse_panel_layout.addWidget( self.adc_scaledown, 0, 11 )
-
-        self.lay_inputs.addLayout( rse_panel_layout, 0, 0, 1, 10 )
-        self.lay_inputs.addWidget( self.collapse, 0, 10 )
-        self.lay_inputs.addWidget( self.draw_diag, 0, 11 )
-        self.lay_inputs.addWidget( self.draw_cosmics, 0, 12 )
-        self.lay_inputs.addWidget( self.prev_event, 0, 13 )
-        self.lay_inputs.addWidget( self.next_event, 0, 14 )
-        self.lay_inputs.addWidget( self.get_event,  0, 15 )
         self.last_clicked_channel = None
         self.user_plot_item = {} # storage for user plot items
 
-        # axis options
-        self.replot = QtGui.QPushButton("Re-plot!")
-        self.openCosmicWindow = QtGui.QPushButton("Cosmic Disc. Viewer")
-        self.draw_only_PMTs = QtGui.QCheckBox("only PMTs")  # draw only PMTs
-        self.draw_only_PMTs.setChecked(False)
-        self.draw_user_items = QtGui.QCheckBox("draw user items")  # draw user products
-        self.draw_user_items.setChecked(True)
-        self.draw_chlabels = QtGui.QCheckBox("channel labels")  # draw user products
-        self.draw_chlabels.setChecked(False)
-        self.run_user_analysis = QtGui.QCheckBox("run user funcs.")  # draw user products
-        self.run_user_analysis.setChecked(True)
+        # input layout
+        self.lay_inputs = QtGui.QGridLayout()
+        navframe = self._makeNavFrame()
+        optframe = self._makeOptionsFrame()
+        usrframe = self._makeUserItemsFrame()
+        self.lay_inputs.addWidget( navframe, 0, 0 )
+        self.lay_inputs.addWidget( optframe, 0, 1 )
+        self.lay_inputs.addWidget( usrframe, 0, 2 )
 
-        self.lay_inputs.addWidget( self.draw_only_PMTs, 1, 10 )
-        self.lay_inputs.addWidget( self.draw_chlabels, 1, 11 )
-        self.lay_inputs.addWidget( self.draw_user_items, 1, 12 )
-        self.lay_inputs.addWidget( self.run_user_analysis, 1, 13 )
-        self.lay_inputs.addWidget( self.replot, 1, 14 )
-        self.lay_inputs.addWidget( self.get_rse, 1, 15 )
+        # addd input layout
+        self.layout.addLayout( self.lay_inputs, 8, 0, 1, 1)
 
         # other options
         self.channellist = [] # when not None, only draw channels in this list
@@ -156,15 +91,6 @@ class OpDetWindow(QtGui.QWidget) :
         self.user_analysis_products = []
         self.user_analyses = []
 
-        # connect
-        self.replot.clicked.connect( self.plotData )
-        self.next_event.clicked.connect( self.nextEntry )
-        self.prev_event.clicked.connect( self.prevEntry )
-        self.get_event.clicked.connect( self.getEntry )
-        self.get_rse.clicked.connect( self.getRSE )
-        self.pmtdiagram.sigClicked.connect( self.pmtDiagramClicked )
-        #self.pmtdiagram.scene().sigMouseMoved.connect(self.onMovePMTdiagram)
-
         # main window
         self.themainwindow = None
 
@@ -173,6 +99,131 @@ class OpDetWindow(QtGui.QWidget) :
 
     def clearVisItems(self):
         self.vis_items = {}
+
+    # --------------------------------------------------
+    # --------------------------------------------------
+    
+    def _makeNavFrame(self):
+        navframe        = QtGui.QFrame()
+        navframe.setLineWidth(1)
+        navframe.setFrameShape( QtGui.QFrame.Box )
+        navframe_layout = QtGui.QGridLayout()
+
+        self.entry  = QtGui.QLineEdit("")  # entry number
+        self.run    = QtGui.QLineEdit("")  # run number
+        self.subrun = QtGui.QLineEdit("")  # run number
+        self.event  = QtGui.QLineEdit("")  # run number
+        self.slot   = QtGui.QLineEdit("5") # slot number
+        self.adc_scaledown = QtGui.QLineEdit("20.0")
+        self.prev_event = QtGui.QPushButton("Previous")
+        self.next_event = QtGui.QPushButton("Next")
+        self.get_event  = QtGui.QPushButton("Goto Entry")
+        self.get_rse  = QtGui.QPushButton("Goto RSE")
+        self.replot = QtGui.QPushButton("Re-plot!")
+
+        navframe_layout_top = QtGui.QGridLayout()
+        navframe_layout_bot = QtGui.QGridLayout()
+
+        entrylabel  = QtGui.QLabel("Entry")
+        runlabel    = QtGui.QLabel("Run")
+        subrunlabel = QtGui.QLabel("Subrun")
+        eventlabel  = QtGui.QLabel("Event")
+        femlabel    = QtGui.QLabel("FEM")
+        adc_scale_label = QtGui.QLabel("ADC scale-down")
+
+        entrylabel.setFixedWidth(30)
+        runlabel.setFixedWidth(25)
+        subrunlabel.setFixedWidth(50)
+        eventlabel.setFixedWidth(35)
+        adc_scale_label.setFixedWidth(100)
+
+        navframe_layout_top.addWidget( entrylabel,  0, 0 )
+        navframe_layout_top.addWidget( self.entry,  0, 1 )
+        navframe_layout_top.addWidget( runlabel,    0, 2 )
+        navframe_layout_top.addWidget( self.run,    0, 3 )
+        navframe_layout_top.addWidget( subrunlabel, 0, 4 )
+        navframe_layout_top.addWidget( self.subrun, 0, 5 )
+        navframe_layout_top.addWidget( eventlabel,  0, 6 )
+        navframe_layout_top.addWidget( self.event,  0, 7 )
+        navframe_layout_top.addWidget( femlabel,    0, 8 )
+        navframe_layout_top.addWidget( self.slot,   0, 9 )
+        navframe_layout_top.addWidget( adc_scale_label, 0, 10 )
+        navframe_layout_top.addWidget( self.adc_scaledown, 0, 11 )
+        
+        navframe_layout_bot.addWidget( self.replot,     0, 0 )
+        navframe_layout_bot.addWidget( self.prev_event, 0, 1 )
+        navframe_layout_bot.addWidget( self.next_event, 0, 2 )
+        navframe_layout_bot.addWidget( self.get_event,  0, 3 )
+        navframe_layout_bot.addWidget( self.get_rse,    0, 4 )
+
+        navframe_layout.addLayout( navframe_layout_top, 0, 0 )
+        navframe_layout.addLayout( navframe_layout_bot, 1, 0 )
+
+        navframe.setLayout( navframe_layout )
+
+        # connect signals
+        self.replot.clicked.connect( self.plotData )
+        self.next_event.clicked.connect( self.nextEntry )
+        self.prev_event.clicked.connect( self.prevEntry )
+        self.get_event.clicked.connect( self.getEntry )
+        self.get_rse.clicked.connect( self.getRSE )
+        self.pmtdiagram.sigClicked.connect( self.pmtDiagramClicked )
+
+        return navframe
+        
+    def _makeOptionsFrame(self):
+        opt_frame        = QtGui.QFrame()
+        opt_frame.setLineWidth(1)
+        opt_frame.setFrameShape( QtGui.QFrame.Box )
+        opt_frame_layout = QtGui.QGridLayout()
+        
+        # control the waveform viewer
+        self.collapse = QtGui.QCheckBox("overlay mode")  # collapse onto one another
+        self.collapse.setChecked(False)
+        self.draw_diag = QtGui.QCheckBox("diagram")  # collapse onto one another
+        self.draw_diag.setChecked(True)
+        self.draw_cosmics = QtGui.QCheckBox("disc. windows")
+        self.draw_cosmics.setChecked(True)
+        self.draw_only_PMTs = QtGui.QCheckBox("no logic")  # draw only PMTs
+        self.draw_only_PMTs.setChecked(False)
+        self.draw_chlabels = QtGui.QCheckBox("channel labels")  # draw user products
+        self.draw_chlabels.setChecked(False)
+        #self.run_user_analysis = QtGui.QCheckBox("run user funcs.")  # draw user products
+        #self.run_user_analysis.setChecked(True)
+
+        opt_frame_layout.addWidget( QtGui.QLabel("Options"), 0, 0)
+        opt_frame_layout.addWidget( self.collapse,           0, 1 )
+        opt_frame_layout.addWidget( self.draw_only_PMTs,     0, 2 )
+        opt_frame_layout.addWidget( self.draw_diag,          1, 0 )
+        opt_frame_layout.addWidget( self.draw_cosmics,       1, 1 )
+        opt_frame_layout.addWidget( self.draw_chlabels,      1, 2 )
+
+        for checkbox in [ self.collapse, self.draw_diag, self.draw_cosmics, self.draw_only_PMTs, self.draw_chlabels ]:
+            checkbox.stateChanged.connect( self.plotData )
+
+        opt_frame.setLayout( opt_frame_layout )
+
+        return opt_frame
+
+    def _makeUserItemsFrame(self):
+        user_frame        = QtGui.QFrame()
+        user_frame.setLineWidth(1)
+        user_frame.setFrameShape( QtGui.QFrame.Box )
+        user_frame_layout = QtGui.QGridLayout()
+        self.user_items = pg.TreeWidget()
+        self.user_items.setFixedHeight(   80 )
+        self.user_items.setMinimumWidth( 300 )
+        self.draw_user_items = QtGui.QCheckBox("draw user items")  # draw user products
+        self.draw_user_items.setChecked(True)
+
+        user_frame_layout.addWidget( self.draw_user_items, 0, 0, 1, 1 )
+        user_frame_layout.addWidget( self.user_items,      1, 0, 5, 2 )
+        user_frame.setLayout( user_frame_layout )
+
+        return user_frame
+
+    # --------------------------------------------------
+    # --------------------------------------------------
         
     def plotData( self ):
 
