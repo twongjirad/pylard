@@ -26,10 +26,11 @@ class OpWfmPlot:
         self.default_color = default_color
         self.highlighted_color = highlighted_color
         if x is None:
-            self.x = x
+            self.x = None
         else:
             if len(x)!=len(self.wfm):
                 raise ValueError("x array, if given, must be same length as wfm")
+            self.x = x
 
     def genTimeArray( self ):
         """ return numpy array of times. we do this, so the time array is only allocated when needed. """

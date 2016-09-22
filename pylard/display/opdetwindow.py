@@ -16,6 +16,8 @@ from pylard.pylardata.opdataplottable import OpDataPlottable
 # Another is the diagram of PMTs, showing intensity via a color sale
 # The last shows the location of all cosmic discriminator windows
 
+#FIXME: data product opdata is special. it is the main waveform set. this should not be the case.
+
 class OpDetWindow(QtGui.QWidget) :
 
     NSPERTICK = 15.625
@@ -66,7 +68,8 @@ class OpDetWindow(QtGui.QWidget) :
         opdata = None # Temp hack
 
         self.last_clicked_channel = None
-        self.user_plot_item = {} # storage for user plot items
+        self.user_plot_item       = {} # storage for user plot items
+        self.user_plot_checkboxes = {} # is it active
 
         # input layout
         self.lay_inputs = QtGui.QGridLayout()
@@ -99,6 +102,7 @@ class OpDetWindow(QtGui.QWidget) :
 
     def clearVisItems(self):
         self.vis_items = {}
+        self.clearUserItems()
 
     # --------------------------------------------------
     # --------------------------------------------------
@@ -211,6 +215,7 @@ class OpDetWindow(QtGui.QWidget) :
         user_frame.setFrameShape( QtGui.QFrame.Box )
         user_frame_layout = QtGui.QGridLayout()
         self.user_items = pg.TreeWidget()
+        self.user_items.setColumnCount(2)
         self.user_items.setFixedHeight(   80 )
         self.user_items.setMinimumWidth( 300 )
         self.draw_user_items = QtGui.QCheckBox("draw user items")  # draw user products
@@ -251,6 +256,7 @@ class OpDetWindow(QtGui.QWidget) :
 
         # draw user waveforms
         if self.draw_user_items.isChecked():
+            print "draw user waveforms"
             self.drawUserWaveforms(offset,scaledown,nsrange)
 
         # refresh range object
@@ -318,6 +324,24 @@ class OpDetWindow(QtGui.QWidget) :
     def plotAllChannels( self ):
         self.channellist = []
 
+    # --------------------------------------------------
+    # --------------------------------------------------
+    # User Items
+        
+    def registerUserVisItem(self,name):
+        # make a checkbox item
+        print "Register UserVisItem: ",name
+        self.user_plot_checkboxes[name] = QtGui.QCheckBox('')
+        self.user_plot_checkboxes[name].setChecked(False)
+        item = pg.TreeWidgetItem(['',name])
+        item.setWidget(0,self.user_plot_checkboxes[name])
+        self.user_items.addTopLevelItem( item )
+
+    def clearUserItems(self):
+        self.user_items.clear()
+        self.user_plot_item = {}
+        self.user_plot_checkboxes = {}
+
     def addUserWaveformItem( self, item, ch=None ):
         if ch not in self.user_plot_item.keys():
             self.user_plot_item[ch] = []
@@ -325,6 +349,10 @@ class OpDetWindow(QtGui.QWidget) :
 
     def clearUserWaveformItem( self ):
         self.user_plot_item = {}
+
+    # --------------------------------------------------
+    # --------------------------------------------------
+
 
     def getChanColor( self, id, alpha=255 ):
         if id<32:
@@ -457,10 +485,13 @@ class OpDetWindow(QtGui.QWidget) :
         for name,vis in self.vis_items.items():
             if name=="opdata":
                 continue
-            if not issubclass(vis,OpDataPlottable):
+            if not isinstance(vis,OpDataPlottable):
+                continue
+            if name not in self.user_plot_checkboxes or self.user_plot_checkboxes[name].isChecked()==False:
                 continue
 
-            userwfms = self.vis_items[name].getWaveformPlotData( nsrange[0], nsrange[1] )
+            userwfms = self.vis_items[name].getUserPlotData( nsrange[0], nsrange[1] )
+            print "drawing user data: ",name," between ",nsrange," ns. number of items=",len(userwfms)
             for wfm in userwfms:
                 ipmt = wfm.ch
                 if ipmt is not None and (len(self.channellist)>0 and ipmt not in self.channellist):
@@ -474,11 +505,13 @@ class OpDetWindow(QtGui.QWidget) :
                 else:
                     y = wfm.wfm
                 
-                x = wfm.genTimeArray()
+                x = wfm.getX()
                 self.wfplot.plot( x=x, y=y, pen=pencolor )
 
     def addVisItem( self, name, product ):
         self.vis_items[name] = product
+        if name != "opdata":
+            self.registerUserVisItem(name)
 
     def drawDiagramData(self,):
         slot = int(self.slot.text())

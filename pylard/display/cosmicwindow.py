@@ -27,7 +27,7 @@ class CosmicWindow(pg.PlotItem):
 
         self.addItem(self.time_range)
 
-        self.setLabel( "bottom", text="time from trigger", units="seconds", unitPrefix="micro" )
+        self.setLabel( "bottom", text="time from trigger", units="usecs" )
 
         # data
         self.cosmicwindowvector = None
