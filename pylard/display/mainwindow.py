@@ -139,6 +139,7 @@ class PyLArD( QtGui.QMainWindow ):
 
         # pass vis products to panels
         self.pmtwindow.clearVisItems()
+        self.rgbdisplay.clearVisItems()
         for key,visproduct in self.visprocessor.products.items():
             destination = self.visprocessor.destination[key]
             print "vis product=",key," dest=",destination

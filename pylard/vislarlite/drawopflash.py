@@ -67,6 +67,11 @@ class PyLArLiteDrawOpFlash:
                                              default_color=PyLArLiteDrawOpFlash.colorlist[colorindex], 
                                              timepertick=PyLArLiteDrawOpFlash.NSPERTICK, x=box_x )
                 print "opflash. ",opflash.Time()
+            else:
+                pass
+            colorindex += 1
+            if colorindex>=len(PyLArLiteDrawOpFlash.colorlist):
+                colorindex = 0
 
         #assn.list_association()
 

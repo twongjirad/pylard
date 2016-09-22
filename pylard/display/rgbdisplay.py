@@ -105,6 +105,8 @@ class RGBDisplay(QtGui.QWidget):
         useritemstart = roipanelstart + self.navwidth
         self.user_item_frame = self._makeUserItemTreeFrame()
         self.lay_inputs.addWidget(self.user_item_frame, 0, useritemstart, self.navheight, self.navwidth)
+        self.user_plot_items = {}       # stores whatever user is tryig to draw onto image
+        self.user_plot_checkboxes = {}  # stores checkboxes that tell us to track item or not
         
         # --------------------------------------------------------
 
@@ -252,6 +254,10 @@ class RGBDisplay(QtGui.QWidget):
         self.event.setText("%d"%(entry))
         self.setRunInfo( run, subrun, event )
 
+    def clearVisItems(self):
+        self.clearUserVisItems()
+        return
+
     # =================================================================
 
     def plotData(self):
@@ -318,6 +324,10 @@ class RGBDisplay(QtGui.QWidget):
         # Emplace the image on the canvas
         #self.imi.setImage(self.pimg)
         self.setImage(drawnimg)
+
+
+        # draw user items
+        self.drawUserItems()
 
         # draw ROIs
 
@@ -782,6 +792,10 @@ class RGBDisplay(QtGui.QWidget):
 
         return roipanel
 
+    # -----------------------------------------------------------------
+    # -----------------------------------------------------------------
+    # User Item Handling
+
     def _makeUserItemTreeFrame(self):
         user_frame = QtGui.QFrame()
         user_frame.setLineWidth(1)
@@ -789,10 +803,60 @@ class RGBDisplay(QtGui.QWidget):
         user_layout = QtGui.QGridLayout()
 
         self.user_items = pg.TreeWidget()
+        self.user_items.setColumnCount(2)
         user_layout.addWidget( QtGui.QLabel("user items"), 0, 0 )
         user_layout.addWidget( self.user_items, 1, 0 )
         user_frame.setLayout( user_layout )
         return user_frame
+
+    def addUserVisItem(self,name,visitem):
+        print "Register User TPC VisItem: ",name
+        self.user_plot_items[name] = visitem
+        self.user_plot_checkboxes[name] = QtGui.QCheckBox('')
+        self.user_plot_checkboxes[name].setChecked(False)
+        item = pg.TreeWidgetItem(['',name])
+        item.setWidget(0,self.user_plot_checkboxes[name])
+        self.user_items.addTopLevelItem( item )
+        
+    def clearUserVisItems(self):
+        self.user_items.clear()
+        self.user_plot_item = {}
+        self.user_plot_checkboxes = {}
+
+    def drawUserItems(self):
+        meta = self.image.imgs[0].meta()
+        dw_i = meta.pixel_width()
+        dh_i = meta.pixel_height()
+        for name,visitem in self.user_plot_items.items():
+            if not self.user_plot_checkboxes[name].isChecked():
+                continue
+            print "RGB drawing user item: ",name
+            visitems = visitem
+            if type(visitems) is not list:
+                visitems = [visitem]
+
+            for item in visitems:
+                if not isinstance(item,pg.PlotDataItem):
+                    print "EGB display does not support this type for visualzation: ",type(item)
+                    continue
+                # we need to convert positions into image coorindates
+
+                if not hasattr(item,"pylardconverted"):
+                    xy = item.getData()
+                    xarr = np.zeros( len(xy) )
+                    yarr = np.zeros( len(xy) )
+
+                    for i in xrange(0,len(xy)):
+                        x = (xy[0][i]-meta.min_x())/dw_i
+                        y = (xy[1][i]-meta.min_y())/dh_i
+                        xarr[i] = x
+                        yarr[i] = y
+                        print "xy: ",i,(xy[0][i],xy[1][i]),(x,y)
+                    item.pylardconverted = True                    
+                    item.setData(x=xarr,y=yarr)
+
+                self.plt.addItem(item)
+                
 
     # -----------------------------------------------------------------
     # -----------------------------------------------------------------
@@ -923,11 +987,12 @@ class RGBDisplay(QtGui.QWidget):
     # MainWindow Interface
 
     def addVisItem( self, name, visitem ):
-        if type(visitem) is TPCdataPlottable or issubclass(visitem,TPCdataPlottable):
+        if type(visitem) is TPCdataPlottable or isinstance(visitem,TPCdataPlottable):
             print "RGBdisplay received Image2D item"
             self.addImage2Ddata(visitem)
         else:
-            print "RGBdisplay recieved ",type(visitem)
+            print "RGBdisplay recieved user item",type(visitem)
+            self.addUserVisItem(name,visitem)
         return True
         
     
