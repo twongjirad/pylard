@@ -33,21 +33,20 @@ class PyLArLiteDrawTPCOpFlash:
             s = self.opflash_producers
             s = s[s.find("[")+1:]
             s = s[:s.find("]")]
-            print s
             slist = s.split(",")
             self.opflash_producers = []
             for p in slist:
                 p = p.replace("\"","").strip()
                 self.opflash_producers.append(p)
 
-        print "flash producers: ",type(self.opflash_producers)
+        #print "flash producers: ",type(self.opflash_producers)
         
         for producer in self.opflash_producers:
 
             if type(producer) is not str:
                 continue
 
-            print "processing flashes from ",producer
+            #print "processing flashes from ",producer
             opflashs_v = larlite_io.get_data(larlite.data.kOpFlash, producer )
         
             for iopflash in xrange(0,opflashs_v.size()):
@@ -67,13 +66,13 @@ class PyLArLiteDrawTPCOpFlash:
                 flashbar = pg.PlotDataItem( x=x, y=y, pen=(255,255,255,100) )
                 flash_plots.append(flashbar)
 
-                print "tpc opflash: t=",opflash.Time()," tick=",y[0]," z=",opflash.ZCenter()," dz=",opflash.ZWidth()
+                #print "tpc opflash: t=",opflash.Time()," tick=",y[0]," z=",opflash.ZCenter()," dz=",opflash.ZWidth()
 
                 colorindex += 1
                 if colorindex>=len(PyLArLiteDrawTPCOpFlash.colorlist):
                     colorindex = 0
 
-        print "total opflashes: ",len(flash_plots)
+        #print "total opflashes: ",len(flash_plots)
 
         return flash_plots
         
