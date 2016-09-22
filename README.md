@@ -63,16 +63,11 @@ Mac Commands (assuming homebrew)
 
 #### LArLite
 
-For larlite, we need to setup a special version that provides additional python-larlite interfaces. Find a suitable place for your copy of larlite and clone it:
+For larlite, one needs the trunk version (as of commit acb5859b65b9ea5a546dd7be06387682dd6be97a, 9/22/2016).  Find a suitable place for your copy of larlite and clone it:
 
     git clone https://github.com/larlight/larlite
 
-Go into the repo and then switch to the special branch
-
-    cd larlite
-    git checkout feature/tmw_pylard_interface
-
-Go into the UserDev folder and clone in a submodule
+Before we build, we need to place our submodule into larlite/UserDev/.  Go into the UserDev folder and clone in the submodule with
 
     cd UserDev
     git clone https://github.com/twongjirad/PLI pylard
@@ -94,7 +89,7 @@ OK. To check if this got built correctly. Check to see if you see 'libpylard_PyA
 
 #### LArCV
 
-Make a new directory somewhere that LArCV will go into
+Works with the versions past 9/22/2016. Make a new directory somewhere that LArCV will go into using
 
     git clone https://github.com/larbys/LArCV LArCV
 
@@ -102,7 +97,7 @@ Go into the repo and configure the build:
 
     source configure.sh
 
-Make sure you see that the larlite package was found (and in the right place):
+Make sure you see that the larlite package was found (and in the right place). Look for the following output after running configure.sh:
 
     Found larlite set up @ $LARLITE_BASEDIR=/Users/twongjirad/working/uboone/larlite
 
@@ -115,10 +110,6 @@ Make
 Find a good place for your copy of pylard and clone the repository:
 
     git clone https://github.com/twongjirad/pylard
-
-Right now, PyLArD version 2 is in a special branch
-
-    git checkout tmw_pylard2
 
 I recommend installing everything inside a python virtual environment.  pylard brings in a lot of python pacakges. At the end of the day, you might not want all of this. Using a virtualenv sandbox allows you to keep all of this crap separate from your main python installation.
 
