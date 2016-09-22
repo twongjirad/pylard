@@ -259,8 +259,14 @@ class RGBDisplay(QtGui.QWidget):
         # get the images, both src and overlay (ovr)
         src = self.getSrcProducer()
         ovr = self.getOvrProducer()
+        if src=="":
+            return True
+
         self.image     = self.images[ src ]
-        self.image_ovr = self.images[ ovr ]
+        if ovr!="":
+            self.image_ovr = self.images[ ovr ]
+        else:
+            self.image_over = None
 
         # Clear out plot
         self.plt.clear()
@@ -282,11 +288,12 @@ class RGBDisplay(QtGui.QWidget):
 
         # threshold for contrast, this image goes to the screen
         self.pimg = self.image.set_plot_mat(self.iimin,self.iimax,src_view)
-        self.pimg_ovr = self.image_ovr.set_plot_mat(self.iimin,self.iimax,ovr_view)
+        #print "pimg shape: ",self.pimg.shape
 
-        # now we make the final image, combining the src and overlay
-        print "pimg shape: ",self.pimg.shape
-        print "pimg_ovr shape: ",self.pimg_ovr.shape
+        if self.image_ovr is not None:
+            self.pimg_ovr = self.image_ovr.set_plot_mat(self.iimin,self.iimax,ovr_view)
+            #print "pimg_ovr shape: ",self.pimg_ovr.shape
+
         drawnimg = np.zeros( self.pimg.shape )
         
         # get mix factor from slider bar
@@ -299,8 +306,7 @@ class RGBDisplay(QtGui.QWidget):
                           1:[self.ovr_gcolor.red(),self.ovr_gcolor.green(), self.ovr_gcolor.blue()],
                           2:[self.ovr_bcolor.red(),self.ovr_bcolor.green(), self.ovr_bcolor.blue()]}
 
-        print ovr_rgbfactors
-        if self.pimg.shape==self.pimg_ovr.shape and slider_val>slider_min:
+        if self.image_ovr is not None and self.pimg.shape==self.pimg_ovr.shape and slider_val>slider_min:
             ovrmix = np.zeros( self.pimg_ovr.shape )
             for rgb in range(0,3):
                 for chovr in range(0,3):

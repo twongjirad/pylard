@@ -2,7 +2,7 @@ import numpy as np
 
 
 class OpWfmPlot:
-    def __init__( self, wfm, times, slot, ch, default_color=(255,255,255,255), highlighted_color=(0,255,255,255), timepertick=None ):
+    def __init__( self, wfm, times, slot, ch, default_color=(255,255,255,255), highlighted_color=(0,255,255,255), timepertick=None, x=None ):
         """
         class storing cosmic discriminator window data
         
@@ -25,6 +25,11 @@ class OpWfmPlot:
         self.ch = ch
         self.default_color = default_color
         self.highlighted_color = highlighted_color
+        if x is None:
+            self.x = x
+        else:
+            if len(x)!=len(self.wfm):
+                raise ValueError("x array, if given, must be same length as wfm")
 
     def genTimeArray( self ):
         """ return numpy array of times. we do this, so the time array is only allocated when needed. """
@@ -45,6 +50,12 @@ class OpWfmPlot:
             return self.times + len(self.wfm)*self.timepertick
         else:
             return self.times[-1]
+
+    def getX(self):
+        if self.x is None:
+            return self.genTimeArray()
+        else:
+            return self.x
 
 
 class OpWfmPlotVector:
@@ -85,9 +96,9 @@ class OpWfmPlotVector:
         self.chtend[ (cdw.slot,cdw.ch) ].append( cdw.getEndstamp() )
         self.chwindows[ (cdw.slot,cdw.ch) ][ cdw.getTimestamp() ] = cdw
 
-    def makeWindow( self, wfm, times, slot, ch, default_color=(255,255,255,255), highlighted_color=(0,255,255,255), timepertick=None ):
+    def makeWindow( self, wfm, times, slot, ch, default_color=(255,255,255,255), highlighted_color=(0,255,255,255), timepertick=None, x=None ):
         """ pass through function to OpWfmPlot constructor """
-        self.addWindow( OpWfmPlot( wfm, times, slot, ch, default_color=default_color, highlighted_color=highlighted_color, timepertick=timepertick ) )
+        self.addWindow( OpWfmPlot( wfm, times, slot, ch, default_color=default_color, highlighted_color=highlighted_color, timepertick=timepertick, x=x ) )
             
         
     def getNumWindows( self ):

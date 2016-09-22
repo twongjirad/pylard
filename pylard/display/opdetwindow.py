@@ -453,7 +453,7 @@ class OpDetWindow(QtGui.QWidget) :
             self.wfplot.plot(x=x,y=y,pen=pencolor)
 
     def drawUserWaveforms(self,offset,scaledown,nsrange):
-
+        
         for name,vis in self.vis_items.items():
             if name=="opdata":
                 continue

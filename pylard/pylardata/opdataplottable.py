@@ -28,17 +28,17 @@ class OpDataPlottable(object):
         self.userwindows.clear()
         self.userDiagramPlotDataItems = []
         
-    def makeBeamWindow( self, wfm, time, slot, ch, default_color=(255,255,255,255), highlighted_color=(0,255,255,255), timepertick=None ):
+    def makeBeamWindow( self, wfm, time, slot, ch, default_color=(255,255,255,255), highlighted_color=(0,255,255,255), timepertick=None, x=None ):
         """ pass through to self.beamwindows.makewindow """
-        self.beamwindows.makeWindow( wfm, time, slot, ch, default_color=default_color, highlighted_color=highlighted_color, timepertick=timepertick )
+        self.beamwindows.makeWindow( wfm, time, slot, ch, default_color=default_color, highlighted_color=highlighted_color, timepertick=timepertick, x=x )
 
-    def makeCosmicWindow( self, wfm, time, slot, ch, default_color=(255,255,255,255), highlighted_color=(0,255,255,255), timepertick=None ):
+    def makeCosmicWindow( self, wfm, time, slot, ch, default_color=(255,255,255,255), highlighted_color=(0,255,255,255), timepertick=None, x=None ):
         """ pass through to self.cosmicwindows.makewindow """
-        self.cosmicwindows.makeWindow( wfm, time, slot, ch, default_color=default_color, highlighted_color=highlighted_color, timepertick=timepertick )
+        self.cosmicwindows.makeWindow( wfm, time, slot, ch, default_color=default_color, highlighted_color=highlighted_color, timepertick=timepertick, x=x )
 
-    def makeUserWindow( self, wfm, time, slot, ch, default_color=(255,255,255,255), highlighted_color=(0,255,255,255), timepertick=None ):
+    def makeUserWindow( self, wfm, time, slot, ch, default_color=(255,255,255,255), highlighted_color=(0,255,255,255), timepertick=None, x=None ):
         """ pass through to self.userwindows.makewindow """
-        self.userwindows.makeWindow( wfm, time, slot, ch, default_color=default_color, highlighted_color=highlighted_color, timepertick=timepertick )
+        self.userwindows.makeWindow( wfm, time, slot, ch, default_color=default_color, highlighted_color=highlighted_color, timepertick=timepertick, x=x )
 
     def getWaveformPlotData( self, tstart, tend, remake_cache=False ):
         """ loop through beam, cosmic and user data to be plotted on the waveform canvas.  make plots, return."""

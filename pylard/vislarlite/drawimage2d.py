@@ -24,6 +24,8 @@ class PyLArLiteDrawImage2D:
         self.maxticks          = int(pset.get("max_ticks",PyLArLiteDrawImage2D.MAXTIMETICKS))
         self.start_tick        = int(pset.get("start_tick",PyLArLiteDrawImage2D.STARTTICK))
         self.tick_offset       = int(pset.get("start_tick",PyLArLiteDrawImage2D.TICKOFFSET))
+        self.verbosity         = int(pset.get("Verbosity",2))
+        self.supera_algo.setVerbosity( self.verbosity )
         
 
     def visualize( self, larlite_io, larcv_io, rawdigit_io ):
