@@ -810,7 +810,6 @@ class RGBDisplay(QtGui.QWidget):
         return user_frame
 
     def addUserVisItem(self,name,visitem):
-        print "Register User TPC VisItem: ",name
         self.user_plot_items[name] = visitem
         self.user_plot_checkboxes[name] = QtGui.QCheckBox('')
         self.user_plot_checkboxes[name].setChecked(False)
@@ -851,7 +850,6 @@ class RGBDisplay(QtGui.QWidget):
                         y = (xy[1][i]-meta.min_y())/dh_i
                         xarr[i] = x
                         yarr[i] = y
-                        print "xy: ",i,(xy[0][i],xy[1][i]),(x,y)
                     item.pylardconverted = True                    
                     item.setData(x=xarr,y=yarr)
 
