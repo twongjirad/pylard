@@ -230,22 +230,26 @@ class RGBDisplay(QtGui.QWidget):
 
     # go to the previous event
     def previousEvent(self):
-
-        event = int(self.event.text())
-
-        if event == 0: return
-
-        self.event.setText(str(event - 1))
-
-        self.plotData()
+        ok = self.themainwindow.prevEntry()
 
     # go to the next event
     def nextEvent(self):
+        ok = self.themainwindow.nextEntry()
 
-        event = int(self.event.text())
-        self.event.setText(str(event + 1))
+    # go to an entry
+    def gotoEntry(self):
+        entry = int( self.event.text() )
+        ok = self.themainwindow.getEntry( entry )
+        if not ok:
+            return ok
 
-        self.plotData()
+    # go to an RSE
+    def gotoRSE(self):
+        run = int(self.run.text())
+        subrun = int(self.subrun.text())
+        event = int(self.event_num.set_text())
+        ok = self.themainwindow.getRSE(run,subrun,event)
+        return ok
 
     def setEntryNumbers( self, entry, run, subrun, event ):
         self.run.setText("%d"%(run))
@@ -610,24 +614,19 @@ class RGBDisplay(QtGui.QWidget):
         self._navlayout.addWidget( self.event_num, 2, 1 )
         self._navlayout.addWidget( self.event,  3, 1 )
 
-        # Yes or no to navigate using R/S/E
-        self.rse_navigation = QtGui.QCheckBox("R/S/E navigation")
-        self.rse_navigation.setChecked(False)#True)
-        self._navlayout.addWidget( self.rse_navigation, 0, 2, 1, 2 )
-
         # select choice options
         self.axis_plot = QtGui.QPushButton("Go/Replot")
-        self.previous_plot = QtGui.QPushButton("Prev Event")
-        self.next_plot = QtGui.QPushButton("Next Event")
+        self.previous_plot = QtGui.QPushButton("Prev")
+        self.next_plot = QtGui.QPushButton("Next")
+        self.goto_entry = QtGui.QPushButton("Goto Entry")
+        self.goto_rse   = QtGui.QPushButton("Goto RSE")
 
         # prev, next, replot
-        self._navlayout.addWidget( self.previous_plot, 1, 2, 1, 2 )
-        self._navlayout.addWidget( self.next_plot,     2, 2, 1, 2 )
+        self._navlayout.addWidget( self.previous_plot, 0, 2, 1, 1 )
+        self._navlayout.addWidget( self.next_plot,     0, 3, 1, 1 )
+        self._navlayout.addWidget( self.goto_entry,    1, 2, 1, 2 )
+        self._navlayout.addWidget( self.goto_rse,      2, 2, 1, 2 )
         self._navlayout.addWidget( self.axis_plot,     3, 2, 1, 2 )
-
-        # select choice option: redundant, because we have the RSE checkbox
-        #self.go_rse_plot = QtGui.QPushButton("Go R/S/E")
-        #self.lay_inputs.addWidget(self.go_rse_plot, 1, 2)
 
         # [ signal connect ]
 
@@ -637,7 +636,8 @@ class RGBDisplay(QtGui.QWidget):
         # Previous and Next event
         self.previous_plot.clicked.connect(self.previousEvent)
         self.next_plot.clicked.connect(self.nextEvent)
-        #self.go_rse_plot.clicked.connect(self.go_rse_Event) # erez, july-21,2016
+        self.goto_entry.clicked.connect(self.gotoEntry)
+        self.goto_rse.clicked.connect(self.gotoRSE)
 
         # set frame
         self._navframe.setLayout( self._navlayout )
