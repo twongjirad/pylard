@@ -1,7 +1,8 @@
 import ROOT
+from larlite import larlite
 from ROOT import fcllite
 fcllite.PSet
-fcllite.CreatePSetFromFile
+from larcv import larcv
 import os,sys
 import pylard as pylard
 
