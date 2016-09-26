@@ -18,7 +18,7 @@ class rawdigits_processor:
         self.opdata = None
         self.tpcdata = None
 
-    def configure(self,confgman):
+    def configure(self,pset):
         pass
 
     def get_entry(self,entry):

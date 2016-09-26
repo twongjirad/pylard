@@ -109,7 +109,8 @@ class DataCoordinator:
                 self.setManagerActivity(name,True)
                 self.confighash[name] = current
             # set the config
-            self.configs[name] = fcllite.ConfigManager( config )
+            #self.configs[name] = fcllite.ConfigManager( config )
+            self.configs[name] = fcllite.CreatePSetFromFile(config)
 
         elif name=="LARCV":
             """ needs iomanager configuration from PSET"""
@@ -150,7 +151,8 @@ class DataCoordinator:
                 proc = rawdigits_processor(self.filemans[name])
                 self.processdrivers[name] = proc
                 self.ioman[name] = proc
-                self.configs[name] = fcllite.ConfigManager( config )
+                #self.configs[name] = fcllite.ConfigManager( config )
+                self.configs[name] = fcllite.CreatePSetFromFile(config)
             proc.configure(self.configs[name])
             self.confighash[name] = current
             self.setManagerActivity(name,True)
