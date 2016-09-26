@@ -23,11 +23,12 @@ Goal is to provide a visual algorithm development framework using data products 
 ## Installation
 
 ### Summary
-* install sip
-* install PyQt4
-* install PyOpenGL
-* install pyqtgraph
-* install virtualenv
+* install pip (apt-get install python-pip; brew install pip)
+* install sip (apt-get install sip-dev; brew install sip)
+* install PyQt4 (apt-get install python-qt4; brew install pyqt )
+* install PyOpenGL (apt-get install python-opengl; pip install PyOpenGL PyOpenGL_accelerate)
+* install pyqtgraph (pip install pyqtgraph; pip install pyqtgraph)
+* install virtualenv (pip install virtualenv; pip install virtualenv)
 * install ROOT
 * install LArLite
 * install LArCV
