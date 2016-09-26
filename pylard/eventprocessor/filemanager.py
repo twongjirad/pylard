@@ -9,6 +9,8 @@ class FileManager:
         self.parsed = False
         self.loaded_larcv = False
         self.loaded_larlite = False
+        self.sorted_filelist = []
+        self.rse_dict = {}
     def setFilelist(self,flist, use_cache=True):
         
         self.filelist = flist
