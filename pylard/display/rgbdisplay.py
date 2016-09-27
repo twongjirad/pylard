@@ -928,7 +928,11 @@ class RGBDisplay(QtGui.QWidget):
             for idx,ch in enumerate(image2d.imgs):
                 rgbch.insertItem( idx, str(idx) )
             rgbch.insertItem(len(image2d.imgs),"(none)")
-            rgbch.setCurrentIndex(ich)
+            if ich<len(image2d.imgs):
+                rgbch.setCurrentIndex(ich)
+            else:
+                rgbch.setCurrentIndex(len(image2d.imgs))
+
         # reactivate
         self.image_src_producer.blockSignals(False)
         for ch in self.src_rgbchs:
@@ -950,7 +954,11 @@ class RGBDisplay(QtGui.QWidget):
             for idx,ch in enumerate(image2d.imgs):
                 rgbch.insertItem( idx, str(idx) )
             rgbch.insertItem(len(image2d.imgs),"(none)")
-            rgbch.setCurrentIndex(ich)
+            if ich<len(image2d.imgs):
+                rgbch.setCurrentIndex(ich)
+            else:
+                rgbch.setCurrentIndex(len(image2d.imgs))
+
         # reactivate
         self.image_ovr_producer.blockSignals(False)
         for ch in self.ovr_rgbchs:

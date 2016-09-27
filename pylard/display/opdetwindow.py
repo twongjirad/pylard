@@ -235,6 +235,10 @@ class OpDetWindow(QtGui.QWidget) :
         # prep window
         print self.vis_items
 
+        if "opdata" not in self.vis_items:
+            print "No opdata given. Stopping opdet plot."
+            return
+
         # setup the graphics
         self.setGraphicsLayout()
         scaledown = float( self.adc_scaledown.text() )

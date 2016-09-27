@@ -12,6 +12,7 @@ class DrawImage2D:
         self.wiredownsample = pset.get("WireDownsamplingFactor",1.0)
         self.image_producer = pset.get("image2d_producer")
         self.roi_producer   = pset.get("roi_producer")
+        self.dump           = pset.get("dump",False)
 
     def visualize( self, larlite_io, larcv_io, rawdigit_io ):
         
@@ -20,5 +21,8 @@ class DrawImage2D:
         planes = []
         for img in event_images.Image2DArray():
             planes.append( img.meta().plane() )
+            if self.dump:
+                arr = larcv.as_ndarray( img )
+                print arr
         pytpcdata = TPCdataPlottable( self.image_producer, event_images.Image2DArray(), event_roi.ROIArray(), planes )
         return pytpcdata
