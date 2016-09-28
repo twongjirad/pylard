@@ -28,6 +28,7 @@ class VisProcessor:
             self._buildVisList()
 
     def _buildVisList(self):
+        print "[Build VisList]"
         for cfg,pset in self.psets.items():
             if not pset.contains_pset("VisProcessor"):
                 continue
@@ -43,8 +44,17 @@ class VisProcessor:
                 modname = modfile.replace("/",".")
                 module = None
                 for d in self.searchpaths:
+                    if d!="":
+                        prefix = "%s."%(d)
+                    else:
+                        prefix = ""
+                    if os.path.exists( modfile+".py" ):
+                        print "  found visprocessor: ",modtype
+                        print "  loading with: ","from %s.%s import %s"%(d,modname,modtype)
+                    else:
+                        print "  cannot find visprocessor: ",modfile+".py"
                     try:
-                        exec("from %s.%s import %s"%(d,modname,modtype))
+                        exec("from %s%s import %s"%(prefix,modname,modtype))
                         exec("module=%s()"%(modtype))
                         foundmod = True
                     except:

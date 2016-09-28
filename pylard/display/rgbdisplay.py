@@ -107,6 +107,8 @@ class RGBDisplay(QtGui.QWidget):
         self.lay_inputs.addWidget(self.user_item_frame, 0, useritemstart, self.navheight, self.navwidth)
         self.user_plot_items = {}       # stores whatever user is tryig to draw onto image
         self.user_plot_checkboxes = {}  # stores checkboxes that tell us to track item or not
+        self.user_subitem_cbxs = {}
+        self.map_user_checkboxes2name = {}
         
         # --------------------------------------------------------
 
@@ -261,6 +263,15 @@ class RGBDisplay(QtGui.QWidget):
     def clearVisItems(self):
         self.clearUserVisItems()
         return
+
+    def parentUserItemCheckBoxChanged(self):
+        """ we change the values of the sub items if they exist"""
+        sender = self.sender()
+        name = self.map_user_checkboxes2name[sender]
+        state = sender.isChecked()
+        if name in self.user_subitem_cbxs:
+            for subitembox in self.user_subitem_cbxs[name]:
+                subitembox.setChecked(state)
 
     # =================================================================
 
@@ -811,30 +822,54 @@ class RGBDisplay(QtGui.QWidget):
 
     def addUserVisItem(self,name,visitem):
         self.user_plot_items[name] = visitem
+        # make checkbox for parent user item
         self.user_plot_checkboxes[name] = QtGui.QCheckBox('')
+        self.map_user_checkboxes2name[self.user_plot_checkboxes[name]] = name # provide a way to map back
         self.user_plot_checkboxes[name].setChecked(False)
+        self.user_plot_checkboxes[name].stateChanged.connect( self.parentUserItemCheckBoxChanged )
+        if type(visitem) is list:
+            # multiple sub-objects!
+            self.user_subitem_cbxs[name] = []
+            for ix,subitem in enumerate(visitem):
+                self.user_subitem_cbxs[name].append( QtGui.QCheckBox('') )
+                self.user_subitem_cbxs[name][ix].setChecked(False)
+            
         item = pg.TreeWidgetItem(['',name])
         item.setWidget(0,self.user_plot_checkboxes[name])
         self.user_items.addTopLevelItem( item )
+
+        if type(visitem) is list:
+            for ix in range(0,len(visitem)):
+                subitem = pg.TreeWidgetItem([name+"_%d"%(ix)])
+                item.addChild(subitem)
+                self.user_items.setItemWidget( subitem, 1, self.user_subitem_cbxs[name][ix] )
+
         
     def clearUserVisItems(self):
         self.user_items.clear()
         self.user_plot_item = {}
         self.user_plot_checkboxes = {}
+        self.user_subitem_cbxs = {}
+        self.map_user_checkboxes2name = {}
 
     def drawUserItems(self):
         meta = self.image.imgs[0].meta()
         dw_i = meta.pixel_width()
         dh_i = meta.pixel_height()
         for name,visitem in self.user_plot_items.items():
-            if not self.user_plot_checkboxes[name].isChecked():
+
+            if type(visitem) is not list and not self.user_plot_checkboxes[name].isChecked():
                 continue
             print "RGB drawing user item: ",name
             visitems = visitem
             if type(visitems) is not list:
                 visitems = [visitem]
 
-            for item in visitems:
+            for idx,item in enumerate(visitems):
+                if name in self.user_subitem_cbxs:
+                    # if we have subitems, we check to not plot it
+                    if self.user_subitem_cbxs[name][idx].isChecked()==False:
+                        continue
                 if not isinstance(item,pg.PlotDataItem):
                     print "EGB display does not support this type for visualzation: ",type(item)
                     continue
@@ -842,10 +877,12 @@ class RGBDisplay(QtGui.QWidget):
 
                 if not hasattr(item,"pylardconverted"):
                     xy = item.getData()
-                    xarr = np.zeros( len(xy) )
-                    yarr = np.zeros( len(xy) )
+                    npts = len(xy[0])
+                    xarr = np.zeros( len(xy[0]) )
+                    yarr = np.zeros( len(xy[1]) )
+                    print "converted data: ",len(xarr),len(yarr)
 
-                    for i in xrange(0,len(xy)):
+                    for i in xrange(0,npts):
                         x = (xy[0][i]-meta.min_x())/dw_i
                         y = (xy[1][i]-meta.min_y())/dh_i
                         xarr[i] = x
@@ -997,8 +1034,8 @@ class RGBDisplay(QtGui.QWidget):
             print "RGBdisplay received Image2D item"
             self.addImage2Ddata(visitem)
         else:
-            print "RGBdisplay recieved user item",type(visitem)
+            print "RGBdisplay recieved user item name=",name," type=",type(visitem)
             self.addUserVisItem(name,visitem)
         return True
-        
+    
     

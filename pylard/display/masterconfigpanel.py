@@ -1,7 +1,7 @@
 import sys,os
 from pyqtgraph.Qt import QtCore, QtGui
 import pyqtgraph as pg
-from pylard.config.defaultprocessor import getDefaultProcessorConfig
+from pylard.config.defaultcfg import default_pylard_cfg
 import json
 
 class MasterConfiguration:
@@ -86,12 +86,16 @@ class MasterConfigPanel(QtGui.QWidget):
         codeview_layout.addWidget(config_fileselect_frame, 11, 0, 2, 1 )
 
         self.codeview_frame.setLayout( codeview_layout )
-        
-        # default config
+
+        # default config        
         config_filepath = self.config_filepath.text()
         if not os.path.exists(config_filepath):
-            os.system( "cp "+os.path.dirname(__file__)+"/../config/default.pylardcfg ." )
+            print "Make default file: ",config_filepath
+            defaultcfg = default_pylard_cfg()
             config_filepath = "default.pylardcfg"
+            fdefault = open(config_filepath,'w')
+            print >> fdefault, defaultcfg
+            fdefault.close()
 
         return self.codeview_frame
 
