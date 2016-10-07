@@ -17,7 +17,6 @@ class PyLArLiteDrawImage2D:
 
     def configure(self,pset):
         self.wire_producer     = pset.get("wire_producer")
-        #self.trigger_producer  = pset.get("trigger_producer")
         self.wire_downsampling = int(pset.get("wire_downsampling"))
         self.time_downsampling = int(pset.get("time_downsampling"))
         self.maxwires          = int(pset.get("max_wires",PyLArLiteDrawImage2D.MAXWIRES))
