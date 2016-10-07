@@ -878,7 +878,7 @@ class RGBDisplay(QtGui.QWidget):
                     if self.user_subitem_cbxs[name][idx].isChecked()==False:
                         continue
                 if not isinstance(item,pg.PlotDataItem):
-                    print "EGB display does not support this type for visualzation: ",type(item)
+                    print "RGB display does not support this type for visualzation: ",type(item)
                     continue
                 # we need to convert positions into image coorindates
 
@@ -887,7 +887,6 @@ class RGBDisplay(QtGui.QWidget):
                     npts = len(xy[0])
                     xarr = np.zeros( len(xy[0]) )
                     yarr = np.zeros( len(xy[1]) )
-                    print "converted data: ",len(xarr),len(yarr)
 
                     for i in xrange(0,npts):
                         x = (xy[0][i]-meta.min_x())/dw_i
