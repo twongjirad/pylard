@@ -830,7 +830,7 @@ class RGBDisplay(QtGui.QWidget):
         if type(visitem) is list:
             # multiple sub-objects!
             self.user_subitem_cbxs[name] = []
-            for ix,subitem in enumerate(visitem):
+            for ix,subitem in enumerate(visitem):                    
                 self.user_subitem_cbxs[name].append( QtGui.QCheckBox('') )
                 self.user_subitem_cbxs[name][ix].setChecked(False)
             
@@ -840,7 +840,12 @@ class RGBDisplay(QtGui.QWidget):
 
         if type(visitem) is list:
             for ix in range(0,len(visitem)):
-                subitem = pg.TreeWidgetItem([name+"_%d"%(ix)])
+                subitem = visitem[ix]
+                if hasattr(subitem,"uservisname"):
+                    subname = subitem.uservisname+"_%d"%(ix)
+                else:
+                    subname = name+"_%d"%(ix)
+                subitem = pg.TreeWidgetItem([subname])
                 item.addChild(subitem)
                 self.user_items.setItemWidget( subitem, 1, self.user_subitem_cbxs[name][ix] )
 

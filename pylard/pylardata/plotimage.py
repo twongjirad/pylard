@@ -58,11 +58,24 @@ class PlotImage(object):
         self.img_v = [larcv.as_ndarray(img) for img in tmp_img_v]
 
         # self.orig_mat is always 3 in ch dim: RGB
-        self.orig_mat = np.zeros(list(self.img_v[0].shape) + [3])
+        if len(self.img_v)>0:
+            #self.orig_mat = np.zeros(list(self.img_v[0].shape) + [3])
+            matshape = list(self.img_v[0].shape)+[3]
+        else:
+            matshape = [10,10,3]
+        self.orig_mat = np.zeros( matshape )
+        print "ORIG MAT: ",self.orig_mat.shape
 
         # self.work_mat is N images in a matrix, we store our manipulations of
         # orig_mat here and exchange them when we change the channel number 
-        self.work_mat = np.zeros(list(self.img_v[0].shape) + [len(self.img_v)])
+        #self.work_mat = np.zeros(list(self.img_v[0].shape) + [len(self.img_v)])
+        if len(self.img_v)>0:
+            workshape = list(self.img_v[0].shape) + [len(self.img_v)]
+        else:
+            workshape = [10,10,3]
+        self.work_mat = np.zeros( workshape )
+        print "WORK MAT: ",self.work_mat.shape
+
 
         # min and max of orig_mat
         self.iimin = 0.0
