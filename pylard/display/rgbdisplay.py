@@ -428,6 +428,7 @@ class RGBDisplay(QtGui.QWidget):
         self.boxes = []
 
         # and makew new boxes
+        # -- cruft, but saving it for when I need it --
         for roi_p in self.rois:
 
             if roi_p['type'] not in kType:
@@ -469,6 +470,7 @@ class RGBDisplay(QtGui.QWidget):
                 r1.setBrush(pg.mkBrush(None))
                 self.plt.addItem(r1)
                 self.boxes.append(r1)
+        # ----------------------------------
 
     # user scrolled to another channel
     def changeChannelViewed(self):

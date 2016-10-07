@@ -11,18 +11,16 @@ class DrawImage2D:
         self.timedownsample = pset.get("TimeDownsamplingFactor",1.0)
         self.wiredownsample = pset.get("WireDownsamplingFactor",1.0)
         self.image_producer = pset.get("image2d_producer")
-        self.roi_producer   = pset.get("roi_producer")
         self.dump           = pset.get("dump",False)
 
     def visualize( self, larlite_io, larcv_io, rawdigit_io ):
         
         event_images = larcv_io.get_data( larcv.kProductImage2D, self.image_producer )
-        event_roi    = larcv_io.get_data( larcv.kProductROI,     self.roi_producer )
         planes = []
         for img in event_images.Image2DArray():
             planes.append( img.meta().plane() )
             if self.dump:
                 arr = larcv.as_ndarray( img )
                 print arr
-        pytpcdata = TPCdataPlottable( self.image_producer, event_images.Image2DArray(), event_roi.ROIArray(), planes )
+        pytpcdata = TPCdataPlottable( self.image_producer, event_images.Image2DArray(), planes )
         return pytpcdata

@@ -3,8 +3,8 @@ import numpy as np
 
 class TPCdataPlottable(PlotImage):
     """ thanks vic. """
-    def __init__(self, producer, img_v, roi_v, planes):
-        super(TPCdataPlottable, self).__init__(img_v, roi_v, planes)
+    def __init__(self, producer, img_v, planes):
+        super(TPCdataPlottable, self).__init__(img_v, planes)
         self.name = "TPCdataPlottable"
         self.producer = producer
 

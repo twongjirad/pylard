@@ -35,7 +35,6 @@ class PyLArLiteDrawImage2D:
         print "wire objects: ",wiredata.size()
 
         event_img = larcv.EventImage2D()
-        event_roi = larcv.EventROI()
         
         planes = []
         start = time.time()
@@ -59,7 +58,7 @@ class PyLArLiteDrawImage2D:
             planes.append(p)
         print "wire -> Image2D time: ",time.time()-start,"secs"
 
-        pytpcdata = TPCdataPlottable( self.wire_producer, event_img.Image2DArray(), event_roi.ROIArray(), planes )
+        pytpcdata = TPCdataPlottable( self.wire_producer, event_img.Image2DArray(), planes )
         return pytpcdata
             
             

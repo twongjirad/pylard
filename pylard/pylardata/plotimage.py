@@ -14,14 +14,11 @@ class PlotImage(object):
     # when loading, we manip orig_mat to have the orientation we want
     # before going to caffe, __revert_image__ is called to rearrange the image
     
-    def __init__(self, img_v, roi_v, planes):
+    def __init__(self, img_v, planes):
         print "PlotImage class being made. Nchannels= ",img_v.size()
 
         # list of image2d objects
         self.imgs = [img_v[i] for i in xrange(img_v.size())]
-
-        if roi_v is not None:
-            self.roi_v = [roi_v[i] for i in xrange(roi_v.size())]
 
         # list of channels to go into views. default to 0,1,2 (or less)
         if img_v.size()>=3:
@@ -85,9 +82,6 @@ class PlotImage(object):
         # before to make sure I only call this method internally. __XX__ style is for
         # ABC
         self.__create_mat()
-
-        # list of the ROIs or bounding boxes we will see on the screen
-        self.rois = []
 
         # deprecated I think
         self.reverted = False
@@ -177,33 +171,6 @@ class PlotImage(object):
         # make the viewing plot_mat and return
         return self.set_plot_mat(imin, imax)
 
-    # create the ROIs if they exists and return them
-    def parse_rois(self):
-
-        # loop over larcv::ROI
-        for ix, roi in enumerate(self.roi_v):
-
-            # how many bbox are there?
-            nbb = roi.BB().size()
-
-            if nbb == 0:  # there was no ROI continue...
-                continue
-            
-            r = {}
-
-            # particle type
-            r['type'] = roi.Type()
-
-            # the bounding boxes
-            r['bbox'] = []
-
-            for iy in xrange(nbb):
-                bb = roi.BB()[iy]
-                r['bbox'].append(bb)
-
-            self.rois.append(r)
-
-        return self.rois
 
     # internal method to make the copy of work_mat[...]
     def __caffe_copy_image(self):
