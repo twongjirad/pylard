@@ -99,6 +99,8 @@ class RGBDisplay(QtGui.QWidget):
         roipanelstart = imagepanelstart+self.navwidth
         self.roi_panel = self._makeROIpanel()
         self.lay_inputs.addWidget(self.roi_panel, 0, roipanelstart, self.navheight, self.navwidth)
+        self.rois = {} # map from name to ROI
+        self.roinames = []
 
         # --------------------------------------------------------
         # user item tree widget
@@ -249,7 +251,7 @@ class RGBDisplay(QtGui.QWidget):
     def gotoRSE(self):
         run = int(self.run.text())
         subrun = int(self.subrun.text())
-        event = int(self.event_num.set_text())
+        event = int(self.event_num.text())
         ok = self.themainwindow.getRSE(run,subrun,event)
         return ok
 
@@ -262,6 +264,9 @@ class RGBDisplay(QtGui.QWidget):
 
     def clearVisItems(self):
         self.clearUserVisItems()
+        self.comboBoxROI.clear()
+        self.roinames = []
+        self.rois = {}
         return
 
     def parentUserItemCheckBoxChanged(self):
@@ -803,7 +808,7 @@ class RGBDisplay(QtGui.QWidget):
         
         roipanel.setLayout( roipanel_layout )
 
-        return roipanel
+        return roipanel            
 
     # -----------------------------------------------------------------
     # -----------------------------------------------------------------
@@ -850,7 +855,13 @@ class RGBDisplay(QtGui.QWidget):
                 subitem = pg.TreeWidgetItem([subname])
                 item.addChild(subitem)
                 self.user_items.setItemWidget( subitem, 1, self.user_subitem_cbxs[name][ix] )
-
+                
+    def addROI( self, name, roi_v ):
+        if name not in self.roisnames:
+            idx = len(self.rois)
+            self.comboBoxROI.insertItem( idx, name )
+            self.rois[name] = roi_v
+            self.roinames.append( name )
         
     def clearUserVisItems(self):
         self.user_items.clear()
@@ -935,6 +946,7 @@ class RGBDisplay(QtGui.QWidget):
         
     def clearImage2Ddata(self):
         self.images = {}
+        
 
     def updateProducerList(self):
         # we silence the redraws until updated

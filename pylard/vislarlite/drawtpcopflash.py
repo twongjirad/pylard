@@ -2,6 +2,7 @@ import os,sys
 from larlite import larlite
 import pyqtgraph as pg
 import numpy as np
+from pylard.config.pmtpos import getPosFromID
 
 class PyLArLiteDrawTPCOpFlash:
 
@@ -23,6 +24,8 @@ class PyLArLiteDrawTPCOpFlash:
         self.min_tick          = float(pset.get("min_tick",2400))
         self.max_tick          = float(pset.get("max_tick",2400+6048))
         self.beam_producer     = str(pset.get("beam_producer"))
+        self.calc_pos          = True
+        self.opflash_thresh    = float(pset.get("OpFlashThreshold"))
         
     def visualize( self, larlite_io, larcv_io, rawdigit_io ):
 
@@ -60,15 +63,36 @@ class PyLArLiteDrawTPCOpFlash:
                 x = np.zeros(2) # wires
                 y = np.zeros(2) # time
                 tick = self.trigger_tick + opflash.Time()/PyLArLiteDrawTPCOpFlash.USPERTICK # in ticks
+
+                qtot = 0.0
+                z_weighted = 0.0
+                for ipmt in range(0,32):
+                    z_weighted += opflash.PE( ipmt )*getPosFromID(ipmt)[2]
+                    qtot += opflash.PE( ipmt )
+                if qtot>0:
+                    z_weighted /= qtot
+                    
+                if qtot<self.opflash_thresh:
+                    continue
+                    
+                if qtot<=0:
+                    x[0] = 0
+                    x[1] = 3456.0
+                else:
+                    x[0] = z_weighted/0.3-100.0
+                    x[1] = z_weighted/0.3+100.0
+                if x[0]<0: 
+                    x[0] = 0
+                if x[1]>3456:
+                    x[1] = 3456
+
                 if self.min_tick<=tick and tick<=self.max_tick:
                     # at-time line (anode)
                     y[:] = tick
                     #x[0] = opflash.ZCenter()/0.3 + -0.5*opflash.ZWidth()
                     #x[1] = opflash.ZCenter()/0.3 +  0.5*opflash.ZWidth()
-                    x[0] = 0
-                    x[1] = 3456.0
 
-                    flashbar = pg.PlotDataItem( x=x, y=y, pen=(125,0,125,100) )
+                    flashbar = pg.PlotDataItem( x=x, y=y, pen=(125,0,125,200) )
                     flash_plots.append(flashbar)
 
                 tick_cathode = tick + 4385.96
@@ -76,10 +100,10 @@ class PyLArLiteDrawTPCOpFlash:
 
                     x_cathode = np.zeros(2)
                     y_cathode = np.zeros(2)
-                    x_cathode[0] = 0.0
-                    x_cathode[1] = 3456.0
+                    x_cathode[0] = x[0]
+                    x_cathode[1] = x[1]
                     y_cathode[:] = tick_cathode
-                    flashbar_cathode = pg.PlotDataItem( x=x_cathode, y=y_cathode, pen=(0,125,125,100) )
+                    flashbar_cathode = pg.PlotDataItem( x=x_cathode, y=y_cathode, pen=(0,125,125,200) )
                     flash_plots.append(flashbar_cathode)
 
                 #print "tpc opflash: t=",opflash.Time()," tick=",y[0]," z=",opflash.ZCenter()," dz=",opflash.ZWidth()

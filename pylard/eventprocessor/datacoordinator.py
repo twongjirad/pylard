@@ -97,7 +97,8 @@ class DataCoordinator:
         if name=="LARLITE":
             """ for larlite, we will open our own storage manager and manager the process analyzers ourselves """
             from larlite import larlite
-            from ROOT import fcllite
+            #from ROOT import fcllite
+            from larcv import larcv
             # the iomanager
             if name not in self.confighash:
                 # open new file
@@ -110,7 +111,8 @@ class DataCoordinator:
                 self.confighash[name] = current
             # set the config
             #self.configs[name] = fcllite.ConfigManager( config )
-            self.configs[name] = fcllite.CreatePSetFromFile(config)
+            #self.configs[name] = fcllite.CreatePSetFromFile(config)
+            self.configs[name] = larcv.CreatePSetFromFile(config)
 
         elif name=="LARCV":
             """ needs iomanager configuration from PSET"""
