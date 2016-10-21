@@ -71,6 +71,16 @@ class PyLArLiteDrawTPCOpFlash:
                     qtot += opflash.PE( ipmt )
                 if qtot>0:
                     z_weighted /= qtot
+
+                mindist = 1000
+                maxdist = 0
+                for ipmt in range(0,32):
+                    if opflash.PE(ipmt)>5:
+                        dist = getPosFromID(ipmt)[2]-z_weighted
+                        if dist<0 and mindist>dist:
+                            mindist = dist
+                        elif dist>0 and maxdist<dist:
+                            maxdist = dist
                     
                 if qtot<self.opflash_thresh:
                     continue
@@ -79,8 +89,8 @@ class PyLArLiteDrawTPCOpFlash:
                     x[0] = 0
                     x[1] = 3456.0
                 else:
-                    x[0] = z_weighted/0.3-100.0
-                    x[1] = z_weighted/0.3+100.0
+                    x[0] = (z_weighted+mindist-10.0)/0.3
+                    x[1] = (z_weighted+maxdist+10.0)/0.3
                 if x[0]<0: 
                     x[0] = 0
                 if x[1]>3456:
@@ -95,7 +105,7 @@ class PyLArLiteDrawTPCOpFlash:
                     flashbar = pg.PlotDataItem( x=x, y=y, pen=(125,0,125,200) )
                     flash_plots.append(flashbar)
 
-                tick_cathode = tick + 4385.96
+                tick_cathode = tick + 4385.96+240.0
                 if self.min_tick<=tick_cathode and tick_cathode<=self.max_tick:
 
                     x_cathode = np.zeros(2)
