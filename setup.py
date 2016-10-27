@@ -25,7 +25,7 @@ setup(name='pylard',
       author_email='taritree@mit.edu',
       url='https://github.com/twongjirad/pylard',
       include_package_data=True,
-      package_data={'pylard/config': ['microboone_32pmts_nowires_cryostat.dae']},
+      package_data={'pylard/config': ['microboone_32pmts_nowires_cryostat.dae','default.pylardcfg']},
       packages=['pylard','pylard/config','pylard/display','pylard/eventprocessor','pylard/pylardata','pylard/vislarcv','pylard/vislarlite','pylard/visrawdigits'],
       install_requires=['cython','numpy>=1.9.1','pyqtgraph','pycollada'],
      )
