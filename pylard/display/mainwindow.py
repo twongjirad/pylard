@@ -4,6 +4,8 @@ from pylard.display.opdetwindow import OpDetWindow
 from pylard.display.rgbdisplay import RGBDisplay
 from pylard.display.eventcontrol import EventControl
 from pylard.display.masterconfigpanel import MasterConfigPanel
+from pylard.display.detwindow import DetWindow
+from pylard.display.detcontrol import DetControlWindow
 from pylard.eventprocessor.processmanager import ProcessManager
 from pylard.eventprocessor.visprocessor import VisProcessor
 from pylard.eventprocessor.datacoordinator import DataCoordinator
@@ -15,10 +17,12 @@ class PyLArD( QtGui.QMainWindow ):
         self.centraltab = QtGui.QTabWidget()
         self.setCentralWidget(self.centraltab)
 
-        self.pmtwindow    = OpDetWindow()
-        self.rgbdisplay   = RGBDisplay()
-        self.eventcontrol = EventControl()
-        self.masterconfig = MasterConfigPanel(pylardconfig)
+        self.pmtwindow       = OpDetWindow()
+        self.rgbdisplay      = RGBDisplay()
+        self.eventcontrol    = EventControl()
+        self.masterconfig    = MasterConfigPanel(pylardconfig)
+        self.detectordisplay = DetWindow()
+        self.detcontrol      = DetControlWindow( self.detectordisplay ) # this is separate widget because GLViewWidget won't play nicely with others
         self.mergeddata = None
         
         # pass the larlite filelist path to the event control
@@ -50,7 +54,9 @@ class PyLArD( QtGui.QMainWindow ):
         self.addPanel( "eventcontrol", "EventLoop Panel", self.eventcontrol )
         self.addPanel( "rgbdisplay", "RGB Display", self.rgbdisplay )
         self.addPanel( "opdetdisplay", "OpDet Display", self.pmtwindow )
-
+        self.addPanel( "detdisplay", "3D View", self.detectordisplay )
+        self.addPanel( "detdisplay", "3D View Control", self.detcontrol )
+        
         self.centraltab.setCurrentWidget( self.eventcontrol )
 
         # filemanagers
