@@ -4,7 +4,7 @@ from pylard.display.opdetwindow import OpDetWindow
 from pylard.display.rgbdisplay import RGBDisplay
 from pylard.display.eventcontrol import EventControl
 from pylard.display.masterconfigpanel import MasterConfigPanel
-from pylard.display.detwindow import DetWindow
+from pylard.display.detectordisplay import DetectorDisplay
 from pylard.display.detcontrol import DetControlWindow
 from pylard.eventprocessor.processmanager import ProcessManager
 from pylard.eventprocessor.visprocessor import VisProcessor
@@ -21,7 +21,7 @@ class PyLArD( QtGui.QMainWindow ):
         self.rgbdisplay      = RGBDisplay()
         self.eventcontrol    = EventControl()
         self.masterconfig    = MasterConfigPanel(pylardconfig)
-        self.detectordisplay = DetWindow()
+        self.detectordisplay = DetectorDisplay()
         self.detcontrol      = DetControlWindow( self.detectordisplay ) # this is separate widget because GLViewWidget won't play nicely with others
         self.mergeddata = None
         
@@ -146,6 +146,7 @@ class PyLArD( QtGui.QMainWindow ):
         # pass vis products to panels
         self.pmtwindow.clearVisItems()
         self.rgbdisplay.clearVisItems()
+        self.detectordisplay.clearVisItems()
         for key,visproduct in self.visprocessor.products.items():
             destination = self.visprocessor.destination[key]
             print "vis product=",key," dest=",destination
