@@ -55,7 +55,7 @@ class PyLArD( QtGui.QMainWindow ):
         self.addPanel( "rgbdisplay", "RGB Display", self.rgbdisplay )
         self.addPanel( "opdetdisplay", "OpDet Display", self.pmtwindow )
         self.addPanel( "detdisplay", "3D View", self.detectordisplay )
-        self.addPanel( "detdisplay", "3D View Control", self.detcontrol )
+        self.addPanel( "detcontrol", "3D View Control", self.detcontrol )
         
         self.centraltab.setCurrentWidget( self.eventcontrol )
 
@@ -155,6 +155,7 @@ class PyLArD( QtGui.QMainWindow ):
 
         self.tabs["opdetdisplay"].plotData()
         self.tabs["rgbdisplay"].plotData()
+        self.tabs["detdisplay"].plotData()
             
         return status
     

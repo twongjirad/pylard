@@ -1,6 +1,7 @@
 import os,sys
-import pyqtgraph.opengl as gl
+from pyqtgraph import QtGui, QtCore
 import pyqtgraph as pg
+import pyqtgraph.opengl as gl
 import collada
 import numpy as np
 from collections import OrderedDict
@@ -18,7 +19,10 @@ class DetectorDisplay(gl.GLViewWidget) :
         # user items (this tracks items. is tree widget displayed by detcontrol widget)
         self.user_items = {} # dict of name and visitem
         self.user_item_checkboxes = {} # dict of name and checkbox governing if active
-        self.drawn_user_items = []
+        self.map_user_checkboxes2name = {}
+        self.user_subitem_cbxs = {}
+        self.drawn_user_item_names = []
+        self.drawn_user_items = {}
         self.user_item_tree = pg.TreeWidget()
         self.user_item_tree.setColumnCount(2)
         
@@ -93,22 +97,23 @@ class DetectorDisplay(gl.GLViewWidget) :
         self.geo_meshitem.meshDataChanged()
             
     def addVisItem( self, name, visitem ):
+        print "[detector display] received visitem=",name
         self.user_items[name] = visitem
         self.user_item_checkboxes[name] = QtGui.QCheckBox('')
         self.map_user_checkboxes2name[self.user_item_checkboxes[name]] = name
-        self.user_item_checkboxes[name].setChecked(False)
+        self.user_item_checkboxes[name].setChecked(True)
         # connect to signal
         # multiple sub-objects!
         if type(visitem) is list:
             self.user_subitem_cbxs[name] = []
             for ix,subitem in enumerate(visitem):                    
                 self.user_subitem_cbxs[name].append( QtGui.QCheckBox('') )
-                self.user_subitem_cbxs[name][ix].setChecked(False)
+                self.user_subitem_cbxs[name][ix].setChecked(True)
 
         # make tree widget item
         item = pg.TreeWidgetItem(['',name])
-        item.setWidget(0,self.user_plot_checkboxes[name])
-        self.user_items.addTopLevelItem( item )
+        item.setWidget(0,self.user_item_checkboxes[name])
+        self.user_item_tree.addTopLevelItem( item )
 
         if type(visitem) is list:
             for ix in range(0,len(visitem)):
@@ -119,33 +124,53 @@ class DetectorDisplay(gl.GLViewWidget) :
                     subname = name+"_%d"%(ix)
                 subitem = pg.TreeWidgetItem([subname])
                 item.addChild(subitem)
-                self.user_items.setItemWidget( subitem, 1, self.user_subitem_cbxs[name][ix] )
-        
+                self.user_item_tree.setItemWidget( subitem, 1, self.user_subitem_cbxs[name][ix] )
+
+    def plotData(self):
+        self.drawUserItems()
+                
     def clearVisItems( self ):
-        for name in self.drawn_user_items:
-            self.removeItem( self.user_items[name] )
-        self.drawn_user_items = []
+        for drawname in self.drawn_user_item_names:
+            self.removeItem( self.drawn_user_items[drawname] )
+        self.drawn_user_items = {}
+        self.drawn_user_item_names = []
         self.user_items = {}
         self.user_item_checkboxes = {}
-
+        self.map_user_checkboxes2name = {}
+        self.user_subitem_cbxs = {}
+        
     def drawUserItems(self):
-        for name,visitem in self.user_items.items():
-            if self.user_item_checkboxes[name].isChecked():
-                # draw this
-                if name not in self.drawn_user_items:
-                    self.addItem( visitem )
-                    self.drawn_user_items.append( name )
+        for name,visitemlist in self.user_items.items():
+            if type(visitemlist) is not list:
+                visitemlist = [visitemlist]
+            for ix,visitem in enumerate(visitemlist):
+                if hasattr(visitem,"uservisname"):
+                    drawname = visitem.uservisname+"_%d"%(ix)
                 else:
-                    # already drawn
-                    continue
-            else:
-                if name in self.drawn_user_items:
-                    # remove from the viewer
-                    self.removeItem( visitem )
-                    self.drawn_user_items.remove(name)
-                else:
-                    # not currently drawn, so keep moving
-                    continue
+                    drawname = name+"_%d"%(ix)
 
-    
+                if self.user_item_checkboxes[name].isChecked():
+                    # draw this
+                    if drawname not in self.drawn_user_item_names:
+                        if not hasattr(visitem,"__pylard_transformed"):
+                            visitem.scale(10,10,10)
+                            visitem.rotate(90,1,0,0)
+                            visitem.__pylard_transformed = True
+                        self.addItem( visitem )
+                        self.drawn_user_item_names.append( drawname )
+                        self.drawn_user_items[drawname] = visitem
+                    else:
+                        # already drawn
+                        continue
+                else:
+                    if drawnname in self.drawn_user_item_names:
+                        # remove from the viewer
+                        self.removeItem( self.drawn_user_items[drawname] )
+                        self.drawn_user_item_names.remove(drawname)
+                        self.drawn_user_items.pop(drawname,None)
+                    else:
+                        # not currently drawn, so keep moving
+                        continue
+        print "items drawn in detdisplay: ",self.drawn_user_items
+        return
                 
