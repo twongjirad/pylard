@@ -56,6 +56,10 @@ class PyLArLiteDrawTPCOpFlash:
 
             #print "processing flashes from ",producer
             opflashs_v = larlite_io.get_data(larlite.data.kOpFlash, producer )
+            #if opflashs_v.name():
+            #    print "no opflash producer found ",producer
+            #    continue
+            print "producer=",producer," ",opflashs_v.name()
             nflashes = opflashs_v.size()
             
             for iopflash in xrange(0,opflashs_v.size()):

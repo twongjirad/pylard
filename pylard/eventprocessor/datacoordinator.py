@@ -149,12 +149,12 @@ class DataCoordinator:
                 proc = self.processdrivers[name]
             else:
                 from pylard.visrawdigits.rawdigitsprocessor import rawdigits_processor
-                from ROOT import fcllite
+                from larcv import larcv
                 proc = rawdigits_processor(self.filemans[name])
                 self.processdrivers[name] = proc
                 self.ioman[name] = proc
                 #self.configs[name] = fcllite.ConfigManager( config )
-                self.configs[name] = fcllite.CreatePSetFromFile(config)
+                self.configs[name] = larcv.CreatePSetFromFile(config)
             proc.configure(self.configs[name])
             self.confighash[name] = current
             self.setManagerActivity(name,True)

@@ -18,7 +18,11 @@ class PlotImage(object):
         print "PlotImage class being made. Nchannels= ",img_v.size()
 
         # list of image2d objects
-        self.imgs = [img_v[i] for i in xrange(img_v.size())]
+        maxsize = 15
+        nimgs = img_v.size()
+        if nimgs>maxsize:
+            nimgs = maxsize
+        self.imgs = [img_v[i] for i in xrange(nimgs)]
 
         # list of channels to go into views. default to 0,1,2 (or less)
         if img_v.size()>=3:
