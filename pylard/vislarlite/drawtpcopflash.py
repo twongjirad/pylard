@@ -109,7 +109,7 @@ class PyLArLiteDrawTPCOpFlash:
                     flashbar = pg.PlotDataItem( x=x, y=y, pen=(125,0,125,200) )
                     flash_plots.append(flashbar)
 
-                tick_cathode = tick + 4385.96+240.0
+                tick_cathode = tick + 4385.96+250.0
                 if self.min_tick<=tick_cathode and tick_cathode<=self.max_tick:
 
                     x_cathode = np.zeros(2)

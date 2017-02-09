@@ -115,6 +115,25 @@ ProcessDriver: {
 
 VisProcessor: {
 
+  # use native format
+  opdata: {
+    module_file: "visrawdigits/drawopdigits"
+    module_type: "RawDigitsDrawOpDigits"
+    destination: "opdetdisplay"
+    isactive: true
+  }
+
+  tpcdata: {
+    module_file: "visrawdigits/drawtpcrawdigits"
+    module_type: "DrawTPCRawDigits"
+    TimeDownsamplingFactor: 6.0
+    WireDownsamplingFactor: 1.0
+    destination: "rgbdisplay"
+    isactive: false
+  }
+
+
+
   # if we converted to larlite
   #DrawOpHits: {
   #  Note. for LArLite this module is a dummy module
@@ -126,12 +145,6 @@ VisProcessor: {
   #  trigger_producer: "triggersim"
   #} 
 
-  # use native format
-  DrawOpDigits: {
-    module_file: "visrawdigits/drawopdigits"
-    module_type: "RawDigitsDrawOpDigits"
-    destination: "opdetdisplay"
-  }
 } 
 """
     return default_processor_cfg

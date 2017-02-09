@@ -38,6 +38,7 @@ class FileManager:
             self.filetype        = fmandata["filetype"]
             if self.filetype=="RAWDIGITS":
                 self.rawdigits_entrymap = fmandata["rawdigits_entrymap"]
+                self.rawdigits_tpcindex = fmandata["rawdigits_tpcindex"]                
             self.parsed = True
             self.loaded_larcv = False
             self.loaded_larlite = False
@@ -66,6 +67,7 @@ class FileManager:
                          }
                 if self.filetype=="RAWDIGITS":
                     data["rawdigits_entrymap"] = self.rawdigits_entrymap
+                    data["rawdigits_tpcindex"] = self.rawdigits_tpcindex
 
                 pickle.dump( data, fmanpickled )
                 print "Caching FileManager Data to ",".pylardcache/"+str(self.fhash)+"/fmandata.pickle"
@@ -104,6 +106,7 @@ class FileManager:
         self.flavors = []    # flavor = hash of string listing set of trees found in a given file
         self.flavor_def = {} # map from flavor to list of tree names
         self.rawdigits_entrymap = {} # only used if file type is raw digits. maps rse to (position,wfms) in data tree
+        self.rawdigits_tpcindex = {}
         flavor_eventset = {}
         eventsets = []
         events_to_files = {}
@@ -230,6 +233,14 @@ class FileManager:
                     flavor_eventset[flavor].append( rse )
                 else:
                     raise ValueError( "found a repeated run/subrun/event index (%s). what?"%( str(rse) ) )
+            if self.filetype=="RAWDIGITS":
+                # rawdigits has another tree index for the TPC
+                tpcindex = r.Get("rawdigitwriter/IndexRawDigits")
+                for n in range(tpcindex.GetEntries()):
+                    tpcindex.GetEntry(n)
+                    rse = ( tpcindex.idx_run, tpcindex.idx_subrun, tpcindex.idx_event )
+                    self.rawdigits_tpcindex[rse] = (tpcindex.entrystart, tpcindex.nentries)
+                
             eventset = tuple(eventset)
             if eventset not in events_to_files:
                 events_to_files[eventset] = {}
@@ -283,12 +294,19 @@ class FileManager:
         # for rawdigits, we also build the entry to data map
         if self.filetype=="RAWDIGITS":
             treepos = 0
+            treepos_tpc = 0
             for entry in range(len(self.entry_dict)):
-                rse = self.entry_dict[entry]
+                rse = self.entry_dict[entry]                
+                # update OPDET tree
                 pos_entries = self.rawdigits_entrymap[rse] # pos is from start of file, nentries is for the event block
                 merged_pos_entries = ( treepos, pos_entries[1] )
                 treepos += pos_entries[1]
-                self.rawdigits_entrymap[rse] = merged_pos_entries # update
+                self.rawdigits_entrymap[rse] = merged_pos_entries # update                
+                # update TPC tree
+                pos_entries = self.rawdigits_tpcindex[rse]
+                merged_pos_entries = ( treepos_tpc, pos_entries[1] )
+                treepos_tpc += pos_entries[1]
+                self.rawdigits_tpcindex[rse] = merged_pos_entries # update
 
     def summary(self):
         if not self.parsed:
